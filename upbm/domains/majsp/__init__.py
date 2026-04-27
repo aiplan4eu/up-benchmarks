@@ -1,0 +1,1 @@
+from .majsp import MaJSPGenerator

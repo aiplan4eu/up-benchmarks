@@ -1,0 +1,13 @@
+domain: matchcellar
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: instance1
+    params:
+      n_matches: 1
+      n_fuses: 1
+  - name: instance2
+    params:
+      n_matches: 1
+      n_fuses: 2
