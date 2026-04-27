@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "unified-planning-benchmarks"
+version = "0.1.0"
+description = "A collection of planning problems"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "unified-planning",
+    "ConfigSpace",
+    "pyyaml"
+]
+
+[tool.setuptools.packages.find]
+include = ["upbm"]
