@@ -32,21 +32,26 @@ def test_automatic_plugins_loading(tmp_path, monkeypatch):
     plugin_module_dir = tmp_path / "plugins_dummy"
     plugin_module_dir.mkdir()
     (plugin_module_dir / "__init__.py").write_text("")
-    (plugin_module_dir / "my_plugin.py").write_text("""\
+    (plugin_module_dir / "my_plugin.py").write_text(
+        """\
 from upbm.generator import Generator
 class CustomTestGenerator(Generator):
     pass
-""")
+"""
+    )
 
     import sys
+
     sys.path.insert(0, str(tmp_path))
     monkeypatch.chdir(tmp_path)
 
     upbm_file = tmp_path / ".upbm"
-    upbm_file.write_text("""\
+    upbm_file.write_text(
+        """\
 plugins:
   custom_yaml_domain: "plugins_dummy.my_plugin:CustomTestGenerator"
-""")
+"""
+    )
 
     # Construction auto-loads plugins (including the one in cwd/.upbm)
     factory = DomainFactory()
@@ -62,13 +67,16 @@ def test_reload_plugins(tmp_path, monkeypatch):
     plugin_module_dir = tmp_path / "plugins_reload"
     plugin_module_dir.mkdir()
     (plugin_module_dir / "__init__.py").write_text("")
-    (plugin_module_dir / "late_plugin.py").write_text("""\
+    (plugin_module_dir / "late_plugin.py").write_text(
+        """\
 from upbm.generator import Generator
 class LateGenerator(Generator):
     pass
-""")
+"""
+    )
 
     import sys
+
     sys.path.insert(0, str(tmp_path))
     monkeypatch.chdir(tmp_path)
 
@@ -77,10 +85,12 @@ class LateGenerator(Generator):
     assert "late_domain" not in factory.get_registered_domains()
 
     # Now write the config and reload
-    (tmp_path / ".upbm").write_text("""\
+    (tmp_path / ".upbm").write_text(
+        """\
 plugins:
   late_domain: "plugins_reload.late_plugin:LateGenerator"
-""")
+"""
+    )
     factory.reload_plugins()
 
     assert "late_domain" in factory.get_registered_domains()

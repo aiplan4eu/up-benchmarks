@@ -10,10 +10,14 @@ def factory():
 def test_generate_instance(factory):
     domain = "matchcellar"
     dom_space = factory.get_domain_parameter_space(domain)
-    dom_params = factory.parse_configuration({"version": "1", "variant": "ipc"}, dom_space)
+    dom_params = factory.parse_configuration(
+        {"version": "1", "variant": "ipc"}, dom_space
+    )
 
     inst_space = factory.get_instance_parameter_space(domain, dom_params)
-    inst_params = factory.parse_configuration({"n_matches": "2", "n_fuses": "3"}, inst_space)
+    inst_params = factory.parse_configuration(
+        {"n_matches": "2", "n_fuses": "3"}, inst_space
+    )
 
     problem = factory.generate_instance(domain, dom_params, inst_params)
     assert problem is not None
@@ -23,9 +27,13 @@ def test_generate_instance(factory):
 def test_sample_instances(factory):
     domain = "matchcellar"
     dom_space = factory.get_domain_parameter_space(domain)
-    dom_params = factory.parse_configuration({"version": "1", "variant": "ipc"}, dom_space)
+    dom_params = factory.parse_configuration(
+        {"version": "1", "variant": "ipc"}, dom_space
+    )
 
-    problems = factory.sample_instances(domain, dom_params, n=3, fixed_instance_params={"n_matches": "1"})
+    problems = factory.sample_instances(
+        domain, dom_params, n=3, fixed_instance_params={"n_matches": "1"}
+    )
     assert len(problems) == 3
     for p in problems:
         assert p is not None
@@ -34,7 +42,8 @@ def test_sample_instances(factory):
 
 def test_generate_dataset(factory, tmp_path):
     dataset_spec = tmp_path / "test_set.yml"
-    dataset_spec.write_text("""\
+    dataset_spec.write_text(
+        """\
 domain: matchcellar
 params:
   version: 1
@@ -48,7 +57,8 @@ instances:
     params:
       n_matches: 2
       n_fuses: 2
-""")
+"""
+    )
 
     instances, _ = factory.generate_dataset(dataset_spec)
     assert len(instances) == 2

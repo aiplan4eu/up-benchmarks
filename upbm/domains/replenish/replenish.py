@@ -3,9 +3,16 @@ from typing import Iterator, Optional, Tuple, Dict, List, Union, Iterable, Any
 import unified_planning as up
 from unified_planning.shortcuts import *
 from unified_planning.model.walkers import AnyChecker
-from ConfigSpace import ConfigurationSpace, Configuration, Integer, Categorical, Constant
+from ConfigSpace import (
+    ConfigurationSpace,
+    Configuration,
+    Integer,
+    Categorical,
+    Constant,
+)
 from upbm.generator import Generator
 from upbm.utils import MAX_INT
+
 
 class ReplenishGenerator(Generator):
     @staticmethod
@@ -93,18 +100,26 @@ class ReplenishGenerator(Generator):
     def _build_domain(self) -> up.model.Problem:
         domain = Problem("Replenish")
 
-        CardboardType = UserType('CardboardType')
-        Drawer = UserType('Drawer')
+        CardboardType = UserType("CardboardType")
+        Drawer = UserType("Drawer")
 
-        no_type = Object('no_type', CardboardType)
+        no_type = Object("no_type", CardboardType)
         domain.add_object(no_type)
 
         # Constants
-        max_type_capacity = Fluent('max_type_capacity', IntType(0, self._global_max_capacities), t=CardboardType)
-        build_box_time = Fluent('build_box_time', IntType(0, 10), t=CardboardType)
-        time_replenish_same_type = Fluent('time_replenish_same_type', IntType(0, 10), t=CardboardType)
-        time_replenish_new_type = Fluent('time_replenish_new_type', IntType(0, 10), t=CardboardType)
-        time_empty = Fluent('time_empty', IntType(0, 10), t=CardboardType)
+        max_type_capacity = Fluent(
+            "max_type_capacity",
+            IntType(0, self._global_max_capacities),
+            t=CardboardType,
+        )
+        build_box_time = Fluent("build_box_time", IntType(0, 10), t=CardboardType)
+        time_replenish_same_type = Fluent(
+            "time_replenish_same_type", IntType(0, 10), t=CardboardType
+        )
+        time_replenish_new_type = Fluent(
+            "time_replenish_new_type", IntType(0, 10), t=CardboardType
+        )
+        time_empty = Fluent("time_empty", IntType(0, 10), t=CardboardType)
 
         domain.add_fluent(max_type_capacity, default_initial_value=Int(0))
         domain.add_fluent(build_box_time, default_initial_value=Int(0))
@@ -113,87 +128,135 @@ class ReplenishGenerator(Generator):
         domain.add_fluent(time_empty, default_initial_value=Int(0))
 
         # Setting up Objects and Fluents
-        drawer_type = Fluent('drawer_type', CardboardType, d=Drawer)
-        drawer_occupancy = Fluent('drawer_occupancy', IntType(0, self._global_max_capacities), d=Drawer)
-        drawer_busy = Fluent('drawer_busy', BoolType(), d=Drawer)
-        drawer_initialized = Fluent('drawer_initialized', BoolType(), d=Drawer)
+        drawer_type = Fluent("drawer_type", CardboardType, d=Drawer)
+        drawer_occupancy = Fluent(
+            "drawer_occupancy", IntType(0, self._global_max_capacities), d=Drawer
+        )
+        drawer_busy = Fluent("drawer_busy", BoolType(), d=Drawer)
+        drawer_initialized = Fluent("drawer_initialized", BoolType(), d=Drawer)
         domain.add_fluent(drawer_type, default_initial_value=no_type)
         domain.add_fluent(drawer_occupancy, default_initial_value=Int(0))
         domain.add_fluent(drawer_busy, default_initial_value=False)
         domain.add_fluent(drawer_initialized, default_initial_value=False)
 
-        #to define goals
-        #create a fluent that keeps track of the progress in the goal sequence
-        goal_progress = Fluent('goal_progress', IntType(0, self._max_goal_sequence_length)) # counts how many goals have been completed
-        target_sequence_fluent = Fluent('target_sequence_fluent', CardboardType, idx=IntType(0, self._max_goal_sequence_length-1)) # fluent to access the goal sequence
-        goal_busy = Fluent('goal_busy', BoolType()) # to ensure only one goal is being worked on at a time
+        # to define goals
+        # create a fluent that keeps track of the progress in the goal sequence
+        goal_progress = Fluent(
+            "goal_progress", IntType(0, self._max_goal_sequence_length)
+        )  # counts how many goals have been completed
+        target_sequence_fluent = Fluent(
+            "target_sequence_fluent",
+            CardboardType,
+            idx=IntType(0, self._max_goal_sequence_length - 1),
+        )  # fluent to access the goal sequence
+        goal_busy = Fluent(
+            "goal_busy", BoolType()
+        )  # to ensure only one goal is being worked on at a time
         domain.add_fluent(goal_progress, default_initial_value=Int(0))
         domain.add_fluent(target_sequence_fluent, default_initial_value=no_type)
         domain.add_fluent(goal_busy, default_initial_value=False)
 
         # Setting up Actions
-        initializeDrawer = DurativeAction('initializeDrawer', d=Drawer, c=CardboardType, load=IntType(0, self._global_max_capacities))
-        d = initializeDrawer.parameter('d')
-        c = initializeDrawer.parameter('c')
-        load = initializeDrawer.parameter('load')
+        initializeDrawer = DurativeAction(
+            "initializeDrawer",
+            d=Drawer,
+            c=CardboardType,
+            load=IntType(0, self._global_max_capacities),
+        )
+        d = initializeDrawer.parameter("d")
+        c = initializeDrawer.parameter("c")
+        load = initializeDrawer.parameter("load")
         initializeDrawer.set_fixed_duration(Int(1))
         initializeDrawer.add_condition(StartTiming(), Not(drawer_initialized(d)))
-        initializeDrawer.add_condition(StartTiming(), Equals(load, max_type_capacity(c)))
-        initializeDrawer.add_condition(StartTiming(), Not(Equals(c, no_type))) # cannot initialize to no_type
+        initializeDrawer.add_condition(
+            StartTiming(), Equals(load, max_type_capacity(c))
+        )
+        initializeDrawer.add_condition(
+            StartTiming(), Not(Equals(c, no_type))
+        )  # cannot initialize to no_type
         initializeDrawer.add_effect(StartTiming(), drawer_initialized(d), True)
         initializeDrawer.add_effect(EndTiming(), drawer_type(d), c)
-        initializeDrawer.add_effect(EndTiming(), drawer_occupancy(d), max_type_capacity(c))
+        initializeDrawer.add_effect(
+            EndTiming(), drawer_occupancy(d), max_type_capacity(c)
+        )
         domain.add_action(initializeDrawer)
 
-        build_box = DurativeAction('build_box', d=Drawer, c=CardboardType, idx=IntType(0, self._max_goal_sequence_length-1))
-        c = build_box.parameter('c')
-        d = build_box.parameter('d')
-        idx = build_box.parameter('idx')
+        build_box = DurativeAction(
+            "build_box",
+            d=Drawer,
+            c=CardboardType,
+            idx=IntType(0, self._max_goal_sequence_length - 1),
+        )
+        c = build_box.parameter("c")
+        d = build_box.parameter("d")
+        idx = build_box.parameter("idx")
         build_box.set_fixed_duration(build_box_time(c))
         build_box.add_condition(StartTiming(), drawer_initialized(d))
         build_box.add_condition(StartTiming(), Equals(drawer_type(d), c))
         build_box.add_condition(StartTiming(), Not(drawer_busy(d)))
         build_box.add_condition(StartTiming(), GT(drawer_occupancy(d), 0))
-        build_box.add_condition(StartTiming(), Equals(idx, goal_progress)) # ensure we are building the current goal in the sequence
-        build_box.add_condition(StartTiming(), Equals(c, target_sequence_fluent(idx))) # ensure we are building the current goal
-        build_box.add_condition(StartTiming(), Not(goal_busy)) # only one goal at a time
+        build_box.add_condition(
+            StartTiming(), Equals(idx, goal_progress)
+        )  # ensure we are building the current goal in the sequence
+        build_box.add_condition(
+            StartTiming(), Equals(c, target_sequence_fluent(idx))
+        )  # ensure we are building the current goal
+        build_box.add_condition(
+            StartTiming(), Not(goal_busy)
+        )  # only one goal at a time
         build_box.add_effect(StartTiming(), drawer_busy(d), True)
         build_box.add_effect(StartTiming(), goal_busy, True)
         build_box.add_effect(EndTiming(), goal_busy, False)
         build_box.add_effect(EndTiming(), drawer_busy(d), False)
-        build_box.add_effect(EndTiming(), drawer_occupancy(d), Minus(drawer_occupancy(d), Int(1)))
+        build_box.add_effect(
+            EndTiming(), drawer_occupancy(d), Minus(drawer_occupancy(d), Int(1))
+        )
         build_box.add_effect(EndTiming(), goal_progress, Plus(goal_progress, Int(1)))
         domain.add_action(build_box)
 
-        replenish_drawer_same_type = DurativeAction('replenish_drawer_same_type', d=Drawer, c=CardboardType)
-        c = replenish_drawer_same_type.parameter('c')
-        d = replenish_drawer_same_type.parameter('d')
+        replenish_drawer_same_type = DurativeAction(
+            "replenish_drawer_same_type", d=Drawer, c=CardboardType
+        )
+        c = replenish_drawer_same_type.parameter("c")
+        d = replenish_drawer_same_type.parameter("d")
         replenish_drawer_same_type.set_fixed_duration(time_replenish_same_type(c))
         replenish_drawer_same_type.add_condition(StartTiming(), drawer_initialized(d))
-        replenish_drawer_same_type.add_condition(StartTiming(), Equals(drawer_type(d), c))
+        replenish_drawer_same_type.add_condition(
+            StartTiming(), Equals(drawer_type(d), c)
+        )
         replenish_drawer_same_type.add_condition(StartTiming(), Not(drawer_busy(d)))
         replenish_drawer_same_type.add_effect(StartTiming(), drawer_busy(d), True)
-        replenish_drawer_same_type.add_effect(EndTiming(), drawer_occupancy(d), max_type_capacity(c))
+        replenish_drawer_same_type.add_effect(
+            EndTiming(), drawer_occupancy(d), max_type_capacity(c)
+        )
         replenish_drawer_same_type.add_effect(EndTiming(), drawer_busy(d), False)
         domain.add_action(replenish_drawer_same_type)
 
-        replenish_drawer_new_type = DurativeAction('replenish_drawer_new_type', d=Drawer, c=CardboardType)
-        c = replenish_drawer_new_type.parameter('c')
-        d = replenish_drawer_new_type.parameter('d')
+        replenish_drawer_new_type = DurativeAction(
+            "replenish_drawer_new_type", d=Drawer, c=CardboardType
+        )
+        c = replenish_drawer_new_type.parameter("c")
+        d = replenish_drawer_new_type.parameter("d")
         replenish_drawer_new_type.set_fixed_duration(time_replenish_new_type(c))
         replenish_drawer_new_type.add_condition(StartTiming(), drawer_initialized(d))
-        replenish_drawer_new_type.add_condition(StartTiming(), Not(Equals(drawer_type(d), c)))
-        replenish_drawer_new_type.add_condition(StartTiming(), Equals(drawer_occupancy(d), Int(0)))
+        replenish_drawer_new_type.add_condition(
+            StartTiming(), Not(Equals(drawer_type(d), c))
+        )
+        replenish_drawer_new_type.add_condition(
+            StartTiming(), Equals(drawer_occupancy(d), Int(0))
+        )
         replenish_drawer_new_type.add_condition(StartTiming(), Not(drawer_busy(d)))
         replenish_drawer_new_type.add_effect(StartTiming(), drawer_busy(d), True)
-        replenish_drawer_new_type.add_effect(EndTiming(), drawer_occupancy(d), max_type_capacity(c))
+        replenish_drawer_new_type.add_effect(
+            EndTiming(), drawer_occupancy(d), max_type_capacity(c)
+        )
         replenish_drawer_new_type.add_effect(EndTiming(), drawer_type(d), c)
         replenish_drawer_new_type.add_effect(EndTiming(), drawer_busy(d), False)
         domain.add_action(replenish_drawer_new_type)
 
-        empty_drawer = DurativeAction('empty_drawer', d=Drawer, c=CardboardType)
-        c = empty_drawer.parameter('c')
-        d = empty_drawer.parameter('d')
+        empty_drawer = DurativeAction("empty_drawer", d=Drawer, c=CardboardType)
+        c = empty_drawer.parameter("c")
+        d = empty_drawer.parameter("d")
         empty_drawer.set_fixed_duration(time_empty(c))
         empty_drawer.add_condition(StartTiming(), Equals(drawer_type(d), c))
         empty_drawer.add_condition(StartTiming(), drawer_initialized(d))
@@ -205,20 +268,24 @@ class ReplenishGenerator(Generator):
 
         return domain
 
-    def get_initial_state(self, params: Configuration) -> Dict[up.model.FNode, up.model.FNode]:
+    def get_initial_state(
+        self, params: Configuration
+    ) -> Dict[up.model.FNode, up.model.FNode]:
         params.check_valid_configuration()
         if params.config_space != self.instance_parameter_space:
             raise ValueError(f"Invalid instance parameters: {params}")
 
         rng = random.Random(params["sequence_seed"])
-        goal_sequence = rng.choices(range(1, params["n_cardboard_types"] + 1), k=params["goal_sequence_length"])
+        goal_sequence = rng.choices(
+            range(1, params["n_cardboard_types"] + 1), k=params["goal_sequence_length"]
+        )
 
         # initial values
         initial_values = {}
         objects = list(self.get_objects(params))
         objects.append(self._domain.object("no_type"))
 
-        c = AnyChecker(lambda x : x.is_object_exp() and x.object() not in objects)
+        c = AnyChecker(lambda x: x.is_object_exp() and x.object() not in objects)
         for k, v in self._domain.initial_values.items():
             if c.any(k):
                 continue
@@ -232,16 +299,22 @@ class ReplenishGenerator(Generator):
 
         for i in range(1, params["n_cardboard_types"] + 1):
             ct = self._get_object(f"cardboard_type_{i}", self._CardboardType)
-            initial_values[max_type_capacity(ct)] = Int(self._type_capacity[i-1])
-            initial_values[build_box_time(ct)] = Int(self._build_box_time[i-1])
-            initial_values[time_replenish_same_type(ct)] = Int(self._time_replenish_same_type[i-1])
-            initial_values[time_replenish_new_type(ct)] = Int(self._time_replenish_new_type[i-1])
-            initial_values[time_empty(ct)] = Int(self._time_empty[i-1])
+            initial_values[max_type_capacity(ct)] = Int(self._type_capacity[i - 1])
+            initial_values[build_box_time(ct)] = Int(self._build_box_time[i - 1])
+            initial_values[time_replenish_same_type(ct)] = Int(
+                self._time_replenish_same_type[i - 1]
+            )
+            initial_values[time_replenish_new_type(ct)] = Int(
+                self._time_replenish_new_type[i - 1]
+            )
+            initial_values[time_empty(ct)] = Int(self._time_empty[i - 1])
 
         target_sequence_fluent = self._domain.fluent("target_sequence_fluent")
         for i, g in enumerate(goal_sequence):
             ct = self._get_object(f"cardboard_type_{g}", self._CardboardType)
-            initial_values[target_sequence_fluent(Int(i))] = self._domain.environment.expression_manager.ObjectExp(ct)
+            initial_values[
+                target_sequence_fluent(Int(i))
+            ] = self._domain.environment.expression_manager.ObjectExp(ct)
 
         return initial_values
 

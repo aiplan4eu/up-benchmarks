@@ -2,6 +2,7 @@ import unittest
 from upbm.factory import DomainFactory
 from upbm.domains.replenish import ReplenishGenerator
 
+
 class TestReplenishGenerator(unittest.TestCase):
     def setUp(self):
         self.factory = DomainFactory()
@@ -17,8 +18,17 @@ class TestReplenishGenerator(unittest.TestCase):
         self.assertIn("max_drawers", dom_space)
         self.assertIn("max_goal_sequence_length", dom_space)
 
-        domain_params = self.factory.parse_configuration({"max_cardboard_types": 3, "max_drawers": 5, "max_goal_sequence_length": 10}, dom_space)
-        inst_space = self.factory.get_instance_parameter_space(self.domain_name, domain_params)
+        domain_params = self.factory.parse_configuration(
+            {
+                "max_cardboard_types": 3,
+                "max_drawers": 5,
+                "max_goal_sequence_length": 10,
+            },
+            dom_space,
+        )
+        inst_space = self.factory.get_instance_parameter_space(
+            self.domain_name, domain_params
+        )
         self.assertIn("n_cardboard_types", inst_space)
         self.assertIn("n_drawers", inst_space)
         self.assertIn("goal_sequence_length", inst_space)
@@ -26,13 +36,32 @@ class TestReplenishGenerator(unittest.TestCase):
 
     def test_instance_generation(self):
         dom_space = self.factory.get_domain_parameter_space(self.domain_name)
-        domain_params = self.factory.parse_configuration({"max_cardboard_types": 3, "max_drawers": 5, "max_goal_sequence_length": 10}, dom_space)
+        domain_params = self.factory.parse_configuration(
+            {
+                "max_cardboard_types": 3,
+                "max_drawers": 5,
+                "max_goal_sequence_length": 10,
+            },
+            dom_space,
+        )
 
-        inst_space = self.factory.get_instance_parameter_space(self.domain_name, domain_params)
-        instance_params = self.factory.parse_configuration({"n_cardboard_types": 2, "n_drawers": 2, "goal_sequence_length": 3, "sequence_seed": 42}, inst_space)
+        inst_space = self.factory.get_instance_parameter_space(
+            self.domain_name, domain_params
+        )
+        instance_params = self.factory.parse_configuration(
+            {
+                "n_cardboard_types": 2,
+                "n_drawers": 2,
+                "goal_sequence_length": 3,
+                "sequence_seed": 42,
+            },
+            inst_space,
+        )
 
-        problem = self.factory.generate_instance(self.domain_name, domain_params, instance_params)
-        self.assertEqual(len(problem.goals), 1) # Equals(goal_progress, Int(3))
+        problem = self.factory.generate_instance(
+            self.domain_name, domain_params, instance_params
+        )
+        self.assertEqual(len(problem.goals), 1)  # Equals(goal_progress, Int(3))
 
         # Check objects
         cardboard_type = problem.user_type("CardboardType")
@@ -48,6 +77,7 @@ class TestReplenishGenerator(unittest.TestCase):
         self.assertEqual(len(drawer_names), 2)
         self.assertIn("drawer_0", drawer_names)
         self.assertIn("drawer_1", drawer_names)
+
 
 if __name__ == "__main__":
     unittest.main()

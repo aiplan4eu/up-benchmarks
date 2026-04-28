@@ -18,7 +18,13 @@ from unified_planning.shortcuts import (
     Plus,
 )
 from unified_planning.model.walkers import AnyChecker
-from ConfigSpace import ConfigurationSpace, Configuration, Integer, Constant, Categorical
+from ConfigSpace import (
+    ConfigurationSpace,
+    Configuration,
+    Integer,
+    Constant,
+    Categorical,
+)
 
 from upbm.generator import Generator
 from upbm.utils import MAX_INT
@@ -255,7 +261,9 @@ class KittingGenerator(Generator):
 
         return domain
 
-    def _get_combinations(self, n_components: int, length: int) -> list[tuple[up.model.Object, ...]]:
+    def _get_combinations(
+        self, n_components: int, length: int
+    ) -> list[tuple[up.model.Object, ...]]:
         Component = self._domain.user_type("Component")
         if not self._isomorphic_instances:
             components_dict = {
@@ -300,7 +308,9 @@ class KittingGenerator(Generator):
             goals.append(completed(i, k1))
         return goals
 
-    def get_initial_state(self, params: Configuration) -> Dict[up.model.FNode, up.model.FNode]:
+    def get_initial_state(
+        self, params: Configuration
+    ) -> Dict[up.model.FNode, up.model.FNode]:
         params.check_valid_configuration()
         if params.config_space != self.instance_parameter_space:
             raise ValueError(f"Invalid instance parameters: {params}")
@@ -308,11 +318,13 @@ class KittingGenerator(Generator):
         initial_values = {}
         objects = list(self.get_objects(params))
         # Add constants that are always present in instances
-        objects.extend([
-            self._domain.object("l0"),
-            self._domain.object("k1"),
-            self._domain.object("EMPTY"),
-        ])
+        objects.extend(
+            [
+                self._domain.object("l0"),
+                self._domain.object("k1"),
+                self._domain.object("EMPTY"),
+            ]
+        )
 
         c = AnyChecker(lambda x: x.is_object_exp() and x.object() not in objects)
         for k, v in self._domain.initial_values.items():

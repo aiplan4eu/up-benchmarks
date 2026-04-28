@@ -230,7 +230,9 @@ class MaJSPGenerator(Generator):
                 goals.append(self._treated(bo, po))
         return goals
 
-    def get_initial_state(self, params: Configuration) -> Dict[up.model.FNode, up.model.FNode]:
+    def get_initial_state(
+        self, params: Configuration
+    ) -> Dict[up.model.FNode, up.model.FNode]:
         params.check_valid_configuration()
         if params.config_space != self.instance_parameter_space:
             raise ValueError(f"Invalid instance parameters: {params}")
@@ -238,11 +240,13 @@ class MaJSPGenerator(Generator):
         initial_values = {}
         objects = list(self.get_objects(params))
         # Add constants that are always present in instances
-        objects.extend([
-            self._domain.object("UNKNOWN"),
-            self._domain.object("DEPOT"),
-            self._domain.object("NOPALLET"),
-        ])
+        objects.extend(
+            [
+                self._domain.object("UNKNOWN"),
+                self._domain.object("DEPOT"),
+                self._domain.object("NOPALLET"),
+            ]
+        )
 
         c = AnyChecker(lambda x: x.is_object_exp() and x.object() not in objects)
         for k, v in self._domain.initial_values.items():
