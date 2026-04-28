@@ -18,12 +18,13 @@ jobs:
         run: python3 -m black --check .
 
       - name: MyPy check
-        run: |
-          mypy --install-types --non-interactive
-          python3 -m mypy .
+        run: python3 -m mypy .
 
   test_linux:
     runs-on: ubuntu-latest
+    needs: [
+      static_analysis,
+    ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
