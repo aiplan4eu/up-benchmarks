@@ -28,12 +28,14 @@ class MaJSPGenerator(Generator):
     @staticmethod
     def get_domain_parameter_space() -> ConfigurationSpace:
         return ConfigurationSpace(
-            name=[
-                Constant("version", 1),
-                Integer("max_robots", (1, MAX_INT), default=5),
-                Integer("max_pallets", (1, MAX_INT), default=10),
-                Integer("max_positions", (1, MAX_INT), default=20),
-            ]
+            name=str(
+                [
+                    Constant("version", 1),
+                    Integer("max_robots", (1, MAX_INT), default=5),
+                    Integer("max_pallets", (1, MAX_INT), default=10),
+                    Integer("max_positions", (1, MAX_INT), default=20),
+                ]
+            )
         )
 
     def __init__(self, domain_params: Configuration) -> None:

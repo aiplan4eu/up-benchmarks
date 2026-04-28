@@ -34,12 +34,14 @@ class ReplenishGenerator(Generator):
     @staticmethod
     def get_domain_parameter_space() -> ConfigurationSpace:
         return ConfigurationSpace(
-            name=[
-                Constant("version", 1),
-                Integer("max_cardboard_types", (1, 5), default=5),
-                Integer("max_drawers", (1, MAX_INT), default=20),
-                Integer("max_goal_sequence_length", (1, MAX_INT), default=20),
-            ]
+            name=str(
+                [
+                    Constant("version", 1),
+                    Integer("max_cardboard_types", (1, 5), default=5),
+                    Integer("max_drawers", (1, MAX_INT), default=20),
+                    Integer("max_goal_sequence_length", (1, MAX_INT), default=20),
+                ]
+            )
         )
 
     def __init__(self, domain_params: Configuration) -> None:

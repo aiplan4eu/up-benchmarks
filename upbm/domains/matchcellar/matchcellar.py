@@ -24,12 +24,14 @@ class MatchCellarGenerator(Generator):
     @staticmethod
     def get_domain_parameter_space():
         return ConfigurationSpace(
-            name=[
-                Constant("version", 1),
-                Categorical("variant", ["ipc", "variable_duration"], default="ipc"),
-                Integer("max_matches", (0, MAX_INT), default=20),
-                Integer("max_fuses", (0, MAX_INT), default=20),
-            ]
+            name=str(
+                [
+                    Constant("version", 1),
+                    Categorical("variant", ["ipc", "variable_duration"], default="ipc"),
+                    Integer("max_matches", (0, MAX_INT), default=20),
+                    Integer("max_fuses", (0, MAX_INT), default=20),
+                ]
+            )
         )
 
     def __init__(self, domain_params: Configuration):

@@ -53,14 +53,16 @@ class KittingGenerator(Generator):
     @staticmethod
     def get_domain_parameter_space() -> ConfigurationSpace:
         return ConfigurationSpace(
-            name=[
-                Constant("version", 1),
-                Integer("max_components", (1, MAX_INT), default=10),
-                Integer("max_kit_size", (1, MAX_INT), default=5),
-                Integer("max_n_kit", (1, MAX_INT), default=5),
-                Integer("max_robots", (1, MAX_INT), default=5),
-                Categorical("isomorphic_instances", [True, False], default=True),
-            ]
+            name=str(
+                [
+                    Constant("version", 1),
+                    Integer("max_components", (1, MAX_INT), default=10),
+                    Integer("max_kit_size", (1, MAX_INT), default=5),
+                    Integer("max_n_kit", (1, MAX_INT), default=5),
+                    Integer("max_robots", (1, MAX_INT), default=5),
+                    Categorical("isomorphic_instances", [True, False], default=True),
+                ]
+            )
         )
 
     def __init__(self, domain_params: Configuration) -> None:
