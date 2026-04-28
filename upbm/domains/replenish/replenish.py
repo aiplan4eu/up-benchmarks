@@ -1,7 +1,23 @@
 import random
 from typing import Iterator, Optional, Tuple, Dict, List, Union, Iterable, Any
 import unified_planning as up
-from unified_planning.shortcuts import *
+from unified_planning.shortcuts import (
+    Problem,
+    UserType,
+    Object,
+    Fluent,
+    IntType,
+    BoolType,
+    Int,
+    Not,
+    StartTiming,
+    EndTiming,
+    Equals,
+    DurativeAction,
+    Plus,
+    Minus,
+    GT,
+)
 from unified_planning.model.walkers import AnyChecker
 from ConfigSpace import (
     ConfigurationSpace,
