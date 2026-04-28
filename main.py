@@ -2,7 +2,7 @@ import argparse
 import yaml
 from pathlib import Path
 
-from tpbm import DomainFactory, Format, dump_instance, print_instance, print_parameter_space
+from upbm import DomainFactory, Format, dump_instance, print_instance, print_parameter_space
 
 
 def main():
