@@ -25,6 +25,7 @@ from ConfigSpace import (
     Constant,
     Categorical,
 )
+from typing import Any
 
 from upbm.generator import Generator
 from upbm.utils import MAX_INT
@@ -52,18 +53,16 @@ def generate_partitions_list(k: int, n: int):
 class KittingGenerator(Generator):
     @staticmethod
     def get_domain_parameter_space() -> ConfigurationSpace:
-        return ConfigurationSpace(
-            name=str(
-                [
-                    Constant("version", 1),
-                    Integer("max_components", (1, MAX_INT), default=10),
-                    Integer("max_kit_size", (1, MAX_INT), default=5),
-                    Integer("max_n_kit", (1, MAX_INT), default=5),
-                    Integer("max_robots", (1, MAX_INT), default=5),
-                    Categorical("isomorphic_instances", [True, False], default=True),
-                ]
-            )
+        mapping: dict[str, Any] = {}
+        mapping["version"] = Constant("version", 1)
+        mapping["max_components"] = Integer("max_components", (1, MAX_INT), default=10)
+        mapping["max_kit_size"] = Integer("max_kit_size", (1, MAX_INT), default=5)
+        mapping["max_n_kit"] = Integer("max_n_kit", (1, MAX_INT), default=5)
+        mapping["max_robots"] = Integer("max_robots", (1, MAX_INT), default=5)
+        mapping["isomorphic_instances"] = Categorical(
+            "isomorphic_instances", [True, False], default=True
         )
+        return ConfigurationSpace(name=mapping)
 
     def __init__(self, domain_params: Configuration) -> None:
         super().__init__(domain_params)

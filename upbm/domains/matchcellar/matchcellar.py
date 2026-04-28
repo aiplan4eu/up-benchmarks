@@ -11,6 +11,7 @@ from ConfigSpace import (
 from unified_planning.io import PDDLReader  # type: ignore[import-untyped]
 from unified_planning.model import Problem, Object, FNode  # type: ignore[import-untyped]
 from unified_planning.shortcuts import TRUE, UserType  # type: ignore[import-untyped]
+from typing import Any
 
 from upbm.generator import Generator
 from upbm.utils import MAX_INT
@@ -23,16 +24,14 @@ RESOURCES_PATH = SCRIPT_PATH / "resources"
 class MatchCellarGenerator(Generator):
     @staticmethod
     def get_domain_parameter_space():
-        return ConfigurationSpace(
-            name=str(
-                [
-                    Constant("version", 1),
-                    Categorical("variant", ["ipc", "variable_duration"], default="ipc"),
-                    Integer("max_matches", (0, MAX_INT), default=20),
-                    Integer("max_fuses", (0, MAX_INT), default=20),
-                ]
-            )
+        mapping: dict[str, Any] = {}
+        mapping["version"] = Constant("version", 1)
+        mapping["variant"] = Categorical(
+            "variant", ["ipc", "variable_duration"], default="ipc"
         )
+        mapping["max_matches"] = Integer("max_matches", (0, MAX_INT), default=20)
+        mapping["max_fuses"] = Integer("max_fuses", (0, MAX_INT), default=20)
+        return ConfigurationSpace(name=mapping)
 
     def __init__(self, domain_params: Configuration):
         domain_params.check_valid_configuration()

@@ -26,6 +26,8 @@ from ConfigSpace import (
     Categorical,
     Constant,
 )
+from typing import Any
+
 from upbm.generator import Generator
 from upbm.utils import MAX_INT
 
@@ -33,16 +35,16 @@ from upbm.utils import MAX_INT
 class ReplenishGenerator(Generator):
     @staticmethod
     def get_domain_parameter_space() -> ConfigurationSpace:
-        return ConfigurationSpace(
-            name=str(
-                [
-                    Constant("version", 1),
-                    Integer("max_cardboard_types", (1, 5), default=5),
-                    Integer("max_drawers", (1, MAX_INT), default=20),
-                    Integer("max_goal_sequence_length", (1, MAX_INT), default=20),
-                ]
-            )
+        mapping: dict[str, Any] = {}
+        mapping["version"] = Constant("version", 1)
+        mapping["max_cardboard_types"] = Integer(
+            "max_cardboard_types", (1, 5), default=5
         )
+        mapping["max_drawers"] = Integer("max_drawers", (1, MAX_INT), default=20)
+        mapping["max_goal_sequence_length"] = Integer(
+            "max_goal_sequence_length", (1, MAX_INT), default=20
+        )
+        return ConfigurationSpace(name=mapping)
 
     def __init__(self, domain_params: Configuration) -> None:
         super().__init__(domain_params)
