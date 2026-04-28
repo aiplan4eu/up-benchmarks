@@ -19,6 +19,7 @@ from unified_planning.shortcuts import (
 )
 from unified_planning.model.walkers import AnyChecker
 from ConfigSpace import ConfigurationSpace, Configuration, Integer, Constant
+from typing import Any
 
 from upbm.generator import Generator
 from upbm.utils import MAX_INT
@@ -27,14 +28,12 @@ from upbm.utils import MAX_INT
 class MaJSPGenerator(Generator):
     @staticmethod
     def get_domain_parameter_space() -> ConfigurationSpace:
-        return ConfigurationSpace(
-            name=[
-                Constant("version", 1),
-                Integer("max_robots", (1, MAX_INT), default=5),
-                Integer("max_pallets", (1, MAX_INT), default=10),
-                Integer("max_positions", (1, MAX_INT), default=20),
-            ]
-        )
+        mapping: dict[str, Any] = {}
+        mapping["version"] = Constant("version", 1)
+        mapping["max_robots"] = Integer("max_robots", (1, MAX_INT), default=5)
+        mapping["max_pallets"] = Integer("max_pallets", (1, MAX_INT), default=10)
+        mapping["max_positions"] = Integer("max_positions", (1, MAX_INT), default=20)
+        return ConfigurationSpace(name=mapping)
 
     def __init__(self, domain_params: Configuration) -> None:
         super().__init__(domain_params)
@@ -230,7 +229,9 @@ class MaJSPGenerator(Generator):
                 goals.append(self._treated(bo, po))
         return goals
 
-    def get_initial_state(self, params: Configuration) -> Dict[up.model.FNode, up.model.FNode]:
+    def get_initial_state(
+        self, params: Configuration
+    ) -> Dict[up.model.FNode, up.model.FNode]:
         params.check_valid_configuration()
         if params.config_space != self.instance_parameter_space:
             raise ValueError(f"Invalid instance parameters: {params}")
@@ -238,11 +239,13 @@ class MaJSPGenerator(Generator):
         initial_values = {}
         objects = list(self.get_objects(params))
         # Add constants that are always present in instances
-        objects.extend([
-            self._domain.object("UNKNOWN"),
-            self._domain.object("DEPOT"),
-            self._domain.object("NOPALLET"),
-        ])
+        objects.extend(
+            [
+                self._domain.object("UNKNOWN"),
+                self._domain.object("DEPOT"),
+                self._domain.object("NOPALLET"),
+            ]
+        )
 
         c = AnyChecker(lambda x: x.is_object_exp() and x.object() not in objects)
         for k, v in self._domain.initial_values.items():

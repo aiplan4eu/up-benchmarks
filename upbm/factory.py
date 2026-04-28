@@ -31,12 +31,16 @@ class DomainFactory:
 
     def _initialize_registry(self) -> None:
         from upbm.domains.matchcellar import MatchCellarGenerator
+
         self._registry["matchcellar"] = MatchCellarGenerator
         from upbm.domains.majsp import MaJSPGenerator
+
         self._registry["majsp"] = MaJSPGenerator
         from upbm.domains.kitting.kitting import KittingGenerator
+
         self._registry["kitting"] = KittingGenerator
         from upbm.domains.replenish import ReplenishGenerator
+
         self._registry["replenish"] = ReplenishGenerator
 
     def register(self, name: str, generator_class: Type[Generator]) -> None:
@@ -69,7 +73,9 @@ class DomainFactory:
                             if ":" in module_path:
                                 mod_name, class_name = module_path.split(":", 1)
                             else:
-                                print(f"Warning: Ignoring improperly formatted plugin target {module_path}")
+                                print(
+                                    f"Warning: Ignoring improperly formatted plugin target {module_path}"
+                                )
                                 continue
 
                             mod = importlib.import_module(mod_name)
@@ -97,7 +103,9 @@ class DomainFactory:
     # ── Domain operations ─────────────────────────────────────────────────────
 
     @staticmethod
-    def parse_configuration(params: dict[str, Any], config_space: ConfigurationSpace) -> Configuration:
+    def parse_configuration(
+        params: dict[str, Any], config_space: ConfigurationSpace
+    ) -> Configuration:
         """Convert a plain ``{param: value}`` dict to a typed :class:`Configuration`.
 
         Unknown keys raise :exc:`ValueError`.  Missing keys are filled from
@@ -106,13 +114,17 @@ class DomainFactory:
         np: dict[str, Any] = {}
         for k, v in params.items():
             if k not in config_space:
-                raise ValueError(f"Unknown parameter '{k}' for configuration space {config_space}")
+                raise ValueError(
+                    f"Unknown parameter '{k}' for configuration space {config_space}"
+                )
             hp = config_space[k]
             V = hp.sample_value().__class__
             try:
                 np[k] = V(v)
             except Exception as e:
-                raise ValueError(f"Invalid value {v!r} for parameter '{k}' of type {V}") from e
+                raise ValueError(
+                    f"Invalid value {v!r} for parameter '{k}' of type {V}"
+                ) from e
         for k, hp in config_space.items():
             if k not in np:
                 if hp.default_value is not None:
@@ -125,7 +137,9 @@ class DomainFactory:
         """Return the domain-level :class:`ConfigurationSpace` for *domain*."""
         return self[domain].get_domain_parameter_space()
 
-    def get_instance_parameter_space(self, domain: str, domain_params: Configuration) -> ConfigurationSpace:
+    def get_instance_parameter_space(
+        self, domain: str, domain_params: Configuration
+    ) -> ConfigurationSpace:
         """Return the instance-level :class:`ConfigurationSpace` for *domain*."""
         return self[domain](domain_params).instance_parameter_space
 
@@ -133,13 +147,19 @@ class DomainFactory:
         """Return True if the domain with the given parameters is PDDL expressible."""
         return self[domain](domain_params).pddl_expressible
 
-    def generate_instance(self, domain: str, domain_params: Configuration,
-                          instance_params: Configuration) -> Problem:
+    def generate_instance(
+        self, domain: str, domain_params: Configuration, instance_params: Configuration
+    ) -> Problem:
         """Generate and return a single planning :class:`Problem`."""
         return self[domain](domain_params).get_instance(instance_params)
 
-    def sample_instances(self, domain: str, domain_params: Configuration, n: int,
-                         fixed_instance_params: Optional[dict[str, Any]] = None) -> list[Problem]:
+    def sample_instances(
+        self,
+        domain: str,
+        domain_params: Configuration,
+        n: int,
+        fixed_instance_params: Optional[dict[str, Any]] = None,
+    ) -> list[Problem]:
         """Sample *n* planning problems with randomly drawn instance parameters.
 
         *fixed_instance_params* pins specific instance parameters to fixed values
@@ -155,7 +175,9 @@ class DomainFactory:
             problems.append(generator.get_instance(instance_params))
         return problems
 
-    def generate_dataset(self, dataset_spec: Path) -> tuple[list[tuple[str, Problem]], bool]:
+    def generate_dataset(
+        self, dataset_spec: Path
+    ) -> tuple[list[tuple[str, Problem]], bool]:
         """Parse a YAML dataset spec file and return ``(name, Problem)`` pairs."""
         with open(dataset_spec, "r") as f:
             spec = yaml.safe_load(f)
@@ -171,7 +193,9 @@ class DomainFactory:
         results: list[tuple[str, Problem]] = []
         for i, inst in enumerate(instances):
             name = inst.get("name", f"instance_{i + 1}")
-            instance_params = self.parse_configuration(inst.get("params", {}), inst_space)
+            instance_params = self.parse_configuration(
+                inst.get("params", {}), inst_space
+            )
             problem = self.generate_instance(domain, domain_params, instance_params)
             results.append((name, problem))
 

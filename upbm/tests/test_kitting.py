@@ -1,6 +1,7 @@
 import pytest
 from upbm.factory import DomainFactory
 
+
 def test_kitting_generator():
     factory = DomainFactory()
     assert "kitting" in factory.get_registered_domains()

@@ -12,7 +12,12 @@ class Format(str, Enum):
     ANML = "anml"
 
 
-def dump_instance(instance: Problem, format: Format, output_prob: Path, output_dom: Optional[Path] = None) -> None:
+def dump_instance(
+    instance: Problem,
+    format: Format,
+    output_prob: Path,
+    output_dom: Optional[Path] = None,
+) -> None:
     """Write a Problem to disk in the given format.
 
     For PDDL, both *output_prob* and *output_dom* must be provided.
@@ -20,7 +25,9 @@ def dump_instance(instance: Problem, format: Format, output_prob: Path, output_d
     """
     if format == Format.PDDL:
         if output_dom is None or output_prob is None:
-            raise ValueError("Both output domain and problem files must be specified for PDDL format")
+            raise ValueError(
+                "Both output domain and problem files must be specified for PDDL format"
+            )
         writer = PDDLWriter(instance)
         writer.write_domain(str(output_dom))
         writer.write_problem(str(output_prob))
@@ -87,12 +94,18 @@ def print_parameter_space(space: ConfigurationSpace) -> None:
     separator = "+" + "+".join(["-" * (w + 2) for w in widths]) + "+"
 
     print(separator)
-    header_row = "|" + "|".join([f" {headers[i]:<{widths[i]}} " for i in range(len(headers))]) + "|"
+    header_row = (
+        "|"
+        + "|".join([f" {headers[i]:<{widths[i]}} " for i in range(len(headers))])
+        + "|"
+    )
     print(header_row)
     print(separator)
 
     for row in rows:
-        data_row = "|" + "|".join([f" {row[i]:<{widths[i]}} " for i in range(len(row))]) + "|"
+        data_row = (
+            "|" + "|".join([f" {row[i]:<{widths[i]}} " for i in range(len(row))]) + "|"
+        )
         print(data_row)
 
     print(separator)

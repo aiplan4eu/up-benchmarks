@@ -85,7 +85,7 @@ class Generator(object):
 
     @property
     def object_universe(self) -> Optional[Iterable[Object]]:
-        '''Return the universe of objects that can be used in instances of this
+        """Return the universe of objects that can be used in instances of this
         domain, or ``None``.
 
         When a universe is returned, each generated instance can only use a
@@ -96,7 +96,7 @@ class Generator(object):
         Returns:
             An iterable of ``Object`` instances defining the shared object
             pool, or ``None`` if no such pool exists.
-        '''
+        """
         return None
 
     def get_instance(self, params: Configuration) -> Problem:

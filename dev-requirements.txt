@@ -1,0 +1,5 @@
+pytest
+black==22.6.0
+mypy
+pre-commit
+types-PyYAML
