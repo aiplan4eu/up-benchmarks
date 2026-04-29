@@ -1,0 +1,1 @@
+from .kitting import KittingGenerator
