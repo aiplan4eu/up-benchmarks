@@ -1,0 +1,24 @@
+{
+    "name" : "replenish",
+    "module" : "upbm.domains.replenish",
+    "generator" : "ReplenishGenerator",
+
+    "domain_params" : {
+        "max_cardboard_types": 3,
+        "max_drawers": 5,
+        "max_goal_sequence_length": 10
+    },
+
+    "instance_params" : {
+        "n_cardboard_types": 2,
+        "n_drawers": 2,
+        "goal_sequence_length": 3,
+        "sequence_seed": 42
+    },
+
+    "instance_goals_n" : 1,
+    "instance_objects" : {
+        "CardboardType" : ["no_type", "cardboard_type_1", "cardboard_type_2"],
+        "Drawer" : ["drawer_0", "drawer_1"]
+    }
+}

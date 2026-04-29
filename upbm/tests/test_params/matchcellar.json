@@ -1,0 +1,23 @@
+{
+    "name" : "matchcellar",
+    "module" : "upbm.domains.matchcellar",
+    "generator" : "MatchCellarGenerator",
+
+    "domain_params" : {
+        "max_fuses": 20,
+        "max_matches": 10,
+        "variant": "ipc",
+        "version": 1
+    },
+
+    "instance_params" : {
+        "n_fuses": 4,
+        "n_matches": 4
+    },
+
+    "instance_goals_n" : 4,
+    "instance_objects" : {
+        "match" : ["match0", "match1", "match2", "match3"],
+        "fuse" : ["fuse0", "fuse1", "fuse2", "fuse3"]
+    }
+}
