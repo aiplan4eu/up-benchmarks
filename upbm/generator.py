@@ -165,6 +165,18 @@ class Generator(object):
         """
         raise NotImplementedError
 
+    def check_instance_parameters(self, params: Configuration):
+        """
+        Check if the parameters generate a valid, solvable problem.
+
+        Args:
+            params: A ``Configuration`` drawn from ``instance_parameter_space``.
+
+        Returns:
+            boolean representing if the parameters are valid - True default for base class / generators that do not implement this
+        """
+        return True
+
     @property
     def requires_per_instance_domain(self) -> bool:
         """Return True if the instances produced by this generator require a

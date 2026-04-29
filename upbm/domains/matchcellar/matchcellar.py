@@ -98,6 +98,9 @@ class MatchCellarGenerator(Generator):
         if params.config_space != self.instance_parameter_space:
             raise ValueError(f"Invalid instance parameters: {params}")
 
+        if self.variant == "ipc" and params["n_fuses"] > 2 * params["n_matches"]:
+            raise ValueError(f"Requested instance is unsolvable")
+
         objs = []
         for i in range(params["n_matches"]):
             objs.append(self._get_object(f"match{i}", self._Match))
@@ -148,3 +151,8 @@ class MatchCellarGenerator(Generator):
                     )
                 ] = 2
         return res
+
+    def check_instance_parameters(self, params: Configuration):
+        if self.variant == "ipc" and params["n_fuses"] > 2 * params["n_matches"]:
+            return False
+        return True
