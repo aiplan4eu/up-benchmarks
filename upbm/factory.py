@@ -169,11 +169,11 @@ class DomainFactory:
         problems: list[Problem] = []
         while len(problems) < n:
             instance_params = generator.instance_parameter_space.sample_configuration()
-            if not generator.check_instance_parameters(instance_params):
-                continue
             if fixed_instance_params is not None:
                 for k, v in fixed_instance_params.items():
                     instance_params[k] = instance_params[k].__class__(v)
+            if not generator.check_instance_parameters(instance_params):
+                continue
             problems.append(generator.get_instance(instance_params))
         return problems
 
