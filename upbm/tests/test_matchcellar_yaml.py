@@ -1,7 +1,5 @@
 import unittest
 from upbm.factory import DomainFactory
-import importlib
-import json
 import os
 from upbm.domains.matchcellar import MatchCellarGenerator
 from unified_planning.shortcuts import OneshotPlanner
@@ -11,6 +9,7 @@ from unified_planning.exceptions import UPNoRequestedEngineAvailableException
 from unified_planning.plans import TimeTriggeredPlan
 import warnings
 from fractions import Fraction
+from pathlib import Path
 
 NAME = "matchcellar"
 GENERATOR = MatchCellarGenerator
@@ -23,8 +22,10 @@ class TestGenericYAMLS(unittest.TestCase):
     # TODO split into smaller tests
 
     def test_placeholder_name(self):
-        yamlpath = os.path.join(
-            os.path.dirname(__file__), "test_yamls", "matchcellar.yml"
+
+        # TODO can we change factory to be compatible with os library paths? instad of having to use pathlib
+        yamlpath = Path(
+            os.path.join(os.path.dirname(__file__), "test_yamls", "matchcellar.yml")
         )
 
         self.assertIn(NAME, self.factory.get_registered_domains())
