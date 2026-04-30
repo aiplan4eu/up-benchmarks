@@ -5,39 +5,35 @@ from upbm.domains.matchcellar import MatchCellarGenerator
 from unified_planning.shortcuts import OneshotPlanner
 from unified_planning.engines.plan_validator import TimeTriggeredPlanValidator
 from unified_planning.engines.results import ValidationResultStatus, POSITIVE_OUTCOMES
-from unified_planning.exceptions import UPNoRequestedEngineAvailableException
+from unified_planning.exceptions import UPNoSuitableEngineAvailableException
 from unified_planning.plans import TimeTriggeredPlan
-import warnings
 from fractions import Fraction
 from pathlib import Path
-
-NAME = "matchcellar"
-GENERATOR = MatchCellarGenerator
+from pytest import skip
 
 
-class TestGenericYAMLS(unittest.TestCase):
+class TestMatchcellar(unittest.TestCase):
+    # TODO structure and tests could maybe be parametrized and moved to base domain test class?
     def setUp(self):
         self.factory = DomainFactory()
-
-    # TODO split into smaller tests
-
-    def test_placeholder_name(self):
-
         # TODO can we change factory to be compatible with os library paths? instad of having to use pathlib
-        yamlpath = Path(
+        self.yamlpath = Path(
             os.path.join(os.path.dirname(__file__), "test_yamls", "matchcellar.yml")
         )
+        self.instances, pddl_expressible = self.factory.generate_dataset(self.yamlpath)
+        self.domain_name = "matchcellar"
+        self.generator = MatchCellarGenerator
 
-        self.assertIn(NAME, self.factory.get_registered_domains())
-        self.assertEqual(self.factory[NAME], GENERATOR)
+    def test_registration(self):
+        self.assertIn(self.domain_name, self.factory.get_registered_domains())
+        self.assertEqual(self.factory[self.domain_name], self.generator)
 
-        instances, pddl_expressible = self.factory.generate_dataset(yamlpath)
-
-        light_match = instances[1][1].action("light_match")
-        mend_fuse = instances[1][1].action("mend_fuse")
-        match_1 = instances[1][1].object("match1")
-        fuse_0 = instances[1][1].object("fuse0")
-        fuse_1 = instances[1][1].object("fuse1")
+    def test_validation(self):
+        light_match = self.instances[1][1].action("light_match")
+        mend_fuse = self.instances[1][1].action("mend_fuse")
+        match_1 = self.instances[1][1].object("match1")
+        fuse_0 = self.instances[1][1].object("fuse0")
+        fuse_1 = self.instances[1][1].object("fuse1")
         valid_plan = TimeTriggeredPlan(
             [
                 (
@@ -57,37 +53,59 @@ class TestGenericYAMLS(unittest.TestCase):
                 ),
             ]
         )
-        # plan validator should always be available, no need for try catch
         with TimeTriggeredPlanValidator() as validator:
-            v_res = validator.validate(instances[1][1], valid_plan)
-            # print(v_res)
-            self.assertEqual(v_res.status, ValidationResultStatus.VALID)
+            v_res = validator.validate(self.instances[1][1], valid_plan)
+            self.assertEqual(
+                v_res.status, ValidationResultStatus.VALID, f"bad res:\n{v_res}"
+            )
 
+    def test_planning(self):
         try:
-            with OneshotPlanner(problem_kind=instances[0][1].kind) as planner:
-                p_res = planner.solve(instances[0][1])
-                # print (res)
-                self.assertIn(p_res.status, POSITIVE_OUTCOMES)
-        except UPNoRequestedEngineAvailableException:
-            warnings.warn(
+            with OneshotPlanner(problem_kind=self.instances[0][1].kind) as planner:
+                p_res = planner.solve(self.instances[0][1])
+                self.assertIn(p_res.status, POSITIVE_OUTCOMES, f"bad plan:\n{p_res}")
+        except UPNoSuitableEngineAvailableException:
+            skip(
                 "no planner available to test the problem - continuing with the other tests"
             )
 
+    def test_objects(self):
+
         self.assertEqual(
-            sum(1 for _ in instances[0][1].objects(instances[0][1].user_type("match"))),
+            sum(
+                1
+                for _ in self.instances[0][1].objects(
+                    self.instances[0][1].user_type("match")
+                )
+            ),
             3,
         )
         self.assertEqual(
-            sum(1 for _ in instances[1][1].objects(instances[1][1].user_type("match"))),
+            sum(
+                1
+                for _ in self.instances[1][1].objects(
+                    self.instances[1][1].user_type("match")
+                )
+            ),
             2,
         )
         self.assertEqual(
-            sum(1 for _ in instances[0][1].objects(instances[0][1].user_type("fuse"))),
+            sum(
+                1
+                for _ in self.instances[0][1].objects(
+                    self.instances[0][1].user_type("fuse")
+                )
+            ),
             4,
         )
         self.assertEqual(
-            sum(1 for _ in instances[1][1].objects(instances[0][1].user_type("fuse"))),
+            sum(
+                1
+                for _ in self.instances[1][1].objects(
+                    self.instances[1][1].user_type("fuse")
+                )
+            ),
             2,
         )
-        self.assertEqual(len(instances[0][1].actions), 2)
-        self.assertEqual(len(instances[1][1].actions), 2)
+        self.assertEqual(len(self.instances[0][1].actions), 2)
+        self.assertEqual(len(self.instances[1][1].actions), 2)
