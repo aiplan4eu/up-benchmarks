@@ -1,0 +1,15 @@
+domain: matchcellar
+params:
+  version: 1
+  variant: ipc
+  max_fuses: 15
+  max_matches: 10
+instances:
+  - name: instance_for_planner
+    params:
+      n_matches: 3
+      n_fuses: 4
+  - name: instance_known_plan
+    params:
+      n_matches: 2
+      n_fuses: 2
