@@ -1,4 +1,4 @@
-import unittest
+from upbm.tests.base_domain_test import BaseDomainTest
 from upbm.factory import DomainFactory
 import os
 from upbm.domains.matchcellar import MatchCellarGenerator
@@ -12,8 +12,9 @@ from pathlib import Path
 from pytest import skip
 
 
-class TestMatchcellar(unittest.TestCase):
-    # TODO make base test class and extend that instead?
+class TestMatchcellar(BaseDomainTest):
+    __test__ = True
+
     def setUp(self):
         self.factory = DomainFactory()
         # TODO can we change factory to be compatible with os library paths? instad of having to use pathlib
@@ -63,33 +64,3 @@ class TestMatchcellar(unittest.TestCase):
         self.validation_cases.append(
             tuple([instances[1][1], valid_plan, ValidationResultStatus.VALID])
         )
-
-    def test_registration(self):
-        self.assertIn(self.domain_name, self.factory.get_registered_domains())
-        self.assertEqual(self.factory[self.domain_name], self.generator)
-
-    def test_validation(self):
-        for (problem, plan, expected_status) in self.validation_cases:
-            with TimeTriggeredPlanValidator() as validator:
-                v_res = validator.validate(problem, plan)
-                self.assertEqual(v_res.status, expected_status, f"bad res:\n{v_res}")
-
-    def test_planning(self):
-        try:
-            for p in self.plannable:
-                with OneshotPlanner(problem_kind=p.kind) as planner:
-                    p_res = planner.solve(p)
-                    self.assertIn(
-                        p_res.status, POSITIVE_OUTCOMES, f"bad plan:\n{p_res}"
-                    )
-        except UPNoSuitableEngineAvailableException:
-            skip("no planner available to test the problem")
-
-    def test_objects_and_actions(self):
-        for problem, objects_list in self.object_data.items():
-            for (obj_name, n_objs) in objects_list:
-                self.assertEqual(
-                    sum(1 for _ in problem.objects(problem.user_type(obj_name))), n_objs
-                )
-        for problem, n_acts in self.problem_actions.items():
-            self.assertEqual(len(problem.actions), n_acts)
