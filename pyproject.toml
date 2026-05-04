@@ -16,3 +16,6 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 include = ["upbm*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.pddl"]
