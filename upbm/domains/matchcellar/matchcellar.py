@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, List
 
 from ConfigSpace import (
     ConfigurationSpace,

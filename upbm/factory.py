@@ -167,13 +167,11 @@ class DomainFactory:
         """
         generator = self[domain](domain_params)
         problems: list[Problem] = []
-        while len(problems) < n:
-            instance_params = generator.instance_parameter_space.sample_configuration()
-            if fixed_instance_params is not None:
-                for k, v in fixed_instance_params.items():
-                    instance_params[k] = instance_params[k].__class__(v)
-            if not generator.check_instance_parameters(instance_params):
-                continue
+
+        instance_params_list = generator.sample(
+            n=n, fixed_instance_params=fixed_instance_params
+        )
+        for instance_params in instance_params_list:
             problems.append(generator.get_instance(instance_params))
         return problems
 

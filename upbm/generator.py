@@ -1,6 +1,6 @@
 from ConfigSpace import ConfigurationSpace, Configuration
 
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Any, List
 from unified_planning.model import Problem, Object, FNode  # type: ignore[import-untyped]
 
 
@@ -176,6 +176,20 @@ class Generator(object):
             boolean representing if the parameters are valid - True default for base class / generators that do not implement this
         """
         return True
+
+    def sample(
+        self, n: int, fixed_instance_params: Optional[dict[str, Any]] = None
+    ) -> List[Configuration]:
+        sampled_params: List[Configuration] = []
+        while len(sampled_params) < n:
+            instance_params = self.instance_parameter_space.sample_configuration()
+            if fixed_instance_params is not None:
+                for k, v in fixed_instance_params.items():
+                    instance_params[k] = instance_params[k].__class__(v)
+            if not self.check_instance_parameters(instance_params):
+                continue
+            sampled_params.append(instance_params)
+        return sampled_params
 
     @property
     def requires_per_instance_domain(self) -> bool:
