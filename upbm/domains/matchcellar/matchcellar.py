@@ -56,10 +56,22 @@ class MatchCellarGenerator(Generator):
 
     @property
     def instance_parameter_space(self) -> ConfigurationSpace:
+        if self.domain_params["max_matches"] == 1:
+            nmatches = 1
+        else:
+            nmatches = (1, self.domain_params["max_matches"])
+        if self.domain_params["max_fuses"] == 1:
+            nfuses = 1
+        else:
+            nfuses = (1, self.domain_params["max_fuses"])
         return ConfigurationSpace(
             {
-                "n_matches": (1, self.domain_params["max_matches"]),
-                "n_fuses": (1, self.domain_params["max_fuses"]),
+                "n_matches": (1)
+                if self.domain_params["max_matches"] == 1
+                else (1, self.domain_params["max_matches"]),
+                "n_fuses": (1)
+                if self.domain_params["max_fuses"] == 1
+                else (1, self.domain_params["max_fuses"]),
             }
         )
 

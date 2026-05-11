@@ -74,9 +74,15 @@ class ReplenishGenerator(Generator):
     def instance_parameter_space(self) -> ConfigurationSpace:
         return ConfigurationSpace(
             {
-                "n_cardboard_types": (1, self._max_n_cardboard_types),
-                "n_drawers": (1, self._max_n_drawers),
-                "goal_sequence_length": (1, self._max_goal_sequence_length),
+                "n_cardboard_types": (1)
+                if self._max_n_cardboard_types == 1
+                else (1, self._max_n_cardboard_types),
+                "n_drawers": (1)
+                if self._max_n_drawers == 1
+                else (1, self._max_n_drawers),
+                "goal_sequence_length": (1)
+                if self._max_goal_sequence_length == 1
+                else (1, self._max_goal_sequence_length),
                 "sequence_seed": (0, MAX_INT),
             }
         )

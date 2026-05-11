@@ -83,10 +83,12 @@ class KittingGenerator(Generator):
     def instance_parameter_space(self) -> ConfigurationSpace:
         return ConfigurationSpace(
             {
-                "n_components": (1, self._max_components),
-                "kit_size": (1, self._max_kit_size),
-                "n_kit": (1, self._max_n_kit),
-                "n_robots": (1, self._max_robots),
+                "n_components": (1)
+                if self._max_components == 1
+                else (1, self._max_components),
+                "kit_size": (1) if self._max_kit_size == 1 else (1, self._max_kit_size),
+                "n_kit": (1) if self._max_n_kit == 1 else (1, self._max_n_kit),
+                "n_robots": (1) if self._max_robots == 1 else (1, self._max_robots),
                 "combination_idx": (0, MAX_INT),
             }
         )

@@ -57,10 +57,16 @@ class MaJSPGenerator(Generator):
     def instance_parameter_space(self) -> ConfigurationSpace:
         return ConfigurationSpace(
             {
-                "n_robots": (1, self._max_n_robots),
-                "n_pallets": (1, self._max_n_pallets),
-                "n_positions": (1, self._max_n_positions),
-                "n_treatments": (1, self._max_n_positions),
+                "n_robots": (1) if self._max_n_robots == 1 else (1, self._max_n_robots),
+                "n_pallets": (1)
+                if self._max_n_pallets == 1
+                else (1, self._max_n_pallets),
+                "n_positions": (1)
+                if self._max_n_positions == 1
+                else (1, self._max_n_positions),
+                "n_treatments": (1)
+                if self._max_n_positions == 1
+                else (1, self._max_n_positions),
             }
         )
 
