@@ -23,6 +23,9 @@ from typing import Any
 
 from upbm.generator import Generator
 from upbm.utils import MAX_INT
+import math
+
+MAX_BATTERY = 100
 
 
 class MaJSPGenerator(Generator):
@@ -136,8 +139,8 @@ class MaJSPGenerator(Generator):
         ready = Fluent("ready", BoolType(), b=Pallet, p=Position)
         domain.add_fluent(ready, default_initial_value=False)
 
-        battery_level = Fluent("battery_level", IntType(0, 100), r=Robot)
-        domain.add_fluent(battery_level, default_initial_value=100)
+        battery_level = Fluent("battery_level", IntType(0, MAX_BATTERY), r=Robot)
+        domain.add_fluent(battery_level, default_initial_value=MAX_BATTERY)
 
         # Setting up Actions:
         move = DurativeAction("move", r=Robot, to=Position)
@@ -259,3 +262,10 @@ class MaJSPGenerator(Generator):
                 continue
             initial_values[k] = v
         return initial_values
+
+    def check_instance_parameters(self, params: Configuration):
+        max_treatments = params["n_robots"] * math.ceil(MAX_BATTERY / 2)
+        n_treat = min(params["n_treatments"], params["n_positions"])
+        if n_treat * params["n_pallets"] > max_treatments:
+            return False
+        return True
