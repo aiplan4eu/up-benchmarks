@@ -2,14 +2,10 @@ from upbm.tests.base_domain_test import BaseDomainTest
 from upbm.factory import DomainFactory
 import os
 from upbm.domains.matchcellar import MatchCellarGenerator
-from unified_planning.shortcuts import OneshotPlanner
-from unified_planning.engines.plan_validator import TimeTriggeredPlanValidator
-from unified_planning.engines.results import ValidationResultStatus, POSITIVE_OUTCOMES
-from unified_planning.exceptions import UPNoSuitableEngineAvailableException
+from unified_planning.engines.results import ValidationResultStatus
 from unified_planning.plans import TimeTriggeredPlan
 from fractions import Fraction
 from pathlib import Path
-from pytest import skip
 
 
 class TestMatchcellar(BaseDomainTest):
@@ -18,10 +14,10 @@ class TestMatchcellar(BaseDomainTest):
     def setUp(self):
         self.factory = DomainFactory()
         # TODO can we change factory to be compatible with os library paths? instad of having to use pathlib
-        self.yamlpath = Path(
+        yamlpath = Path(
             os.path.join(os.path.dirname(__file__), "test_yamls", "matchcellar.yml")
         )
-        instances, pddl_expressible = self.factory.generate_dataset(self.yamlpath)
+        instances, pddl_expressible = self.factory.generate_dataset(yamlpath)
 
         self.domain_name = "matchcellar"
         self.generator = MatchCellarGenerator
