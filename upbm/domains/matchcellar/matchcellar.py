@@ -159,4 +159,10 @@ class MatchCellarGenerator(Generator):
     def check_instance_parameters(self, params: Configuration):
         if self.variant == "ipc" and params["n_fuses"] > 2 * params["n_matches"]:
             return False
+        if (
+            self.variant == "variable_duration"
+            and params["n_fuses"] > 2 * params["n_matches"]
+        ):
+            # NOTE seems that for now the durations are hardcoded to be set the same way as ipc
+            return False
         return True

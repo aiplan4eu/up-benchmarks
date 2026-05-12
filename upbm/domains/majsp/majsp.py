@@ -264,6 +264,7 @@ class MaJSPGenerator(Generator):
         return initial_values
 
     def check_instance_parameters(self, params: Configuration):
+        # TODO FIXME this marks as unsolvable some solvable instances
         max_treatments = params["n_robots"] * math.ceil(MAX_BATTERY / 2)
         n_treat = min(params["n_treatments"], params["n_positions"])
         if n_treat * params["n_pallets"] > max_treatments:
