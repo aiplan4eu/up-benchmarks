@@ -1,11 +1,8 @@
 from upbm.tests.base_domain_test import BaseDomainTest
-from upbm.factory import DomainFactory
-import os
 from upbm.domains.matchcellar import MatchCellarGenerator
 from unified_planning.engines.results import ValidationResultStatus
 from unified_planning.plans import TimeTriggeredPlan
 from fractions import Fraction
-from pathlib import Path
 from ConfigSpace import Configuration
 
 

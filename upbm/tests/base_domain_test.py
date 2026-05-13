@@ -45,6 +45,7 @@ class BaseDomainTest(unittest.TestCase):
         for (problem, plan, expected_status) in self.get_validation_cases():
             with TimeTriggeredPlanValidator() as validator:
                 v_res = validator.validate(problem, plan)
+                print(v_res)
                 self.assertEqual(v_res.status, expected_status, f"bad res:\n{v_res}")
 
     def test_planning(self):
@@ -52,6 +53,7 @@ class BaseDomainTest(unittest.TestCase):
             for p in self.get_plannable():
                 with OneshotPlanner(problem_kind=p.kind) as planner:
                     p_res = planner.solve(p)
+                    print(p_res)
                     self.assertIn(
                         p_res.status, POSITIVE_OUTCOMES, f"bad plan:\n{p_res}"
                     )
