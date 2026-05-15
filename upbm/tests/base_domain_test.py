@@ -1,10 +1,14 @@
 import unittest
 from upbm.factory import DomainFactory
-from unified_planning.shortcuts import OneshotPlanner
-from unified_planning.engines.plan_validator import TimeTriggeredPlanValidator
-from unified_planning.engines.results import POSITIVE_OUTCOMES
+from unified_planning.shortcuts import OneshotPlanner, Problem
+from unified_planning.engines.plan_validator import (
+    TimeTriggeredPlanValidator,
+    ValidationResultStatus,
+)
+from unified_planning.engines.results import POSITIVE_OUTCOMES, Plan
 from unified_planning.exceptions import UPNoSuitableEngineAvailableException
 from pytest import skip
+from typing import Any, List, Tuple, Dict
 
 
 class BaseDomainTest(unittest.TestCase):
@@ -12,30 +16,49 @@ class BaseDomainTest(unittest.TestCase):
 
     def setUp(self):
         self.factory = DomainFactory()
-        self.domain_name = ""
-        self.generator = None
-        self.validation_cases = []
-        self.plannable = []
-        self.object_data = {}
-        self.problem_actions = {}
 
     def get_domain_name(self) -> str:
-        return self.domain_name
+        """
+        Returns the name of the domain we are testing
+        """
+        return ""
 
-    def get_generator(self):
-        return self.generator
+    def get_generator(self) -> Any:
+        """
+        Returns the generator class of the domain we are testing (imported from upbm.domains. ...)
+        """
+        return None
 
-    def get_validation_cases(self):
-        return self.validation_cases
+    def get_validation_cases(
+        self,
+    ) -> List[Tuple[Problem, Plan, ValidationResultStatus]]:
+        """
+        Returns a list of validation cases. Every case is a tuple:
+            - a problem instance
+            - the plan we want to validate on the problem
+            - the expected result from the validation
+        """
+        return []
 
-    def get_plannable(self):
-        return self.plannable
+    def get_plannable(self) -> List[Problem]:
+        """
+        Returns a list of problems we can quickly plan on.
+        These problems have to be simple enough so that the tests do note get unreasonably bloated given the amount of domains to test.
+        """
+        return []
 
-    def get_object_data(self):
-        return self.object_data
+    def get_object_data(self) -> Dict[Problem, List[Tuple[str, int]]]:
+        """
+        Returns a dictionary that maps problems to information about their objects.
+        This information is a list of tuples(object_type_name, object_amount) that we are expected to find in the problem.
+        """
+        return {}
 
-    def get_problem_actions(self):
-        return self.problem_actions
+    def get_problem_actions(self) -> List[Tuple[Problem, int]]:
+        """
+        Returns a List of tuples(problem, number_of_actions) that we want to verify are correct.
+        """
+        return []
 
     def test_registration(self):
         self.assertIn(self.get_domain_name(), self.factory.get_registered_domains())
@@ -66,5 +89,5 @@ class BaseDomainTest(unittest.TestCase):
                 self.assertEqual(
                     sum(1 for _ in problem.objects(problem.user_type(obj_name))), n_objs
                 )
-        for problem, n_acts in self.get_problem_actions().items():
+        for problem, n_acts in self.get_problem_actions():
             self.assertEqual(len(problem.actions), n_acts)

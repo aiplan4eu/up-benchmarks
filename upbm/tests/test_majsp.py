@@ -46,13 +46,13 @@ class TestMaJSP(BaseDomainTest):
 
     def get_problem_actions(self):
         instances = self._get_instances()
-        problem_actions = {}
-        problem_actions[instances[0]] = 5
-        problem_actions[instances[0]] = 5
+        problem_actions = []
+        problem_actions.append((instances[0], 5))
+        problem_actions.append((instances[1], 5))
         return problem_actions
 
     def get_validation_cases(self):
-        instances = self._get_instances()  # TODO
+        instances = self._get_instances()
         load_at_depot = instances[1].action("load_at_depot")
         move = instances[1].action("move")
         make_treatment = instances[1].action("make_treatment")
@@ -62,7 +62,11 @@ class TestMaJSP(BaseDomainTest):
         position = instances[1].object("p0")
         valid_plan = TimeTriggeredPlan(
             [
-                (Fraction(0, 1), load_at_depot(robot, pallet), Fraction(0, 1)),
+                (
+                    Fraction(0, 1),
+                    load_at_depot(robot, pallet),
+                    Fraction(0, 1),
+                ),
                 (
                     Fraction(1, 100),
                     move(robot, position),
@@ -83,6 +87,6 @@ class TestMaJSP(BaseDomainTest):
 
         validation_cases = []
         validation_cases.append(
-            tuple([instances[1], valid_plan, ValidationResultStatus.VALID])
+            (instances[1], valid_plan, ValidationResultStatus.VALID)
         )
         return validation_cases

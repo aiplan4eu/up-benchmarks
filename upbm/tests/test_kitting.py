@@ -68,9 +68,9 @@ class TestKitting(BaseDomainTest):
 
     def get_problem_actions(self):
         instances = self._get_instances()
-        problem_actions = {}
-        problem_actions[instances[0]] = 4
-        problem_actions[instances[1]] = 4
+        problem_actions = []
+        problem_actions.append((instances[0], 4))
+        problem_actions.append((instances[1], 4))
         return problem_actions
 
     def get_validation_cases(self):
@@ -111,6 +111,6 @@ class TestKitting(BaseDomainTest):
         )
         validation_cases = []
         validation_cases.append(
-            tuple([instances[1], valid_plan, ValidationResultStatus.VALID])
+            (instances[1], valid_plan, ValidationResultStatus.VALID)
         )
         return validation_cases

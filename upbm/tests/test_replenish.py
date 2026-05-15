@@ -44,8 +44,8 @@ class TestReplenish(BaseDomainTest):
 
     def get_problem_actions(self):
         instances = self._get_instances()
-        problem_actions = {}
-        problem_actions[instances[0]] = 5
+        problem_actions = []
+        problem_actions.append((instances[0], 5))
         return problem_actions
 
     def get_validation_cases(self):
@@ -87,6 +87,6 @@ class TestReplenish(BaseDomainTest):
         )
         validation_cases = []
         validation_cases.append(
-            tuple([instances[0], valid_plan, ValidationResultStatus.VALID])
+            (instances[0], valid_plan, ValidationResultStatus.VALID)
         )
         return validation_cases
