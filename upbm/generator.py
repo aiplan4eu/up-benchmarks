@@ -3,6 +3,8 @@ from ConfigSpace import ConfigurationSpace, Configuration
 from typing import Iterable, Optional, Any, List
 from unified_planning.model import Problem, Object, FNode  # type: ignore[import-untyped]
 
+from upbm.utils import is_subspace
+
 
 class Generator(object):
     """Abstract base class for domain-specific problem instance generators.
@@ -84,7 +86,7 @@ class Generator(object):
         raise NotImplementedError
 
     @property
-    def object_universe(self) -> Optional[Iterable[Object]]:
+    def object_universe(self, instance_parameters_space) -> Optional[Iterable[Object]]:
         """Return the universe of objects that can be used in instances of this
         domain, or ``None``.
 
@@ -178,14 +180,17 @@ class Generator(object):
         return True
 
     def sample(
-        self, n: int, fixed_instance_params: Optional[dict[str, Any]] = None
+        self, n: int, instance_space: ConfigurationSpace = None
     ) -> List[Configuration]:
+        if instance_space is None:
+            instance_space == self.instance_parameter_space
+        elif not is_subspace(instance_space, self.instance_parameter_space):
+            raise ValueError(
+                "The provided parameter space for sampling is not contained in the parameter space for the chosen domain"
+            )
         sampled_params: List[Configuration] = []
         while len(sampled_params) < n:
-            instance_params = self.instance_parameter_space.sample_configuration()
-            if fixed_instance_params is not None:
-                for k, v in fixed_instance_params.items():
-                    instance_params[k] = instance_params[k].__class__(v)
+            instance_params = instance_space.sample_configuration()
             if not self.check_instance_parameters(instance_params):
                 continue
             sampled_params.append(instance_params)

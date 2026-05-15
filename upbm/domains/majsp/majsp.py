@@ -22,7 +22,7 @@ from ConfigSpace import ConfigurationSpace, Configuration, Integer, Constant
 from typing import Any
 
 from upbm.generator import Generator
-from upbm.utils import MAX_INT
+from upbm.utils import MAX_INT, is_subspace
 import math
 
 MAX_BATTERY = 100
@@ -33,9 +33,6 @@ class MaJSPGenerator(Generator):
     def get_domain_parameter_space() -> ConfigurationSpace:
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        mapping["max_robots"] = Integer("max_robots", (1, MAX_INT), default=5)
-        mapping["max_pallets"] = Integer("max_pallets", (1, MAX_INT), default=10)
-        mapping["max_positions"] = Integer("max_positions", (1, MAX_INT), default=20)
         return ConfigurationSpace(name=mapping)
 
     def __init__(self, domain_params: Configuration) -> None:
@@ -43,10 +40,6 @@ class MaJSPGenerator(Generator):
         domain_params.check_valid_configuration()
         if domain_params.config_space != self.get_domain_parameter_space():
             raise ValueError(f"Invalid domain parameters: {domain_params}")
-
-        self._max_n_robots = domain_params["max_robots"]
-        self._max_n_pallets = domain_params["max_pallets"]
-        self._max_n_positions = domain_params["max_positions"]
         self._domain = self._build_domain()
 
         self._Robot = self._domain.user_type("Robot")
@@ -60,16 +53,10 @@ class MaJSPGenerator(Generator):
     def instance_parameter_space(self) -> ConfigurationSpace:
         return ConfigurationSpace(
             {
-                "n_robots": (1) if self._max_n_robots == 1 else (1, self._max_n_robots),
-                "n_pallets": (1)
-                if self._max_n_pallets == 1
-                else (1, self._max_n_pallets),
-                "n_positions": (1)
-                if self._max_n_positions == 1
-                else (1, self._max_n_positions),
-                "n_treatments": (1)
-                if self._max_n_positions == 1
-                else (1, self._max_n_positions),
+                "n_robots": Integer("n_robots", (1, MAX_INT), default=5),
+                "n_pallets": Integer("n_pallets", (1, MAX_INT), default=10),
+                "n_positions": Integer("n_positions", (1, MAX_INT), default=20),
+                "n_treatments": Integer("n_treatments", (1, MAX_INT), default=5),
             }
         )
 
@@ -93,17 +80,17 @@ class MaJSPGenerator(Generator):
         return res
 
     @property
-    def object_universe(self) -> Iterable[Object]:
+    def object_universe(self, instance_parameters_space) -> Iterable[Object]:
         objs = [
             self._domain.object("UNKNOWN"),
             self._domain.object("DEPOT"),
             self._domain.object("NOPALLET"),
         ]
-        for i in range(self._max_n_robots):
+        for i in range(instance_parameters_space["n_robots"].upper):
             objs.append(self._get_object(f"r{i}", self._Robot))
-        for i in range(self._max_n_pallets):
+        for i in range(instance_parameters_space["n_pallets"].upper):
             objs.append(self._get_object(f"b{i}", self._Pallet))
-        for i in range(self._max_n_positions):
+        for i in range(instance_parameters_space["n_positions"].upper):
             objs.append(self._get_object(f"p{i}", self._Position))
         return objs
 
@@ -212,7 +199,7 @@ class MaJSPGenerator(Generator):
 
     def get_objects(self, params: Configuration) -> Iterable[Object]:
         params.check_valid_configuration()
-        if params.config_space != self.instance_parameter_space:
+        if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
 
         objs = []
@@ -226,7 +213,7 @@ class MaJSPGenerator(Generator):
 
     def get_goal(self, params: Configuration) -> List[up.model.FNode]:
         params.check_valid_configuration()
-        if params.config_space != self.instance_parameter_space:
+        if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
 
         goals = []
@@ -242,7 +229,7 @@ class MaJSPGenerator(Generator):
         self, params: Configuration
     ) -> Dict[up.model.FNode, up.model.FNode]:
         params.check_valid_configuration()
-        if params.config_space != self.instance_parameter_space:
+        if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
 
         initial_values = {}
