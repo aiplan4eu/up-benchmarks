@@ -9,10 +9,12 @@ from ConfigSpace import Configuration
 class TestMaJSP(BaseDomainTest):
     __test__ = True
 
-    def get_domain_name(self):
+    @property
+    def domain_name(self):
         return "majsp"
 
-    def get_generator(self):
+    @property
+    def generator(self):
         return MaJSPGenerator
 
     def _get_instances(self):
@@ -34,24 +36,28 @@ class TestMaJSP(BaseDomainTest):
         )
         return [instance_1, instance_2]
 
-    def get_plannable(self):
+    @property
+    def plannable(self):
         return self._get_instances()
 
-    def get_object_data(self):
+    @property
+    def object_data(self):
         instances = self._get_instances()
         object_data = {}
         object_data[instances[0]] = [("Pallet", 3), ("Robot", 1), ("Position", 5)]
         object_data[instances[1]] = [("Pallet", 2), ("Robot", 1), ("Position", 4)]
         return object_data
 
-    def get_problem_actions(self):
+    @property
+    def problem_actions(self):
         instances = self._get_instances()
         problem_actions = []
         problem_actions.append((instances[0], 5))
         problem_actions.append((instances[1], 5))
         return problem_actions
 
-    def get_validation_cases(self):
+    @property
+    def validation_cases(self):
         instances = self._get_instances()
         load_at_depot = instances[1].action("load_at_depot")
         move = instances[1].action("move")

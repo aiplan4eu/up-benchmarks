@@ -9,10 +9,12 @@ from ConfigSpace import Configuration
 class TestMatchcellar(BaseDomainTest):
     __test__ = True
 
-    def get_domain_name(self):
+    @property
+    def domain_name(self):
         return "matchcellar"
 
-    def get_generator(self):
+    @property
+    def generator(self):
         return MatchCellarGenerator
 
     def _get_instances(self):
@@ -28,17 +30,20 @@ class TestMatchcellar(BaseDomainTest):
         )
         return [instance_1, instance_2]
 
-    def get_plannable(self):
+    @property
+    def plannable(self):
         return self._get_instances()
 
-    def get_object_data(self):
+    @property
+    def object_data(self):
         instances = self._get_instances()
         object_data = {}
         object_data[instances[0]] = [("match", 3), ("fuse", 4)]
         object_data[instances[1]] = [("match", 2), ("fuse", 2)]
         return object_data
 
-    def get_problem_actions(self):
+    @property
+    def problem_actions(self):
         instances = self._get_instances()
         problem_actions = []
         problem_actions.append((instances[0], 2))

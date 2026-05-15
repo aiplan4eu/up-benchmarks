@@ -9,10 +9,12 @@ from ConfigSpace import Configuration
 class TestKitting(BaseDomainTest):
     __test__ = True
 
-    def get_domain_name(self):
+    @property
+    def domain_name(self):
         return "kitting"
 
-    def get_generator(self):
+    @property
+    def generator(self):
         return KittingGenerator
 
     def _get_instances(self):
@@ -46,10 +48,12 @@ class TestKitting(BaseDomainTest):
         )
         return [instance_1, instance_2]
 
-    def get_plannable(self):
+    @property
+    def plannable(self):
         return self._get_instances()
 
-    def get_object_data(self):
+    @property
+    def object_data(self):
         instances = self._get_instances()
         object_data = {}
         object_data[instances[0]] = [
@@ -66,14 +70,16 @@ class TestKitting(BaseDomainTest):
         ]
         return object_data
 
-    def get_problem_actions(self):
+    @property
+    def problem_actions(self):
         instances = self._get_instances()
         problem_actions = []
         problem_actions.append((instances[0], 4))
         problem_actions.append((instances[1], 4))
         return problem_actions
 
-    def get_validation_cases(self):
+    @property
+    def validation_cases(self):
         instances = self._get_instances()
         prepare_unload = instances[1].action("prepare_unload")
         move = instances[1].action("move")
