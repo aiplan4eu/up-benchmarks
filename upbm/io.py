@@ -1,10 +1,14 @@
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 from ConfigSpace import ConfigurationSpace
+import unified_planning as up
 from unified_planning.model import Problem  # type: ignore[import-untyped]
+from unified_planning.plans import Plan
 from unified_planning.io import PDDLWriter, ANMLWriter  # type: ignore[import-untyped]
+from fractions import Fraction
+import re
 
 
 class Format(str, Enum):
@@ -109,3 +113,59 @@ def print_parameter_space(space: ConfigurationSpace) -> None:
         print(data_row)
 
     print(separator)
+
+
+def parse_plan_string(
+    problem: Problem,
+    plan_str: str,
+) -> Plan:
+    """
+    The format of the string must be:
+        ``(action-name param1 param2 ... paramN)`` in each line for SequentialPlans
+        ``start-time: (action-name param1 param2 ... paramN) [duration]`` in each line for TimeTriggeredPlans,
+        where ``[duration]`` is optional and not specified for InstantaneousActions.
+    """
+    actions: List = []
+    is_tt = False
+    for line in plan_str.splitlines():
+        if re.match(r"^\s*(;.*)?$", line):
+            continue
+        s_ai = re.match(r"^\s*\(\s*([\w?-]+)((\s+[\w?-]+)*)\s*\)\s*$", line)
+        t_ai = re.match(
+            r"^\s*(\d+\.?\d*)\s*:\s*\(\s*([\w?-]+)((\s+[\w?-]+)*)\s*\)\s*(\[\s*(\d+\.?\d*)\s*\])?\s*$",
+            line,
+        )
+        if s_ai:
+            assert is_tt == False
+            name = s_ai.group(1)
+            params_name = s_ai.group(2).split()
+        elif t_ai:
+            is_tt = True
+            start = Fraction(t_ai.group(1))
+            name = t_ai.group(2)
+            params_name = t_ai.group(3).split()
+            dur = None
+            if t_ai.group(6) is not None:
+                dur = Fraction(t_ai.group(6))
+        else:
+            raise ValueError(f"Error parsing test plan:\n{plan_str}")
+
+        action = problem.action(name)
+        assert isinstance(action, up.model.Action), "Wrong plan or renaming."
+        parameters = []
+        for p in params_name:
+            try:
+                obj = problem.object(p)
+                assert isinstance(obj, up.model.Object)
+                parameters.append(problem.environment.expression_manager.ObjectExp(obj))
+            except:
+                parameters.append(problem.environment.expression_manager.Int(int(p)))
+        act_instance = up.plans.ActionInstance(action, tuple(parameters))
+        if is_tt:
+            actions.append((start, act_instance, dur))
+        else:
+            actions.append(act_instance)
+    if is_tt:
+        return up.plans.TimeTriggeredPlan(actions)
+    else:
+        return up.plans.SequentialPlan(actions)
