@@ -54,47 +54,15 @@ class TestReplenish(BaseDomainTest):
     @property
     def validation_cases(self):
         instances = self._get_configs()
-        gen = ReplenishGenerator(
-            ReplenishGenerator.get_domain_parameter_space().get_default_configuration()
-        )
-        prob = gen.get_instance(instances[0])
-        initializeDrawer = prob.action("initializeDrawer")
-        build_box = prob.action("build_box")
-        cardboard_1 = prob.object("cardboard_type_1")
-        cardboard_2 = prob.object("cardboard_type_2")
-        drawer_0 = prob.object("drawer_0")
-        drawer_1 = prob.object("drawer_1")
-        valid_plan = TimeTriggeredPlan(
-            [
-                (
-                    Fraction(0, 1),
-                    initializeDrawer(drawer_1, cardboard_1, 4),
-                    Fraction(1, 1),
-                ),
-                (
-                    Fraction(0, 1),
-                    initializeDrawer(drawer_0, cardboard_2, 5),
-                    Fraction(1, 1),
-                ),
-                (
-                    Fraction(101, 100),
-                    build_box(drawer_1, cardboard_1, 0),
-                    Fraction(3, 1),
-                ),
-                (
-                    Fraction(402, 100),
-                    build_box(drawer_0, cardboard_2, 1),
-                    Fraction(4, 1),
-                ),
-                (
-                    Fraction(803, 100),
-                    build_box(drawer_0, cardboard_2, 2),
-                    Fraction(4, 1),
-                ),
-            ]
-        )
         validation_cases = []
+        plan_string = """
+        0: (initializeDrawer drawer_1 cardboard_type_1 4) [1]
+        0: (initializeDrawer drawer_0 cardboard_type_2 5) [1]
+        1.01: (build_box drawer_1 cardboard_type_1 0) [3]
+        4.02: (build_box drawer_0 cardboard_type_2 1) [4]
+        8.03: (build_box drawer_0 cardboard_type_2 2) [4]
+        """
         validation_cases.append(
-            (instances[0], valid_plan, ValidationResultStatus.VALID)
+            (instances[0], plan_string, ValidationResultStatus.VALID)
         )
         return validation_cases

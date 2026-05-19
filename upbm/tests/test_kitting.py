@@ -78,46 +78,15 @@ class TestKitting(BaseDomainTest):
     @property
     def validation_cases(self):
         instances = self._get_configs()
-        gen = KittingGenerator(
-            KittingGenerator.get_domain_parameter_space().get_default_configuration()
-        )
-        prob = gen.get_instance(instances[1])
-        prepare_unload = prob.action("prepare_unload")
-        move = prob.action("move")
-        load = prob.action("load")
-        unload = prob.action("unload")
-        robot = prob.object("r0")
-        l0 = prob.object("l0")
-        l1 = prob.object("l1")
-        component = prob.object("c1")
-        kit = prob.object("k1")
-        valid_plan = TimeTriggeredPlan(
-            [
-                (Fraction(0, 1), prepare_unload(0), Fraction(30, 1)),
-                (
-                    Fraction(1, 100),
-                    move(robot, l0, l1),
-                    Fraction(1, 1),
-                ),
-                (
-                    Fraction(102, 100),
-                    load(robot, l1, component, kit, 0),
-                    Fraction(5, 1),
-                ),
-                (
-                    Fraction(603, 100),
-                    move(robot, l1, l0),
-                    Fraction(1, 1),
-                ),
-                (
-                    Fraction(1002, 100),
-                    unload(robot, kit, 0),
-                    Fraction(5, 1),
-                ),
-            ]
-        )
         validation_cases = []
+        plan_string = """
+        0: (prepare_unload 0) [30]
+        0.01: (move r0 l0 l1) [1]
+        1.02: (load r0 l1 c1 k1 0) [5]
+        6.03: (move r0 l1 l0) [1]
+        10.02: (unload r0 k1 0) [5]
+        """
         validation_cases.append(
-            (instances[1], valid_plan, ValidationResultStatus.VALID)
+            (instances[1], plan_string, ValidationResultStatus.VALID)
         )
         return validation_cases
