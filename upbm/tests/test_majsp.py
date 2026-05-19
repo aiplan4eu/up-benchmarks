@@ -57,44 +57,15 @@ class TestMaJSP(BaseDomainTest):
     @property
     def validation_cases(self):
         instances = self._get_configs()
-        gen = MaJSPGenerator(
-            MaJSPGenerator.get_domain_parameter_space().get_default_configuration()
-        )
-        prob = gen.get_instance(instances[1])
-        load_at_depot = prob.action("load_at_depot")
-        move = prob.action("move")
-        make_treatment = prob.action("make_treatment")
-        load = prob.action("load")
-        robot = prob.object("r0")
-        pallet = prob.object("b0")
-        position = prob.object("p0")
-        valid_plan = TimeTriggeredPlan(
-            [
-                (
-                    Fraction(0, 1),
-                    load_at_depot(robot, pallet),
-                    Fraction(0, 1),
-                ),
-                (
-                    Fraction(1, 100),
-                    move(robot, position),
-                    Fraction(1, 1),
-                ),
-                (
-                    Fraction(102, 100),
-                    make_treatment(robot, pallet, position),
-                    Fraction(2000, 100),
-                ),
-                (
-                    Fraction(1103, 100),
-                    load(robot, pallet, position),
-                    Fraction(1, 1),
-                ),
-            ]
-        )
 
         validation_cases = []
+        plan_string = """
+        0: (load_at_depot r0 b0)
+        0.01: (move r0 p0) [1]
+        1.02: (make_treatment r0 b0 p0) [20]
+        11.03: (load r0 b0 p0) [1]
+        """
         validation_cases.append(
-            (instances[1], valid_plan, ValidationResultStatus.VALID)
+            (instances[1], plan_string, ValidationResultStatus.VALID)
         )
         return validation_cases

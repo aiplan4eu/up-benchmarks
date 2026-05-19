@@ -7,6 +7,7 @@ from unified_planning.engines.plan_validator import (
 )
 from unified_planning.engines.results import POSITIVE_OUTCOMES, Plan
 from unified_planning.exceptions import UPNoSuitableEngineAvailableException
+from unified_planning.io.pddl_reader import PDDLReader
 from pytest import skip
 from typing import Any, List, Tuple, Dict
 
@@ -76,6 +77,8 @@ class BaseDomainTest(unittest.TestCase):
     def test_validation(self):
         for (problem_config, plan, expected_status) in self.validation_cases:
             problem = self.default_gen.get_instance(problem_config)
+            if isinstance(plan, str):
+                plan = PDDLReader().parse_plan_string(problem, plan)
             with TimeTriggeredPlanValidator() as validator:
                 v_res = validator.validate(problem, plan)
                 print(v_res)

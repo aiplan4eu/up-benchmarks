@@ -4,6 +4,7 @@ from unified_planning.engines.results import ValidationResultStatus
 from unified_planning.plans import TimeTriggeredPlan
 from fractions import Fraction
 from ConfigSpace import Configuration
+from unified_planning.io.pddl_reader import PDDLReader
 
 
 class TestMatchcellar(BaseDomainTest):
@@ -46,39 +47,17 @@ class TestMatchcellar(BaseDomainTest):
         problem_actions.append((instances[1], 2))
         return problem_actions
 
-    def get_validation_cases(self):
+    @property
+    def validation_cases(self):
         instances = self._get_configs()
-        gen = MatchCellarGenerator(
-            MatchCellarGenerator.get_domain_parameter_space().get_default_configuration()
-        )
-        prob = gen.get_instance(instances[1])
-        light_match = prob.action("light_match")
-        mend_fuse = prob.action("mend_fuse")
-        match_1 = prob.object("match1")
-        fuse_0 = prob.object("fuse0")
-        fuse_1 = prob.object("fuse1")
-        valid_plan = TimeTriggeredPlan(
-            [
-                (
-                    Fraction(0, 1),
-                    light_match(match_1),
-                    Fraction(5, 1),
-                ),
-                (
-                    Fraction(1, 100),
-                    mend_fuse(fuse_0, match_1),
-                    Fraction(2, 1),
-                ),
-                (
-                    Fraction(205, 100),
-                    mend_fuse(fuse_1, match_1),
-                    Fraction(2, 1),
-                ),
-            ]
-        )
 
         validation_cases = []
+        plan_string = """
+        0: (light_match match1) [5]
+        0.01: (mend_fuse fuse0 match1) [2]
+        2.05: (mend_fuse fuse1 match1) [2]
+        """
         validation_cases.append(
-            (instances[1], valid_plan, ValidationResultStatus.VALID)
+            (instances[1], plan_string, ValidationResultStatus.VALID)
         )
         return validation_cases
