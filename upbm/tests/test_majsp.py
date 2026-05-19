@@ -1,73 +1,76 @@
-import unittest
-from upbm.factory import DomainFactory
+from upbm.tests.base_domain_test import BaseDomainTest
 from upbm.domains.majsp import MaJSPGenerator
+from unified_planning.engines.results import ValidationResultStatus
+from unified_planning.plans import TimeTriggeredPlan
+from fractions import Fraction
+from ConfigSpace import Configuration
 
 
-class TestMaJSPGenerator(unittest.TestCase):
-    def setUp(self):
-        self.factory = DomainFactory()
-        self.domain_name = "majsp"
+class TestMaJSP(BaseDomainTest):
+    __test__ = True
 
-    def test_registration(self):
-        self.assertIn(self.domain_name, self.factory.get_registered_domains())
-        self.assertEqual(self.factory[self.domain_name], MaJSPGenerator)
+    @property
+    def domain_name(self):
+        return "majsp"
 
-    def test_parameter_spaces(self):
-        dom_space = self.factory.get_domain_parameter_space(self.domain_name)
-        self.assertIn("max_robots", dom_space)
-        self.assertIn("max_pallets", dom_space)
-        self.assertIn("max_positions", dom_space)
+    @property
+    def generator(self):
+        return MaJSPGenerator
 
-        domain_params = self.factory.parse_configuration(
-            {"max_robots": 2, "max_pallets": 2, "max_positions": 5}, dom_space
+    def _get_configs(self):
+        default_config = (
+            MaJSPGenerator.get_domain_parameter_space().get_default_configuration()
         )
-        inst_space = self.factory.get_instance_parameter_space(
-            self.domain_name, domain_params
-        )
-        self.assertIn("n_robots", inst_space)
-        self.assertIn("n_pallets", inst_space)
-        self.assertIn("n_positions", inst_space)
-        self.assertIn("n_treatments", inst_space)
-
-    def test_instance_generation(self):
-        dom_space = self.factory.get_domain_parameter_space(self.domain_name)
-        domain_params = self.factory.parse_configuration(
-            {"max_robots": 2, "max_pallets": 2, "max_positions": 5}, dom_space
+        gen = MaJSPGenerator(default_config)
+        instance_space = gen.instance_parameter_space
+        instance_1 = Configuration(
+            instance_space,
+            {"n_pallets": 2, "n_robots": 1, "n_positions": 3, "n_treatments": 2},
         )
 
-        inst_space = self.factory.get_instance_parameter_space(
-            self.domain_name, domain_params
-        )
-        instance_params = self.factory.parse_configuration(
-            {"n_robots": 1, "n_pallets": 1, "n_positions": 3, "n_treatments": 2},
-            inst_space,
+        instance_2 = Configuration(
+            instance_space,
+            {"n_pallets": 1, "n_robots": 1, "n_positions": 2, "n_treatments": 1},
         )
 
-        problem = self.factory.generate_instance(
-            self.domain_name, domain_params, instance_params
+        return [(default_config, instance_1), (default_config, instance_2)]
+
+    @property
+    def plannable(self):
+        return self._get_configs()
+
+    @property
+    def object_data(self):
+        instances = self._get_configs()
+        object_data = []
+        object_data.append(
+            (*instances[0], [("Pallet", 3), ("Robot", 1), ("Position", 5)])
         )
-        self.assertEqual(
-            len(problem.goals), 2
-        )  # n_pallets * min(n_treatments, n_positions) = 1 * 2 = 2
+        object_data.append(
+            (*instances[1], [("Pallet", 2), ("Robot", 1), ("Position", 4)])
+        )
+        return object_data
 
-        # Check objects
-        robot_names = [o.name for o in problem.objects(problem.user_type("Robot"))]
-        self.assertEqual(len(robot_names), 1)
-        self.assertIn("r0", robot_names)
+    @property
+    def problem_actions(self):
+        instances = self._get_configs()
+        problem_actions = []
+        problem_actions.append((*instances[0], 5))
+        problem_actions.append((*instances[1], 5))
+        return problem_actions
 
-        pallet_names = [o.name for o in problem.objects(problem.user_type("Pallet"))]
-        self.assertEqual(len(pallet_names), 2)  # b0 + NOPALLET
-        self.assertIn("b0", pallet_names)
-        self.assertIn("NOPALLET", pallet_names)
+    @property
+    def validation_cases(self):
+        instances = self._get_configs()
 
-        pos_names = [o.name for o in problem.objects(problem.user_type("Position"))]
-        self.assertEqual(len(pos_names), 5)  # p0, p1, p2 + UNKNOWN, DEPOT
-        self.assertIn("p0", pos_names)
-        self.assertIn("p1", pos_names)
-        self.assertIn("p2", pos_names)
-        self.assertIn("UNKNOWN", pos_names)
-        self.assertIn("DEPOT", pos_names)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        validation_cases = []
+        plan_string = """
+        0: (load_at_depot r0 b0)
+        0.01: (move r0 p0) [1]
+        1.02: (make_treatment r0 b0 p0) [20]
+        11.03: (load r0 b0 p0) [1]
+        """
+        validation_cases.append(
+            (*instances[1], plan_string, ValidationResultStatus.VALID)
+        )
+        return validation_cases
