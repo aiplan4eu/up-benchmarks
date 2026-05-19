@@ -158,7 +158,7 @@ class DomainFactory:
         domain: str,
         domain_params: Configuration,
         n: int,
-        instance_parameter_space: ConfigurationSpace = None,
+        instance_parameter_space: Optional[ConfigurationSpace] = None,
     ) -> list[Problem]:
         """Sample *n* planning problems with randomly drawn instance parameters.
 
@@ -169,7 +169,7 @@ class DomainFactory:
         problems: list[Problem] = []
 
         instance_params_list = generator.sample(
-            n=n, instance_space=instance_parameter_space
+            n=n, instance_parameters_space=instance_parameter_space
         )
         for instance_params in instance_params_list:
             problems.append(generator.get_instance(instance_params))

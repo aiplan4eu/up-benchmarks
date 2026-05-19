@@ -22,7 +22,7 @@ from ConfigSpace import ConfigurationSpace, Configuration, Integer, Constant
 from typing import Any
 
 from upbm.generator import Generator
-from upbm.utils import MAX_INT, is_subspace
+from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 import math
 
 MAX_BATTERY = 100
@@ -79,18 +79,25 @@ class MaJSPGenerator(Generator):
             self._object_cache[(name, type)] = res
         return res
 
-    @property
-    def object_universe(self, instance_parameters_space) -> Iterable[Object]:
+    def object_universe(
+        self, instance_parameters_space: Optional[ConfigurationSpace] = None
+    ) -> Iterable[Object]:
+        if instance_parameters_space is None:
+            instance_parameters_space = self.instance_parameter_space
         objs = [
             self._domain.object("UNKNOWN"),
             self._domain.object("DEPOT"),
             self._domain.object("NOPALLET"),
         ]
-        for i in range(instance_parameters_space["n_robots"].upper):
+        _, robots_upper = hyperparam_range(instance_parameters_space["n_robots"])
+        _, pallets_upper = hyperparam_range(instance_parameters_space["n_pallets"])
+        _, positions_upper = hyperparam_range(instance_parameters_space["n_positions"])
+
+        for i in range(robots_upper):
             objs.append(self._get_object(f"r{i}", self._Robot))
-        for i in range(instance_parameters_space["n_pallets"].upper):
+        for i in range(pallets_upper):
             objs.append(self._get_object(f"b{i}", self._Pallet))
-        for i in range(instance_parameters_space["n_positions"].upper):
+        for i in range(positions_upper):
             objs.append(self._get_object(f"p{i}", self._Position))
         return objs
 
@@ -251,9 +258,11 @@ class MaJSPGenerator(Generator):
         return initial_values
 
     def check_instance_parameters(self, params: Configuration):
-        # TODO FIXME this marks as unsolvable some solvable instances
-        max_treatments = params["n_robots"] * math.ceil(MAX_BATTERY / 2)
-        n_treat = min(params["n_treatments"], params["n_positions"])
-        if n_treat * params["n_pallets"] > max_treatments:
+        # NOTE FIXME this can be improved
+        max_treatments = params["n_robots"] * (MAX_BATTERY - params["n_pallets"])
+        n_treat = (
+            min(params["n_treatments"], params["n_positions"]) * params["n_pallets"]
+        )
+        if n_treat > max_treatments:
             return False
         return True

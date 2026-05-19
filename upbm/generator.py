@@ -85,10 +85,11 @@ class Generator(object):
         """
         raise NotImplementedError
 
-    @property
-    def object_universe(self, instance_parameters_space) -> Optional[Iterable[Object]]:
+    def object_universe(
+        self, instance_parameters_space: Optional[ConfigurationSpace] = None
+    ) -> Optional[Iterable[Object]]:
         """Return the universe of objects that can be used in instances of this
-        domain, or ``None``.
+        domain bounded by the instance_parameters_space, or ``None``.
 
         When a universe is returned, each generated instance can only use a
         subset of these objects.  Returning ``None`` (the default) means there
@@ -180,17 +181,18 @@ class Generator(object):
         return True
 
     def sample(
-        self, n: int, instance_space: ConfigurationSpace = None
+        self, n: int, instance_parameters_space: Optional[ConfigurationSpace] = None
     ) -> List[Configuration]:
-        if instance_space is None:
-            instance_space == self.instance_parameter_space
-        elif not is_subspace(instance_space, self.instance_parameter_space):
+        if instance_parameters_space is None:
+            instance_parameters_space == self.instance_parameter_space
+        assert instance_parameters_space is not None
+        if not is_subspace(instance_parameters_space, self.instance_parameter_space):
             raise ValueError(
                 "The provided parameter space for sampling is not contained in the parameter space for the chosen domain"
             )
         sampled_params: List[Configuration] = []
         while len(sampled_params) < n:
-            instance_params = instance_space.sample_configuration()
+            instance_params = instance_parameters_space.sample_configuration()
             if not self.check_instance_parameters(instance_params):
                 continue
             sampled_params.append(instance_params)

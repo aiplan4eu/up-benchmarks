@@ -21,10 +21,13 @@ def is_subspace(small: ConfigurationSpace, big: ConfigurationSpace):
                 if big_hyperpar.value != small_hyperpar.value:
                     return False
             else:  # range
-                if (
-                    small_hyperpar.value > big_hyperpar.upper
-                    or small_hyperpar.value < big_hyperpar.lower
-                ):
+                try:
+                    big_lower, big_upper = hyperparam_range(big_hyperpar)
+                except TypeError as e:
+                    raise TypeError(
+                        f"Hyperparameter {small_hyperpar} is only compatible with constants or ranges, {big_hyperpar} is neither"
+                    )
+                if small_hyperpar.value > big_upper or small_hyperpar.value < big_lower:
                     return False
         elif isinstance(small_hyperpar, CategoricalHyperparameter):
             # big is categorical and contains all possible values found in small
@@ -35,8 +38,16 @@ def is_subspace(small: ConfigurationSpace, big: ConfigurationSpace):
                     return False
         else:
             # this should be a range, check min max
-            if small_hyperpar.lower < big_hyperpar.lower:
+            small_lower, small_upper = hyperparam_range(small_hyperpar)
+            big_lower, big_upper = hyperparam_range(big_hyperpar)
+            if small_lower < big_lower:
                 return False
-            if small_hyperpar.upper > big_hyperpar.upper:
+            if small_upper > big_upper:
                 return False
     return True
+
+
+def hyperparam_range(hp):
+    if not (hasattr(hp, "lower") and hasattr(hp, "upper")):
+        raise TypeError(f"Hyperparameter {hp} is not a range")
+    return (hp.lower, hp.upper)

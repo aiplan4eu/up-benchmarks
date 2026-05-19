@@ -14,7 +14,7 @@ from unified_planning.shortcuts import TRUE, UserType  # type: ignore[import-unt
 from typing import Any
 
 from upbm.generator import Generator
-from upbm.utils import MAX_INT, is_subspace
+from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 
 
 SCRIPT_PATH = Path(__file__).absolute().parent
@@ -103,16 +103,16 @@ class MatchCellarGenerator(Generator):
             objs.append(self._get_object(f"fuse{i}", self._Fuse))
         return objs
 
-    @property
-    def object_universe(self, instance_parameters_space: ConfigurationSpace):
-
+    def object_universe(
+        self, instance_parameters_space: Optional[ConfigurationSpace] = None
+    ):
+        if instance_parameters_space is None:
+            instance_parameters_space = self.instance_parameter_space
+        _, matches_upper = hyperparam_range(instance_parameters_space["n_matches"])
+        _, fuses_upper = hyperparam_range(instance_parameters_space["n_fuses"])
         return [
-            self._get_object(f"match{i}", self._Match)
-            for i in range(instance_parameters_space["n_matches"].upper)
-        ] + [
-            self._get_object(f"fuse{i}", self._Fuse)
-            for i in range(instance_parameters_space["n_fuses"].upper)
-        ]
+            self._get_object(f"match{i}", self._Match) for i in range(matches_upper)
+        ] + [self._get_object(f"fuse{i}", self._Fuse) for i in range(fuses_upper)]
 
     def get_goal(self, params) -> list[FNode]:
         params.check_valid_configuration()

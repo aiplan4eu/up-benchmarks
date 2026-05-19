@@ -28,7 +28,7 @@ from ConfigSpace import (
 from typing import Any
 
 from upbm.generator import Generator
-from upbm.utils import MAX_INT, is_subspace
+from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 
 MAX_CARDBOARD_TYPES = 5
 
@@ -36,7 +36,6 @@ MAX_CARDBOARD_TYPES = 5
 class ReplenishGenerator(Generator):
     @staticmethod
     def get_domain_parameter_space() -> ConfigurationSpace:
-        # TODO check if this is really necessary - used in build domain
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
         mapping["max_goal_sequence_length"] = Integer(
@@ -100,12 +99,21 @@ class ReplenishGenerator(Generator):
             self._object_cache[(name, type)] = res
         return res
 
-    @property
-    def object_universe(self, instance_parameters_space) -> Iterable[Object]:
+    def object_universe(
+        self, instance_parameters_space: Optional[ConfigurationSpace] = None
+    ) -> Iterable[Object]:
+        if instance_parameters_space is None:
+            instance_parameters_space = self.instance_parameter_space
         objs = [self._domain.object("no_type")]
-        for i in range(1, instance_parameters_space["n_cardboard_types"].upper + 1):
+
+        _, cardboard_upper = hyperparam_range(
+            instance_parameters_space["n_cardboard_types"]
+        )
+        _, drawers_upper = hyperparam_range(instance_parameters_space["n_drawers"])
+
+        for i in range(1, cardboard_upper + 1):
             objs.append(self._get_object(f"cardboard_type_{i}", self._CardboardType))
-        for i in range(instance_parameters_space["n_drawers"].upper):
+        for i in range(drawers_upper):
             objs.append(self._get_object(f"drawer_{i}", self._Drawer))
         return objs
 
