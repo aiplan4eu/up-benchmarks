@@ -17,51 +17,53 @@ class TestReplenish(BaseDomainTest):
     def generator(self):
         return ReplenishGenerator
 
-    def _get_instances(self):
+    def _get_configs(self):
         gen = ReplenishGenerator(
             ReplenishGenerator.get_domain_parameter_space().get_default_configuration()
         )
         instance_space = gen.instance_parameter_space
-        instance_1 = gen.get_instance(
-            Configuration(
-                instance_space,
-                {
-                    "goal_sequence_length": 3,
-                    "n_cardboard_types": 2,
-                    "n_drawers": 2,
-                    "sequence_seed": 1,
-                },
-            )
+        instance_1 = Configuration(
+            instance_space,
+            {
+                "goal_sequence_length": 3,
+                "n_cardboard_types": 2,
+                "n_drawers": 2,
+                "sequence_seed": 1,
+            },
         )
         return [instance_1]
 
     @property
     def plannable(self):
-        return self._get_instances()
+        return self._get_configs()
 
     @property
     def object_data(self):
-        instances = self._get_instances()
+        instances = self._get_configs()
         object_data = {}
         object_data[instances[0]] = [("CardboardType", 3), ("Drawer", 2)]
         return object_data
 
     @property
     def problem_actions(self):
-        instances = self._get_instances()
+        instances = self._get_configs()
         problem_actions = []
         problem_actions.append((instances[0], 5))
         return problem_actions
 
     @property
     def validation_cases(self):
-        instances = self._get_instances()
-        initializeDrawer = instances[0].action("initializeDrawer")
-        build_box = instances[0].action("build_box")
-        cardboard_1 = instances[0].object("cardboard_type_1")
-        cardboard_2 = instances[0].object("cardboard_type_2")
-        drawer_0 = instances[0].object("drawer_0")
-        drawer_1 = instances[0].object("drawer_1")
+        instances = self._get_configs()
+        gen = ReplenishGenerator(
+            ReplenishGenerator.get_domain_parameter_space().get_default_configuration()
+        )
+        prob = gen.get_instance(instances[0])
+        initializeDrawer = prob.action("initializeDrawer")
+        build_box = prob.action("build_box")
+        cardboard_1 = prob.object("cardboard_type_1")
+        cardboard_2 = prob.object("cardboard_type_2")
+        drawer_0 = prob.object("drawer_0")
+        drawer_1 = prob.object("drawer_1")
         valid_plan = TimeTriggeredPlan(
             [
                 (

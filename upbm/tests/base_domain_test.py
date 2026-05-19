@@ -16,6 +16,9 @@ class BaseDomainTest(unittest.TestCase):
 
     def setUp(self):
         self.factory = DomainFactory()
+        self.default_gen = self.generator(
+            self.generator.get_domain_parameter_space().get_default_configuration()
+        )
 
     @property
     def domain_name(self) -> str:
@@ -71,7 +74,8 @@ class BaseDomainTest(unittest.TestCase):
         self.assertEqual(self.factory[self.domain_name], self.generator)
 
     def test_validation(self):
-        for (problem, plan, expected_status) in self.validation_cases:
+        for (problem_config, plan, expected_status) in self.validation_cases:
+            problem = self.default_gen.get_instance(problem_config)
             with TimeTriggeredPlanValidator() as validator:
                 v_res = validator.validate(problem, plan)
                 print(v_res)
@@ -79,7 +83,8 @@ class BaseDomainTest(unittest.TestCase):
 
     def test_planning(self):
         try:
-            for p in self.plannable:
+            for p_c in self.plannable:
+                p = self.default_gen.get_instance(p_c)
                 with OneshotPlanner(problem_kind=p.kind) as planner:
                     p_res = planner.solve(p)
                     print(p_res)
@@ -90,10 +95,12 @@ class BaseDomainTest(unittest.TestCase):
             skip("no planner available to test the problem")
 
     def test_objects_and_actions(self):
-        for problem, objects_list in self.object_data.items():
+        for problem_config, objects_list in self.object_data.items():
+            problem = self.default_gen.get_instance(problem_config)
             for (obj_name, n_objs) in objects_list:
                 self.assertEqual(
                     sum(1 for _ in problem.objects(problem.user_type(obj_name))), n_objs
                 )
-        for problem, n_acts in self.problem_actions:
+        for problem_config, n_acts in self.problem_actions:
+            problem = self.default_gen.get_instance(problem_config)
             self.assertEqual(len(problem.actions), n_acts)

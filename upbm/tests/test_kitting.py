@@ -17,44 +17,41 @@ class TestKitting(BaseDomainTest):
     def generator(self):
         return KittingGenerator
 
-    def _get_instances(self):
+    def _get_configs(self):
         gen = KittingGenerator(
             KittingGenerator.get_domain_parameter_space().get_default_configuration()
         )
         instance_space = gen.instance_parameter_space
-        instance_1 = gen.get_instance(
-            Configuration(
-                instance_space,
-                {
-                    "n_components": 3,
-                    "kit_size": 2,
-                    "n_kit": 2,
-                    "n_robots": 1,
-                    "combination_idx": 1,
-                },
-            )
+        instance_1 = Configuration(
+            instance_space,
+            {
+                "n_components": 3,
+                "kit_size": 2,
+                "n_kit": 2,
+                "n_robots": 1,
+                "combination_idx": 1,
+            },
         )
-        instance_2 = gen.get_instance(
-            Configuration(
-                instance_space,
-                {
-                    "n_components": 1,
-                    "kit_size": 1,
-                    "n_kit": 1,
-                    "n_robots": 1,
-                    "combination_idx": 1,
-                },
-            )
+        instance_2 = Configuration(
+            instance_space,
+            {
+                "n_components": 1,
+                "kit_size": 1,
+                "n_kit": 1,
+                "n_robots": 1,
+                "combination_idx": 1,
+            },
         )
+
         return [instance_1, instance_2]
 
     @property
     def plannable(self):
-        return self._get_instances()
+        return self._get_configs()
 
     @property
     def object_data(self):
-        instances = self._get_instances()
+        instances = self._get_configs()
         object_data = {}
         object_data[instances[0]] = [
             ("Location", 4),
@@ -72,7 +69,7 @@ class TestKitting(BaseDomainTest):
 
     @property
     def problem_actions(self):
-        instances = self._get_instances()
+        instances = self._get_configs()
         problem_actions = []
         problem_actions.append((instances[0], 4))
         problem_actions.append((instances[1], 4))
@@ -80,16 +77,20 @@ class TestKitting(BaseDomainTest):
 
     @property
     def validation_cases(self):
-        instances = self._get_instances()
-        prepare_unload = instances[1].action("prepare_unload")
-        move = instances[1].action("move")
-        load = instances[1].action("load")
-        unload = instances[1].action("unload")
-        robot = instances[1].object("r0")
-        l0 = instances[1].object("l0")
-        l1 = instances[1].object("l1")
-        component = instances[1].object("c1")
-        kit = instances[1].object("k1")
+        instances = self._get_configs()
+        gen = KittingGenerator(
+            KittingGenerator.get_domain_parameter_space().get_default_configuration()
+        )
+        prob = gen.get_instance(instances[1])
+        prepare_unload = prob.action("prepare_unload")
+        move = prob.action("move")
+        load = prob.action("load")
+        unload = prob.action("unload")
+        robot = prob.object("r0")
+        l0 = prob.object("l0")
+        l1 = prob.object("l1")
+        component = prob.object("c1")
+        kit = prob.object("k1")
         valid_plan = TimeTriggeredPlan(
             [
                 (Fraction(0, 1), prepare_unload(0), Fraction(30, 1)),

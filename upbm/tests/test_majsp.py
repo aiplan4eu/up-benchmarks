@@ -17,32 +17,30 @@ class TestMaJSP(BaseDomainTest):
     def generator(self):
         return MaJSPGenerator
 
-    def _get_instances(self):
+    def _get_configs(self):
         gen = MaJSPGenerator(
             MaJSPGenerator.get_domain_parameter_space().get_default_configuration()
         )
         instance_space = gen.instance_parameter_space
-        instance_1 = gen.get_instance(
-            Configuration(
-                instance_space,
-                {"n_pallets": 2, "n_robots": 1, "n_positions": 3, "n_treatments": 2},
-            )
+        instance_1 = Configuration(
+            instance_space,
+            {"n_pallets": 2, "n_robots": 1, "n_positions": 3, "n_treatments": 2},
         )
-        instance_2 = gen.get_instance(
-            Configuration(
-                instance_space,
-                {"n_pallets": 1, "n_robots": 1, "n_positions": 2, "n_treatments": 1},
-            )
+
+        instance_2 = Configuration(
+            instance_space,
+            {"n_pallets": 1, "n_robots": 1, "n_positions": 2, "n_treatments": 1},
         )
+
         return [instance_1, instance_2]
 
     @property
     def plannable(self):
-        return self._get_instances()
+        return self._get_configs()
 
     @property
     def object_data(self):
-        instances = self._get_instances()
+        instances = self._get_configs()
         object_data = {}
         object_data[instances[0]] = [("Pallet", 3), ("Robot", 1), ("Position", 5)]
         object_data[instances[1]] = [("Pallet", 2), ("Robot", 1), ("Position", 4)]
@@ -50,7 +48,7 @@ class TestMaJSP(BaseDomainTest):
 
     @property
     def problem_actions(self):
-        instances = self._get_instances()
+        instances = self._get_configs()
         problem_actions = []
         problem_actions.append((instances[0], 5))
         problem_actions.append((instances[1], 5))
@@ -58,14 +56,18 @@ class TestMaJSP(BaseDomainTest):
 
     @property
     def validation_cases(self):
-        instances = self._get_instances()
-        load_at_depot = instances[1].action("load_at_depot")
-        move = instances[1].action("move")
-        make_treatment = instances[1].action("make_treatment")
-        load = instances[1].action("load")
-        robot = instances[1].object("r0")
-        pallet = instances[1].object("b0")
-        position = instances[1].object("p0")
+        instances = self._get_configs()
+        gen = MaJSPGenerator(
+            MaJSPGenerator.get_domain_parameter_space().get_default_configuration()
+        )
+        prob = gen.get_instance(instances[1])
+        load_at_depot = prob.action("load_at_depot")
+        move = prob.action("move")
+        make_treatment = prob.action("make_treatment")
+        load = prob.action("load")
+        robot = prob.object("r0")
+        pallet = prob.object("b0")
+        position = prob.object("p0")
         valid_plan = TimeTriggeredPlan(
             [
                 (

@@ -17,26 +17,22 @@ class TestMatchcellar(BaseDomainTest):
     def generator(self):
         return MatchCellarGenerator
 
-    def _get_instances(self):
+    def _get_configs(self):
         gen = MatchCellarGenerator(
             MatchCellarGenerator.get_domain_parameter_space().get_default_configuration()
         )
         instance_space = gen.instance_parameter_space
-        instance_1 = gen.get_instance(
-            Configuration(instance_space, {"n_matches": 3, "n_fuses": 4})
-        )
-        instance_2 = gen.get_instance(
-            Configuration(instance_space, {"n_matches": 2, "n_fuses": 2})
-        )
+        instance_1 = Configuration(instance_space, {"n_matches": 3, "n_fuses": 4})
+        instance_2 = Configuration(instance_space, {"n_matches": 2, "n_fuses": 2})
         return [instance_1, instance_2]
 
     @property
     def plannable(self):
-        return self._get_instances()
+        return self._get_configs()
 
     @property
     def object_data(self):
-        instances = self._get_instances()
+        instances = self._get_configs()
         object_data = {}
         object_data[instances[0]] = [("match", 3), ("fuse", 4)]
         object_data[instances[1]] = [("match", 2), ("fuse", 2)]
@@ -44,19 +40,23 @@ class TestMatchcellar(BaseDomainTest):
 
     @property
     def problem_actions(self):
-        instances = self._get_instances()
+        instances = self._get_configs()
         problem_actions = []
         problem_actions.append((instances[0], 2))
         problem_actions.append((instances[1], 2))
         return problem_actions
 
     def get_validation_cases(self):
-        instances = self._get_instances()
-        light_match = instances[1].action("light_match")
-        mend_fuse = instances[1].action("mend_fuse")
-        match_1 = instances[1].object("match1")
-        fuse_0 = instances[1].object("fuse0")
-        fuse_1 = instances[1].object("fuse1")
+        instances = self._get_configs()
+        gen = MatchCellarGenerator(
+            MatchCellarGenerator.get_domain_parameter_space().get_default_configuration()
+        )
+        prob = gen.get_instance(instances[1])
+        light_match = prob.action("light_match")
+        mend_fuse = prob.action("mend_fuse")
+        match_1 = prob.object("match1")
+        fuse_0 = prob.object("fuse0")
+        fuse_1 = prob.object("fuse1")
         valid_plan = TimeTriggeredPlan(
             [
                 (
