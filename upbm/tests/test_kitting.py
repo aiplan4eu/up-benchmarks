@@ -18,9 +18,10 @@ class TestKitting(BaseDomainTest):
         return KittingGenerator
 
     def _get_configs(self):
-        gen = KittingGenerator(
+        default_config = (
             KittingGenerator.get_domain_parameter_space().get_default_configuration()
         )
+        gen = KittingGenerator(default_config)
         instance_space = gen.instance_parameter_space
         instance_1 = Configuration(
             instance_space,
@@ -43,7 +44,7 @@ class TestKitting(BaseDomainTest):
             },
         )
 
-        return [instance_1, instance_2]
+        return [(default_config, instance_1), (default_config, instance_2)]
 
     @property
     def plannable(self):
@@ -52,27 +53,37 @@ class TestKitting(BaseDomainTest):
     @property
     def object_data(self):
         instances = self._get_configs()
-        object_data = {}
-        object_data[instances[0]] = [
-            ("Location", 4),
-            ("Robot", 1),
-            ("Component", 4),
-            ("Kit", 1),
-        ]
-        object_data[instances[1]] = [
-            ("Location", 2),
-            ("Robot", 1),
-            ("Component", 2),
-            ("Kit", 1),
-        ]
+        object_data = []
+        object_data.append(
+            (
+                *instances[0],
+                [
+                    ("Location", 4),
+                    ("Robot", 1),
+                    ("Component", 4),
+                    ("Kit", 1),
+                ],
+            )
+        )
+        object_data.append(
+            (
+                *instances[1],
+                [
+                    ("Location", 2),
+                    ("Robot", 1),
+                    ("Component", 2),
+                    ("Kit", 1),
+                ],
+            )
+        )
         return object_data
 
     @property
     def problem_actions(self):
         instances = self._get_configs()
         problem_actions = []
-        problem_actions.append((instances[0], 4))
-        problem_actions.append((instances[1], 4))
+        problem_actions.append((*instances[0], 4))
+        problem_actions.append((*instances[1], 4))
         return problem_actions
 
     @property
@@ -87,6 +98,6 @@ class TestKitting(BaseDomainTest):
         10.02: (unload r0 k1 0) [5]
         """
         validation_cases.append(
-            (instances[1], plan_string, ValidationResultStatus.VALID)
+            (*instances[1], plan_string, ValidationResultStatus.VALID)
         )
         return validation_cases

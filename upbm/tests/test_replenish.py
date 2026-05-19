@@ -18,9 +18,10 @@ class TestReplenish(BaseDomainTest):
         return ReplenishGenerator
 
     def _get_configs(self):
-        gen = ReplenishGenerator(
+        default_config = (
             ReplenishGenerator.get_domain_parameter_space().get_default_configuration()
         )
+        gen = ReplenishGenerator(default_config)
         instance_space = gen.instance_parameter_space
         instance_1 = Configuration(
             instance_space,
@@ -31,7 +32,7 @@ class TestReplenish(BaseDomainTest):
                 "sequence_seed": 1,
             },
         )
-        return [instance_1]
+        return [(default_config, instance_1)]
 
     @property
     def plannable(self):
@@ -40,15 +41,15 @@ class TestReplenish(BaseDomainTest):
     @property
     def object_data(self):
         instances = self._get_configs()
-        object_data = {}
-        object_data[instances[0]] = [("CardboardType", 3), ("Drawer", 2)]
+        object_data = []
+        object_data.append((*instances[0], [("CardboardType", 3), ("Drawer", 2)]))
         return object_data
 
     @property
     def problem_actions(self):
         instances = self._get_configs()
         problem_actions = []
-        problem_actions.append((instances[0], 5))
+        problem_actions.append((*instances[0], 5))
         return problem_actions
 
     @property
@@ -63,6 +64,6 @@ class TestReplenish(BaseDomainTest):
         8.03: (build_box drawer_0 cardboard_type_2 2) [4]
         """
         validation_cases.append(
-            (instances[0], plan_string, ValidationResultStatus.VALID)
+            (*instances[0], plan_string, ValidationResultStatus.VALID)
         )
         return validation_cases

@@ -18,9 +18,10 @@ class TestMaJSP(BaseDomainTest):
         return MaJSPGenerator
 
     def _get_configs(self):
-        gen = MaJSPGenerator(
+        default_config = (
             MaJSPGenerator.get_domain_parameter_space().get_default_configuration()
         )
+        gen = MaJSPGenerator(default_config)
         instance_space = gen.instance_parameter_space
         instance_1 = Configuration(
             instance_space,
@@ -32,7 +33,7 @@ class TestMaJSP(BaseDomainTest):
             {"n_pallets": 1, "n_robots": 1, "n_positions": 2, "n_treatments": 1},
         )
 
-        return [instance_1, instance_2]
+        return [(default_config, instance_1), (default_config, instance_2)]
 
     @property
     def plannable(self):
@@ -41,17 +42,21 @@ class TestMaJSP(BaseDomainTest):
     @property
     def object_data(self):
         instances = self._get_configs()
-        object_data = {}
-        object_data[instances[0]] = [("Pallet", 3), ("Robot", 1), ("Position", 5)]
-        object_data[instances[1]] = [("Pallet", 2), ("Robot", 1), ("Position", 4)]
+        object_data = []
+        object_data.append(
+            (*instances[0], [("Pallet", 3), ("Robot", 1), ("Position", 5)])
+        )
+        object_data.append(
+            (*instances[1], [("Pallet", 2), ("Robot", 1), ("Position", 4)])
+        )
         return object_data
 
     @property
     def problem_actions(self):
         instances = self._get_configs()
         problem_actions = []
-        problem_actions.append((instances[0], 5))
-        problem_actions.append((instances[1], 5))
+        problem_actions.append((*instances[0], 5))
+        problem_actions.append((*instances[1], 5))
         return problem_actions
 
     @property
@@ -66,6 +71,6 @@ class TestMaJSP(BaseDomainTest):
         11.03: (load r0 b0 p0) [1]
         """
         validation_cases.append(
-            (instances[1], plan_string, ValidationResultStatus.VALID)
+            (*instances[1], plan_string, ValidationResultStatus.VALID)
         )
         return validation_cases
