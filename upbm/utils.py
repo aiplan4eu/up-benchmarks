@@ -18,8 +18,13 @@ def is_subspace(small: ConfigurationSpace, big: ConfigurationSpace):
         if isinstance(small_hyperpar, Constant):
             # big is either a constant of the same value or a range that contains the value
             if isinstance(big_hyperpar, Constant):
+                if type(big_hyperpar.value) != type(small_hyperpar.value):
+                    raise TypeError(
+                        f"Hyperparameter {small_hyperpar} does not have the same value type as {big_hyperpar}: { type(small_hyperpar.value)}, { type(big_hyperpar.value)}"
+                    )
                 if big_hyperpar.value != small_hyperpar.value:
                     return False
+
             else:  # range
                 try:
                     big_lower, big_upper = hyperparam_range(big_hyperpar)
@@ -27,7 +32,14 @@ def is_subspace(small: ConfigurationSpace, big: ConfigurationSpace):
                     raise TypeError(
                         f"Hyperparameter {small_hyperpar} is only compatible with constants or ranges, {big_hyperpar} is neither"
                     )
-                if small_hyperpar.value > big_upper or small_hyperpar.value < big_lower:
+                if type(big_upper) != type(small_hyperpar.value):
+                    raise TypeError(
+                        f"Hyperparameter {small_hyperpar} does not have the same value type as {big_hyperpar}: { type(small_hyperpar.value)}, { type(big_upper)}"
+                    )
+                if (
+                    int(small_hyperpar.value) > big_upper
+                    or int(small_hyperpar.value) < big_lower
+                ):
                     return False
         elif isinstance(small_hyperpar, CategoricalHyperparameter):
             # big is categorical and contains all possible values found in small
@@ -51,3 +63,10 @@ def hyperparam_range(hp):
     if not (hasattr(hp, "lower") and hasattr(hp, "upper")):
         raise TypeError(f"Hyperparameter {hp} is not a range")
     return (hp.lower, hp.upper)
+
+
+def fix_string_integer(p):
+    try:
+        return int(p)
+    except:
+        return p

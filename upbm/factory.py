@@ -1,12 +1,13 @@
 import yaml
 import importlib
 from pathlib import Path
-from typing import Any, Optional, Type, TYPE_CHECKING
+from typing import Any, Optional, Type, TYPE_CHECKING, Dict
 
-from ConfigSpace import Configuration, ConfigurationSpace
+from ConfigSpace import Configuration, ConfigurationSpace, Integer, Constant
 from unified_planning.model import Problem  # type: ignore[import-untyped]
 
 from upbm.generator import Generator
+from upbm.utils import is_subspace, fix_string_integer
 
 if TYPE_CHECKING:
     pass
@@ -201,3 +202,26 @@ class DomainFactory:
 
         pddl_expressible = self.is_pddl_expressible(domain, domain_params)
         return results, pddl_expressible
+
+    def get_reduced_instance_space(self, domain, domain_params, reduction_dictionary):
+        full_space = self.get_instance_parameter_space(domain, domain_params)
+        new_dict: Dict[str, Any] = {}
+        for k, v in reduction_dictionary.items():
+            assert k in full_space
+            if isinstance(v, tuple):
+                minval, maxval = v
+                if minval > maxval:
+                    raise ValueError
+                if minval == maxval:
+                    new_dict[k] = Constant(k, minval)
+                else:
+                    new_dict[k] = Integer(k, (int(minval), int(maxval)))
+            else:
+                new_dict[k] = Constant(k, fix_string_integer(v))
+        for k, v in full_space.items():
+            if k in new_dict:
+                continue
+            new_dict[k] = v
+        new_space = ConfigurationSpace(new_dict)
+        assert is_subspace(new_space, full_space)
+        return new_space
