@@ -1,5 +1,4 @@
 import argparse
-import yaml
 from pathlib import Path
 
 from upbm import (
@@ -227,13 +226,17 @@ def main():
             ):
                 raise ValueError(f"Domain {args.domain} is not expressible in PDDL.")
 
-            fixed_params_dict = dict(args.param)
+            # TODO FIXME figure out how to make it work with ranges rather than just a fixed parameter value
+            reducing_dict = {}
+            for plist in args.param:
+                reducing_dict[plist[0]] = plist[1]
+
+            instance_space = factory.get_reduced_instance_space(
+                args.domain, domain_params, reducing_dict
+            )
 
             problems = factory.sample_instances(
-                args.domain,
-                domain_params,
-                args.n,
-                fixed_instance_params=fixed_params_dict,
+                args.domain, domain_params, args.n, instance_space
             )
 
             for i, instance in enumerate(problems):
