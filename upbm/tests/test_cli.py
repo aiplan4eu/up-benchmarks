@@ -123,19 +123,19 @@ def test_cli_sample(tmp_path):
             "-d",
             "variant",
             "ipc",
-            "-p",  # TODO remove or change to range
-            "n_fuses",  # TODO remove or change to range
-            "1",  # TODO remove or change to range
             "-p",
+            "n_fuses",
+            "1",
+            "-r",
             "n_matches",
             "1",
+            "4",
             "-o",
             str(out_folder),
             "--format",
             "pddl",
         ]
     )
-    # TODO FIXME this used to work because the default domain parameters shrunk the space to max 20 or so matches, now it goes up to MAX_INT
     assert result.returncode == 0
     assert out_folder.exists()
     # Check if files were generated (problem_1.pddl, domain_1.pddl, etc.)

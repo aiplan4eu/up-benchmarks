@@ -117,6 +117,14 @@ def main():
         help="Instance parameter in the form -p param_name param_value",
     )
     sample_parser.add_argument(
+        "-r",
+        "--paramrange",
+        nargs=3,
+        action="append",
+        default=[],
+        help="Instance parameter range in the form -r param_name min_value, max_value",
+    )
+    sample_parser.add_argument(
         "-o",
         "--output-folder",
         type=Path,
@@ -226,10 +234,11 @@ def main():
             ):
                 raise ValueError(f"Domain {args.domain} is not expressible in PDDL.")
 
-            # TODO FIXME figure out how to make it work with ranges rather than just a fixed parameter value
             reducing_dict = {}
             for plist in args.param:
                 reducing_dict[plist[0]] = plist[1]
+            for prlist in args.paramrange:
+                reducing_dict[prlist[0]] = (prlist[1], prlist[2])
 
             instance_space = factory.get_reduced_instance_space(
                 args.domain, domain_params, reducing_dict
