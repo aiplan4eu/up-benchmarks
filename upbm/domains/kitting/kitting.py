@@ -59,7 +59,7 @@ class KittingGenerator(Generator):
         mapping["max_n_kit"] = Integer("max_n_kit", (1, MAX_INT), default=5)
         mapping["isomorphic_instances"] = Categorical(
             "isomorphic_instances", [True, False], default=True
-        )  # NOTE maybe move to instance
+        )
         return ConfigurationSpace(name=mapping)
 
     def __init__(self, domain_params: Configuration) -> None:

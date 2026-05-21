@@ -258,7 +258,7 @@ class MaJSPGenerator(Generator):
         return initial_values
 
     def check_instance_parameters(self, params: Configuration):
-        # NOTE FIXME this can be improved
+        # NOTE this is not perfect and could be improved
         max_treatments = params["n_robots"] * (MAX_BATTERY - params["n_pallets"])
         n_treat = (
             min(params["n_treatments"], params["n_positions"]) * params["n_pallets"]
