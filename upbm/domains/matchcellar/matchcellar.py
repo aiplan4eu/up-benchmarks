@@ -75,7 +75,7 @@ class MatchCellarGenerator(Generator):
 
     @property
     def name(self) -> str:
-        return f"MatchCellar V{self.version}"  # TODO add variant in name ?
+        return f"MatchCellar V{self.version} ({self.variant})"
 
     @property
     def domain(self) -> Problem:
@@ -130,7 +130,8 @@ class MatchCellarGenerator(Generator):
             ) + math.ceil(params["long_fuses"] / params["longs_in_one_match"])
             for i in range(useful_matches + params["extra_matches"]):
                 objs.append(self._get_object(f"match_{i}", self._Match))
-            pass
+        else:
+            raise ValueError(f"invalid variant {self.variant}")
         return objs
 
     def object_universe(
@@ -145,8 +146,38 @@ class MatchCellarGenerator(Generator):
                 self._get_object(f"match{i}", self._Match) for i in range(matches_upper)
             ] + [self._get_object(f"fuse{i}", self._Fuse) for i in range(fuses_upper)]
         elif self.variant == "long_short_fuse":
-            # TODO
-            pass
+            if instance_parameters_space is None:
+                instance_parameters_space = self.instance_parameter_space
+            _, short_fuses_upper = hyperparam_range(
+                instance_parameters_space["short_fuses"]
+            )
+            _, long_fuses_upper = hyperparam_range(
+                instance_parameters_space["long_fuses"]
+            )
+            _, extra_matches_upper = hyperparam_range(
+                instance_parameters_space["extra_matches"]
+            )
+            shorts_in_one_match_lower, _ = hyperparam_range(
+                instance_parameters_space["shorts_in_one_match"]
+            )
+            longs_in_one_match_lower, _ = hyperparam_range(
+                instance_parameters_space["longs_in_one_match"]
+            )
+            useful_matches = math.ceil(
+                short_fuses_upper / shorts_in_one_match_lower
+            ) + math.ceil(long_fuses_upper / longs_in_one_match_lower)
+            shorts = []
+            longs = []
+            matches = []
+            for i in range(short_fuses_upper):
+                shorts.append(self._get_object(f"short_fuse_{i}", self._Fuse))
+            for i in range(long_fuses_upper):
+                longs.append(self._get_object(f"long_fuse_{i}", self._Fuse))
+            for i in range(useful_matches + extra_matches_upper):
+                matches.append(self._get_object(f"match_{i}", self._Match))
+            return shorts + longs + matches
+        else:
+            raise ValueError(f"invalid variant {self.variant}")
 
     def get_goal(self, params) -> list[FNode]:
         params.check_valid_configuration()
@@ -157,13 +188,14 @@ class MatchCellarGenerator(Generator):
             for i in range(params["n_fuses"]):
                 res.append(self._mended(self._get_object(f"fuse{i}", self._Fuse)))
         elif self.variant == "long_short_fuse":
-
             for i in range(params["long_fuses"]):
                 res.append(self._mended(self._get_object(f"long_fuse_{i}", self._Fuse)))
             for i in range(params["short_fuses"]):
                 res.append(
                     self._mended(self._get_object(f"short_fuse_{i}", self._Fuse))
                 )
+        else:
+            raise ValueError(f"invalid variant {self.variant}")
         return res
 
     def get_initial_state(self, params) -> dict[FNode, FNode]:
@@ -207,6 +239,8 @@ class MatchCellarGenerator(Generator):
                         self._get_object(f"short_fuse_{i}", self._Fuse)
                     )
                 ] = Real(Fraction(6, params["shorts_in_one_match"]))
+        else:
+            raise ValueError(f"invalid variant {self.variant}")
         return res
 
     def check_instance_parameters(self, params: Configuration):
