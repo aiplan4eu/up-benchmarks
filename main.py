@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+from upbm.utils import get_reduced_instance_space
 
 from upbm import (
     DomainFactory,
@@ -240,8 +241,9 @@ def main():
             for prlist in args.paramrange:
                 reducing_dict[prlist[0]] = (prlist[1], prlist[2])
 
-            instance_space = factory.get_reduced_instance_space(
-                args.domain, domain_params, reducing_dict
+            instance_space = get_reduced_instance_space(
+                factory.get_instance_parameter_space(args.domain, domain_params),
+                reducing_dict,
             )
 
             problems = factory.sample_instances(

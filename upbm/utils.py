@@ -1,8 +1,6 @@
-from ConfigSpace import (
-    ConfigurationSpace,
-    Constant,
-    CategoricalHyperparameter,
-)
+from ConfigSpace import ConfigurationSpace, Constant, CategoricalHyperparameter, Integer
+from typing import Dict, Any
+
 
 MAX_INT = 2**31 - 1
 
@@ -70,3 +68,26 @@ def fix_string_integer(p):
         return int(p)
     except:
         return p
+
+
+def get_reduced_instance_space(large_space, reduction_dictionary):
+    new_dict: Dict[str, Any] = {}
+    for k, v in reduction_dictionary.items():
+        assert k in large_space
+        if isinstance(v, tuple):
+            minval, maxval = v
+            if minval > maxval:
+                raise ValueError
+            if minval == maxval:
+                new_dict[k] = Constant(k, minval)
+            else:
+                new_dict[k] = Integer(k, (int(minval), int(maxval)))
+        else:
+            new_dict[k] = Constant(k, fix_string_integer(v))
+    for k, v in large_space.items():
+        if k in new_dict:
+            continue
+        new_dict[k] = v
+    new_space = ConfigurationSpace(new_dict)
+    assert is_subspace(new_space, large_space)
+    return new_space

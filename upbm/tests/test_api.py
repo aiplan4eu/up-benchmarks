@@ -1,6 +1,7 @@
 import pytest
 from upbm import DomainFactory
 from typing import Dict, Any
+from upbm.utils import get_reduced_instance_space
 
 
 @pytest.fixture
@@ -34,8 +35,8 @@ def test_sample_instances(factory):
     reducing_dict: Dict[str, Any] = {}
     reducing_dict["n_fuses"] = 1
     reducing_dict["n_matches"] = (5, 10)
-    reduced_space = factory.get_reduced_instance_space(
-        domain, dom_params, reducing_dict
+    reduced_space = get_reduced_instance_space(
+        factory.get_instance_parameter_space(domain, dom_params), reducing_dict
     )
     problems = factory.sample_instances(
         domain, dom_params, n=3, instance_parameter_space=reduced_space
