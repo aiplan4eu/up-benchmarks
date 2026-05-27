@@ -49,8 +49,6 @@ class ReplenishGenerator(Generator):
         if domain_params.config_space != self.get_domain_parameter_space():
             raise ValueError(f"Invalid domain parameters: {domain_params}")
 
-        self._max_n_cardboard_types = MAX_CARDBOARD_TYPES
-        self._max_n_drawers = MAX_INT
         self._max_goal_sequence_length = domain_params["max_goal_sequence_length"]
 
         self._build_box_time = [3, 4, 5, 3, 5]
