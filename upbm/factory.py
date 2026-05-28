@@ -168,10 +168,11 @@ class DomainFactory:
         generator = self[domain](domain_params)
         problems: list[Problem] = []
 
-        instance_params_list = generator.sample(
-            n=n, instance_parameters_space=instance_parameter_space
+        instance_params_generator = generator.sample(
+            instance_parameters_space=instance_parameter_space
         )
-        for instance_params in instance_params_list:
+        for _ in range(n):
+            instance_params = next(instance_params_generator)
             problems.append(generator.get_instance(instance_params))
         return problems
 
