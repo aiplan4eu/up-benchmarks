@@ -58,6 +58,8 @@ def is_subspace(small: ConfigurationSpace, big: ConfigurationSpace):
 
 
 def hyperparam_range(hp):
+    if isinstance(hp, Constant):
+        return (hp.value, hp.value)
     if not (hasattr(hp, "lower") and hasattr(hp, "upper")):
         raise TypeError(f"Hyperparameter {hp} is not a range")
     return (hp.lower, hp.upper)
