@@ -30,8 +30,6 @@ from typing import Any
 from upbm.generator import Generator
 from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 
-MAX_CARDBOARD_TYPES = 5
-
 
 class ReplenishGenerator(Generator):
     @staticmethod
@@ -58,6 +56,16 @@ class ReplenishGenerator(Generator):
         self._time_replenish_new_type = [8, 9, 10, 8, 10]
         self._time_empty = [5, 6, 7, 5, 7]
 
+        self._values_lists_len = min(
+            [
+                len(self._build_box_time),
+                len(self._type_capacity),
+                len(self._time_replenish_same_type),
+                len(self._time_replenish_new_type),
+                len(self._time_empty),
+            ]
+        )
+
         self._domain = self._build_domain()
 
         self._CardboardType = self._domain.user_type("CardboardType")
@@ -70,7 +78,7 @@ class ReplenishGenerator(Generator):
         return ConfigurationSpace(
             {
                 "n_cardboard_types": Integer(
-                    "n_cardboard_types", (1, MAX_CARDBOARD_TYPES), default=5
+                    "n_cardboard_types", (1, MAX_INT), default=5
                 ),
                 "n_drawers": Integer("n_drawers", (1, MAX_INT), default=20),
                 "goal_sequence_length": Integer(
@@ -329,15 +337,21 @@ class ReplenishGenerator(Generator):
 
         for i in range(1, params["n_cardboard_types"] + 1):
             ct = self._get_object(f"cardboard_type_{i}", self._CardboardType)
-            initial_values[max_type_capacity(ct)] = Int(self._type_capacity[i - 1])
-            initial_values[build_box_time(ct)] = Int(self._build_box_time[i - 1])
+            initial_values[max_type_capacity(ct)] = Int(
+                self._type_capacity[(i - 1) % self._values_lists_len]
+            )
+            initial_values[build_box_time(ct)] = Int(
+                self._build_box_time[(i - 1) % self._values_lists_len]
+            )
             initial_values[time_replenish_same_type(ct)] = Int(
-                self._time_replenish_same_type[i - 1]
+                self._time_replenish_same_type[(i - 1) % self._values_lists_len]
             )
             initial_values[time_replenish_new_type(ct)] = Int(
-                self._time_replenish_new_type[i - 1]
+                self._time_replenish_new_type[(i - 1) % self._values_lists_len]
             )
-            initial_values[time_empty(ct)] = Int(self._time_empty[i - 1])
+            initial_values[time_empty(ct)] = Int(
+                self._time_empty[(i - 1) % self._values_lists_len]
+            )
 
         target_sequence_fluent = self._domain.fluent("target_sequence_fluent")
         for i, g in enumerate(goal_sequence):
