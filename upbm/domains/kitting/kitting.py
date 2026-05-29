@@ -28,7 +28,7 @@ from ConfigSpace import (
 from typing import Any
 
 from upbm.generator import Generator
-from upbm.utils import MAX_INT
+from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 
 
 def generate_partitions_list(k: int, n: int):
@@ -55,10 +55,8 @@ class KittingGenerator(Generator):
     def get_domain_parameter_space() -> ConfigurationSpace:
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        mapping["max_components"] = Integer("max_components", (1, MAX_INT), default=10)
         mapping["max_kit_size"] = Integer("max_kit_size", (1, MAX_INT), default=5)
         mapping["max_n_kit"] = Integer("max_n_kit", (1, MAX_INT), default=5)
-        mapping["max_robots"] = Integer("max_robots", (1, MAX_INT), default=5)
         mapping["isomorphic_instances"] = Categorical(
             "isomorphic_instances", [True, False], default=True
         )
@@ -70,10 +68,8 @@ class KittingGenerator(Generator):
         if domain_params.config_space != self.get_domain_parameter_space():
             raise ValueError(f"Invalid domain parameters: {domain_params}")
 
-        self._max_components = domain_params["max_components"]
         self._max_kit_size = domain_params["max_kit_size"]
         self._max_n_kit = domain_params["max_n_kit"]
-        self._max_robots = domain_params["max_robots"]
         self._isomorphic_instances = domain_params["isomorphic_instances"]
 
         self._object_cache: Dict[Tuple[str, UserType], Object] = {}
@@ -83,10 +79,10 @@ class KittingGenerator(Generator):
     def instance_parameter_space(self) -> ConfigurationSpace:
         return ConfigurationSpace(
             {
-                "n_components": (1, self._max_components),
-                "kit_size": (1, self._max_kit_size),
-                "n_kit": (1, self._max_n_kit),
-                "n_robots": (1, self._max_robots),
+                "n_components": Integer("n_components", (1, MAX_INT), default=10),
+                "kit_size": Integer("kit_size", (1, self._max_kit_size), default=5),
+                "n_kit": Integer("n_kit", (1, self._max_n_kit), default=5),
+                "n_robots": Integer("n_robots", (1, MAX_INT), default=5),
                 "combination_idx": (0, MAX_INT),
             }
         )
@@ -110,8 +106,11 @@ class KittingGenerator(Generator):
             self._object_cache[(name, utype)] = res
         return res
 
-    @property
-    def object_universe(self) -> Iterable[Object]:
+    def object_universe(
+        self, instance_parameters_space: Optional[ConfigurationSpace] = None
+    ) -> Iterable[Object]:
+        if instance_parameters_space is None:
+            instance_parameters_space = self.instance_parameter_space
         objs = [
             self._domain.object("l0"),
             self._domain.object("k1"),
@@ -120,10 +119,14 @@ class KittingGenerator(Generator):
         Location = self._domain.user_type("Location")
         Component = self._domain.user_type("Component")
         Robot = self._domain.user_type("Robot")
-        for i in range(1, self._max_components + 1):
+        _, components_upper = hyperparam_range(
+            instance_parameters_space["n_components"]
+        )
+        _, robots_upper = hyperparam_range(instance_parameters_space["n_robots"])
+        for i in range(1, components_upper + 1):
             objs.append(self._get_object(f"l{i}", Location))
             objs.append(self._get_object(f"c{i}", Component))
-        for i in range(self._max_robots):
+        for i in range(robots_upper):
             objs.append(self._get_object(f"r{i}", Robot))
         return objs
 
@@ -283,7 +286,7 @@ class KittingGenerator(Generator):
 
     def get_objects(self, params: Configuration) -> Iterable[Object]:
         params.check_valid_configuration()
-        if params.config_space != self.instance_parameter_space:
+        if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
 
         Location = self._domain.user_type("Location")
@@ -299,7 +302,7 @@ class KittingGenerator(Generator):
 
     def get_goal(self, params: Configuration) -> List[up.model.FNode]:
         params.check_valid_configuration()
-        if params.config_space != self.instance_parameter_space:
+        if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
 
         goals = []
@@ -313,7 +316,7 @@ class KittingGenerator(Generator):
         self, params: Configuration
     ) -> Dict[up.model.FNode, up.model.FNode]:
         params.check_valid_configuration()
-        if params.config_space != self.instance_parameter_space:
+        if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
 
         initial_values = {}

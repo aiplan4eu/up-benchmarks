@@ -1,7 +1,16 @@
-from ConfigSpace import ConfigurationSpace, Configuration
+from ConfigSpace import (
+    ConfigurationSpace,
+    Configuration,
+    Constant,
+    UniformIntegerHyperparameter,
+    CategoricalHyperparameter,
+)
 
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Iterator
 from unified_planning.model import Problem, Object, FNode  # type: ignore[import-untyped]
+import itertools
+
+from upbm.utils import is_subspace
 
 
 class Generator(object):
@@ -83,10 +92,11 @@ class Generator(object):
         """
         raise NotImplementedError
 
-    @property
-    def object_universe(self) -> Optional[Iterable[Object]]:
+    def object_universe(
+        self, instance_parameters_space: Optional[ConfigurationSpace] = None
+    ) -> Optional[Iterable[Object]]:
         """Return the universe of objects that can be used in instances of this
-        domain, or ``None``.
+        domain bounded by the instance_parameters_space, or ``None``.
 
         When a universe is returned, each generated instance can only use a
         subset of these objects.  Returning ``None`` (the default) means there
@@ -164,6 +174,65 @@ class Generator(object):
             NotImplementedError: Always, when called on the base class.
         """
         raise NotImplementedError
+
+    def check_instance_parameters(self, params: Configuration):
+        """
+        Check if the parameters generate a valid, solvable problem.
+
+        Args:
+            params: A ``Configuration`` drawn from ``instance_parameter_space``.
+
+        Returns:
+            boolean representing if the parameters are valid - True default for base class / generators that do not implement this
+        """
+        return True
+
+    def sample(
+        self, instance_parameters_space: Optional[ConfigurationSpace] = None
+    ) -> Iterator[Configuration]:
+        if instance_parameters_space is None:
+            instance_parameters_space == self.instance_parameter_space
+        assert instance_parameters_space is not None
+        if not is_subspace(instance_parameters_space, self.instance_parameter_space):
+            raise ValueError(
+                "The provided parameter space for sampling is not contained in the parameter space for the chosen domain"
+            )
+        while True:
+            instance_params = instance_parameters_space.sample_configuration()
+            if not self.check_instance_parameters(instance_params):
+                continue
+            yield instance_params
+
+    def get_all_instances_configurations(
+        self, instance_parameters_space: Optional[ConfigurationSpace] = None
+    ) -> Iterator[Configuration]:
+        """
+        Returns the iterator with all the valid instance configurations that are part of the given instance_parameter_space.
+        If instance_parameter_space is None, uses self.instance_parameter_space instead.
+        """
+        if instance_parameters_space is None:
+            instance_parameters_space = self.instance_parameter_space
+        assert instance_parameters_space is not None
+        if not is_subspace(instance_parameters_space, self.instance_parameter_space):
+            raise ValueError(
+                "The provided parameter space for sampling is not contained in the parameter space for the chosen domain"
+            )
+        hp_grid = {}
+        for name, hp in instance_parameters_space.items():
+            if isinstance(hp, Constant):
+                hp_grid[name] = [hp.value]
+            elif isinstance(hp, UniformIntegerHyperparameter):
+                hp_grid[name] = list(range(hp.lower, hp.upper + 1))
+            elif isinstance(hp, CategoricalHyperparameter):
+                hp_grid[name] = list(hp.choices)
+            else:
+                raise TypeError("unexpected hyperparam type")
+
+        for combo in itertools.product(*hp_grid.values()):
+            values = dict(zip(hp_grid.keys(), combo))
+            temp_config = Configuration(instance_parameters_space, values=values)
+            if self.check_instance_parameters(temp_config):
+                yield temp_config
 
     @property
     def requires_per_instance_domain(self) -> bool:

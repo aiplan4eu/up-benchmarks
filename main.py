@@ -1,6 +1,6 @@
 import argparse
-import yaml
 from pathlib import Path
+from upbm.utils import get_reduced_instance_space
 
 from upbm import (
     DomainFactory,
@@ -118,6 +118,14 @@ def main():
         help="Instance parameter in the form -p param_name param_value",
     )
     sample_parser.add_argument(
+        "-r",
+        "--paramrange",
+        nargs=3,
+        action="append",
+        default=[],
+        help="Instance parameter range in the form -r param_name min_value, max_value",
+    )
+    sample_parser.add_argument(
         "-o",
         "--output-folder",
         type=Path,
@@ -227,13 +235,19 @@ def main():
             ):
                 raise ValueError(f"Domain {args.domain} is not expressible in PDDL.")
 
-            fixed_params_dict = dict(args.param)
+            reducing_dict = {}
+            for plist in args.param:
+                reducing_dict[plist[0]] = plist[1]
+            for prlist in args.paramrange:
+                reducing_dict[prlist[0]] = (prlist[1], prlist[2])
+
+            instance_space = get_reduced_instance_space(
+                factory.get_instance_parameter_space(args.domain, domain_params),
+                reducing_dict,
+            )
 
             problems = factory.sample_instances(
-                args.domain,
-                domain_params,
-                args.n,
-                fixed_instance_params=fixed_params_dict,
+                args.domain, domain_params, args.n, instance_space
             )
 
             for i, instance in enumerate(problems):

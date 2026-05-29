@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, List
 
 from ConfigSpace import (
     ConfigurationSpace,
@@ -14,7 +14,7 @@ from unified_planning.shortcuts import TRUE, UserType  # type: ignore[import-unt
 from typing import Any
 
 from upbm.generator import Generator
-from upbm.utils import MAX_INT
+from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 
 
 SCRIPT_PATH = Path(__file__).absolute().parent
@@ -29,8 +29,6 @@ class MatchCellarGenerator(Generator):
         mapping["variant"] = Categorical(
             "variant", ["ipc", "variable_duration"], default="ipc"
         )
-        mapping["max_matches"] = Integer("max_matches", (0, MAX_INT), default=20)
-        mapping["max_fuses"] = Integer("max_fuses", (0, MAX_INT), default=20)
         return ConfigurationSpace(name=mapping)
 
     def __init__(self, domain_params: Configuration):
@@ -41,7 +39,6 @@ class MatchCellarGenerator(Generator):
         ):
             raise ValueError(f"Invalid domain parameters: {domain_params}")
 
-        self.domain_params = domain_params
         self.version = domain_params["version"]
         self.variant = domain_params["variant"]
         self._domain = self._mk_domain()
@@ -56,12 +53,10 @@ class MatchCellarGenerator(Generator):
 
     @property
     def instance_parameter_space(self) -> ConfigurationSpace:
-        return ConfigurationSpace(
-            {
-                "n_matches": (1, self.domain_params["max_matches"]),
-                "n_fuses": (1, self.domain_params["max_fuses"]),
-            }
-        )
+        mapping: dict[str, Any] = {}
+        mapping["n_matches"] = Integer("n_matches", (0, MAX_INT), default=10)
+        mapping["n_fuses"] = Integer("n_fuses", (0, MAX_INT), default=16)
+        return ConfigurationSpace(name=mapping)
 
     @property
     def name(self) -> str:
@@ -95,8 +90,11 @@ class MatchCellarGenerator(Generator):
 
     def get_objects(self, params) -> list[Object]:
         params.check_valid_configuration()
-        if params.config_space != self.instance_parameter_space:
+        if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
+
+        if self.variant == "ipc" and params["n_fuses"] > 2 * params["n_matches"]:
+            raise ValueError(f"Requested instance is unsolvable")
 
         objs = []
         for i in range(params["n_matches"]):
@@ -105,19 +103,20 @@ class MatchCellarGenerator(Generator):
             objs.append(self._get_object(f"fuse{i}", self._Fuse))
         return objs
 
-    @property
-    def object_universe(self):
+    def object_universe(
+        self, instance_parameters_space: Optional[ConfigurationSpace] = None
+    ):
+        if instance_parameters_space is None:
+            instance_parameters_space = self.instance_parameter_space
+        _, matches_upper = hyperparam_range(instance_parameters_space["n_matches"])
+        _, fuses_upper = hyperparam_range(instance_parameters_space["n_fuses"])
         return [
-            self._get_object(f"match{i}", self._Match)
-            for i in range(self.domain_params["max_matches"])
-        ] + [
-            self._get_object(f"fuse{i}", self._Fuse)
-            for i in range(self.domain_params["max_fuses"])
-        ]
+            self._get_object(f"match{i}", self._Match) for i in range(matches_upper)
+        ] + [self._get_object(f"fuse{i}", self._Fuse) for i in range(fuses_upper)]
 
     def get_goal(self, params) -> list[FNode]:
         params.check_valid_configuration()
-        if params.config_space != self.instance_parameter_space:
+        if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
 
         res = []
@@ -127,7 +126,7 @@ class MatchCellarGenerator(Generator):
 
     def get_initial_state(self, params) -> dict[FNode, FNode]:
         params.check_valid_configuration()
-        if params.config_space != self.instance_parameter_space:
+        if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
 
         res = {self._handfree(): TRUE()}
@@ -148,3 +147,14 @@ class MatchCellarGenerator(Generator):
                     )
                 ] = 2
         return res
+
+    def check_instance_parameters(self, params: Configuration):
+        if self.variant == "ipc" and params["n_fuses"] > 2 * params["n_matches"]:
+            return False
+        if (
+            self.variant == "variable_duration"
+            and params["n_fuses"] > 2 * params["n_matches"]
+        ):
+            # NOTE seems that for now the durations are hardcoded to be set the same way as ipc
+            return False
+        return True

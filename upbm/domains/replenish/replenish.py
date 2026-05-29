@@ -23,13 +23,12 @@ from ConfigSpace import (
     ConfigurationSpace,
     Configuration,
     Integer,
-    Categorical,
     Constant,
 )
 from typing import Any
 
 from upbm.generator import Generator
-from upbm.utils import MAX_INT
+from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 
 
 class ReplenishGenerator(Generator):
@@ -37,10 +36,6 @@ class ReplenishGenerator(Generator):
     def get_domain_parameter_space() -> ConfigurationSpace:
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        mapping["max_cardboard_types"] = Integer(
-            "max_cardboard_types", (1, 5), default=5
-        )
-        mapping["max_drawers"] = Integer("max_drawers", (1, MAX_INT), default=20)
         mapping["max_goal_sequence_length"] = Integer(
             "max_goal_sequence_length", (1, MAX_INT), default=20
         )
@@ -52,8 +47,6 @@ class ReplenishGenerator(Generator):
         if domain_params.config_space != self.get_domain_parameter_space():
             raise ValueError(f"Invalid domain parameters: {domain_params}")
 
-        self._max_n_cardboard_types = domain_params["max_cardboard_types"]
-        self._max_n_drawers = domain_params["max_drawers"]
         self._max_goal_sequence_length = domain_params["max_goal_sequence_length"]
 
         self._build_box_time = [3, 4, 5, 3, 5]
@@ -62,6 +55,16 @@ class ReplenishGenerator(Generator):
         self._time_replenish_same_type = [6, 7, 8, 6, 8]
         self._time_replenish_new_type = [8, 9, 10, 8, 10]
         self._time_empty = [5, 6, 7, 5, 7]
+
+        self._values_lists_len = min(
+            [
+                len(self._build_box_time),
+                len(self._type_capacity),
+                len(self._time_replenish_same_type),
+                len(self._time_replenish_new_type),
+                len(self._time_empty),
+            ]
+        )
 
         self._domain = self._build_domain()
 
@@ -74,9 +77,15 @@ class ReplenishGenerator(Generator):
     def instance_parameter_space(self) -> ConfigurationSpace:
         return ConfigurationSpace(
             {
-                "n_cardboard_types": (1, self._max_n_cardboard_types),
-                "n_drawers": (1, self._max_n_drawers),
-                "goal_sequence_length": (1, self._max_goal_sequence_length),
+                "n_cardboard_types": Integer(
+                    "n_cardboard_types", (1, MAX_INT), default=5
+                ),
+                "n_drawers": Integer("n_drawers", (1, MAX_INT), default=20),
+                "goal_sequence_length": Integer(
+                    "goal_sequence_length",
+                    (1, self._max_goal_sequence_length),
+                    default=20,
+                ),
                 "sequence_seed": (0, MAX_INT),
             }
         )
@@ -96,18 +105,27 @@ class ReplenishGenerator(Generator):
             self._object_cache[(name, type)] = res
         return res
 
-    @property
-    def object_universe(self) -> Iterable[Object]:
+    def object_universe(
+        self, instance_parameters_space: Optional[ConfigurationSpace] = None
+    ) -> Iterable[Object]:
+        if instance_parameters_space is None:
+            instance_parameters_space = self.instance_parameter_space
         objs = [self._domain.object("no_type")]
-        for i in range(1, self._max_n_cardboard_types + 1):
+
+        _, cardboard_upper = hyperparam_range(
+            instance_parameters_space["n_cardboard_types"]
+        )
+        _, drawers_upper = hyperparam_range(instance_parameters_space["n_drawers"])
+
+        for i in range(1, cardboard_upper + 1):
             objs.append(self._get_object(f"cardboard_type_{i}", self._CardboardType))
-        for i in range(self._max_n_drawers):
+        for i in range(drawers_upper):
             objs.append(self._get_object(f"drawer_{i}", self._Drawer))
         return objs
 
     def get_objects(self, params: Configuration) -> Iterable[Object]:
         params.check_valid_configuration()
-        if params.config_space != self.instance_parameter_space:
+        if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
 
         objs = []
@@ -292,7 +310,7 @@ class ReplenishGenerator(Generator):
         self, params: Configuration
     ) -> Dict[up.model.FNode, up.model.FNode]:
         params.check_valid_configuration()
-        if params.config_space != self.instance_parameter_space:
+        if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
 
         rng = random.Random(params["sequence_seed"])
@@ -319,15 +337,21 @@ class ReplenishGenerator(Generator):
 
         for i in range(1, params["n_cardboard_types"] + 1):
             ct = self._get_object(f"cardboard_type_{i}", self._CardboardType)
-            initial_values[max_type_capacity(ct)] = Int(self._type_capacity[i - 1])
-            initial_values[build_box_time(ct)] = Int(self._build_box_time[i - 1])
+            initial_values[max_type_capacity(ct)] = Int(
+                self._type_capacity[(i - 1) % self._values_lists_len]
+            )
+            initial_values[build_box_time(ct)] = Int(
+                self._build_box_time[(i - 1) % self._values_lists_len]
+            )
             initial_values[time_replenish_same_type(ct)] = Int(
-                self._time_replenish_same_type[i - 1]
+                self._time_replenish_same_type[(i - 1) % self._values_lists_len]
             )
             initial_values[time_replenish_new_type(ct)] = Int(
-                self._time_replenish_new_type[i - 1]
+                self._time_replenish_new_type[(i - 1) % self._values_lists_len]
             )
-            initial_values[time_empty(ct)] = Int(self._time_empty[i - 1])
+            initial_values[time_empty(ct)] = Int(
+                self._time_empty[(i - 1) % self._values_lists_len]
+            )
 
         target_sequence_fluent = self._domain.fluent("target_sequence_fluent")
         for i, g in enumerate(goal_sequence):
@@ -344,7 +368,7 @@ class ReplenishGenerator(Generator):
 
     def get_goal(self, params: Configuration) -> List[up.model.FNode]:
         params.check_valid_configuration()
-        if params.config_space != self.instance_parameter_space:
+        if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
 
         goal_progress = self._domain.fluent("goal_progress")

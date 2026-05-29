@@ -5,7 +5,7 @@
           (handfree)
           (unused ?match - match)
           (mended ?fuse - fuse)
-	  (light ?match - match))
+       (light ?match - match))
 
      (:functions
           (match-duration ?match - match)
@@ -16,11 +16,11 @@
           :parameters (?match - match)
           :duration (= ?duration (match-duration ?match))
           :condition (and
-	       (at start (unused ?match)))
+            (at start (unused ?match)))
           :effect (and
-		(at start (not (unused ?match)))
-		(at start (light ?match))
-		(at end (not (light ?match)))))
+          (at start (not (unused ?match)))
+          (at start (light ?match))
+          (at end (not (light ?match)))))
 
 
      (:durative-action MEND_FUSE
@@ -28,10 +28,9 @@
           :duration (= ?duration (fuse-duration ?fuse))
           :condition (and
                (at start (handfree))
-	       (over all (light ?match)))
+               (over all (light ?match)))
           :effect (and
                (at start (not (handfree)))
                (at end (mended ?fuse))
                (at end (handfree))))
 )
-

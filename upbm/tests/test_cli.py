@@ -1,6 +1,5 @@
 import subprocess
 import sys
-import pytest
 
 
 def run_cli(args):
@@ -125,8 +124,12 @@ def test_cli_sample(tmp_path):
             "variant",
             "ipc",
             "-p",
+            "n_fuses",
+            "1",
+            "-r",
             "n_matches",
             "1",
+            "4",
             "-o",
             str(out_folder),
             "--format",
