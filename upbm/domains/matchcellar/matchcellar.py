@@ -29,7 +29,9 @@ class MatchCellarGenerator(Generator):
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
         mapping["variant"] = Categorical(
-            "variant", ["ipc", "variable_duration", "long_short_fuse"], default="ipc"
+            "variant",
+            ["ipc", "variable_duration", "long_short_fuse", "simple"],
+            default="ipc",
         )
         return ConfigurationSpace(name=mapping)
 
@@ -56,7 +58,7 @@ class MatchCellarGenerator(Generator):
     @property
     def instance_parameter_space(self) -> ConfigurationSpace:
         mapping: dict[str, Any] = {}
-        if self.variant in ["ipc", "variable_duration"]:
+        if self.variant in ["ipc", "variable_duration", "simple"]:
             mapping["n_matches"] = Integer("n_matches", (0, MAX_INT), default=10)
             mapping["n_fuses"] = Integer("n_fuses", (0, MAX_INT), default=16)
         elif self.variant == "long_short_fuse":
@@ -96,6 +98,10 @@ class MatchCellarGenerator(Generator):
                 return reader.parse_problem(
                     str(RESOURCES_PATH / f"matchcellar_long_short_fuse.pddl")
                 )
+            elif self.variant == "simple":
+                return reader.parse_problem(
+                    str(RESOURCES_PATH / f"matchcellar_simple.pddl")
+                )
         raise ValueError(
             f"Unknown domain version {self.version} or variant {self.variant}"
         )
@@ -115,7 +121,7 @@ class MatchCellarGenerator(Generator):
 
         if not self.check_instance_parameters(params):
             raise ValueError(f"Requested instance is unsolvable")
-        if self.variant in ["ipc", "variable_duration"]:
+        if self.variant in ["ipc", "variable_duration", "simple"]:
             for i in range(params["n_matches"]):
                 objs.append(self._get_object(f"match{i}", self._Match))
             for i in range(params["n_fuses"]):
@@ -137,7 +143,7 @@ class MatchCellarGenerator(Generator):
     def object_universe(
         self, instance_parameters_space: Optional[ConfigurationSpace] = None
     ):
-        if self.variant in ["ipc", "variable_duration"]:
+        if self.variant in ["ipc", "variable_duration", "simple"]:
             if instance_parameters_space is None:
                 instance_parameters_space = self.instance_parameter_space
             _, matches_upper = hyperparam_range(instance_parameters_space["n_matches"])
@@ -184,7 +190,7 @@ class MatchCellarGenerator(Generator):
         if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
         res = []
-        if self.variant in ["ipc", "variable_duration"]:
+        if self.variant in ["ipc", "variable_duration", "simple"]:
             for i in range(params["n_fuses"]):
                 res.append(self._mended(self._get_object(f"fuse{i}", self._Fuse)))
         elif self.variant == "long_short_fuse":
@@ -203,7 +209,7 @@ class MatchCellarGenerator(Generator):
         if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
         res = {self._handfree(): TRUE()}
-        if self.variant in ["ipc", "variable_duration"]:
+        if self.variant in ["ipc", "variable_duration", "simple"]:
             for i in range(params["n_matches"]):
                 res[self._unused(self._get_object(f"match{i}", self._Match))] = TRUE()
 
@@ -245,6 +251,8 @@ class MatchCellarGenerator(Generator):
 
     def check_instance_parameters(self, params: Configuration):
         if self.variant == "ipc" and params["n_fuses"] > 2 * params["n_matches"]:
+            return False
+        if self.variant == "simple" and params["n_fuses"] > params["n_matches"]:
             return False
         if (
             self.variant == "variable_duration"
