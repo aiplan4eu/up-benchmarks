@@ -18,7 +18,13 @@ from unified_planning.shortcuts import (
     TRUE,
 )
 from unified_planning.model.walkers import AnyChecker
-from ConfigSpace import ConfigurationSpace, Configuration, Integer, Constant
+from ConfigSpace import (
+    ConfigurationSpace,
+    Configuration,
+    Integer,
+    Constant,
+    Categorical,
+)
 from typing import Any
 
 from upbm.generator import Generator
@@ -33,6 +39,9 @@ class MaJSPGenerator(Generator):
     def get_domain_parameter_space() -> ConfigurationSpace:
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
+        mapping["variant"] = Categorical(
+            "variant", ["default", "allow_extra_locations"], default="default"
+        )
         return ConfigurationSpace(name=mapping)
 
     def __init__(self, domain_params: Configuration) -> None:
@@ -40,6 +49,7 @@ class MaJSPGenerator(Generator):
         domain_params.check_valid_configuration()
         if domain_params.config_space != self.get_domain_parameter_space():
             raise ValueError(f"Invalid domain parameters: {domain_params}")
+        self._variant = domain_params["variant"]
         self._domain = self._build_domain()
 
         self._Robot = self._domain.user_type("Robot")
@@ -82,6 +92,7 @@ class MaJSPGenerator(Generator):
     def object_universe(
         self, instance_parameters_space: Optional[ConfigurationSpace] = None
     ) -> Iterable[Object]:
+        # object universe is the same in both variants
         if instance_parameters_space is None:
             instance_parameters_space = self.instance_parameter_space
         objs = [
@@ -214,8 +225,15 @@ class MaJSPGenerator(Generator):
             objs.append(self._get_object(f"r{i}", self._Robot))
         for i in range(params["n_pallets"]):
             objs.append(self._get_object(f"b{i}", self._Pallet))
-        for i in range(params["n_positions"]):
-            objs.append(self._get_object(f"p{i}", self._Position))
+
+        if self._variant == "default":
+            for i in range(min(params["n_treatments"], params["n_positions"])):
+                objs.append(self._get_object(f"p{i}", self._Position))
+        elif self._variant == "allow_extra_locations":
+            for i in range(params["n_positions"]):
+                objs.append(self._get_object(f"p{i}", self._Position))
+        else:
+            raise ValueError(f"Invalid variant: {self._variant}")
         return objs
 
     def get_goal(self, params: Configuration) -> List[up.model.FNode]:
