@@ -80,10 +80,10 @@ class KittingGenerator(Generator):
         return ConfigurationSpace(
             {
                 "n_components": Integer("n_components", (1, MAX_INT), default=10),
-                "kit_size": Integer("kit_size", (1, self._max_kit_size)),
+                "kit_size": Integer("kit_size", (0, self._max_kit_size)),
                 "n_kit": Integer("n_kit", (1, self._max_n_kit)),
                 "n_robots": Integer("n_robots", (1, MAX_INT), default=5),
-                "combination_idx": (0, MAX_INT),
+                "combination_idx": Integer("combination_idx", (0, MAX_INT)),
             }
         )
 
@@ -383,3 +383,11 @@ class KittingGenerator(Generator):
             ] = self._domain.environment.expression_manager.ObjectExp(EMPTY)
 
         return initial_values
+
+    def check_instance_parameters(self, params: Configuration):
+        combinations = self._get_combinations(
+            params["n_components"], params["kit_size"]
+        )
+        if params["combination_idx"] > (len(combinations) - 1):
+            return False
+        return True
