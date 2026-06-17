@@ -80,8 +80,8 @@ class KittingGenerator(Generator):
         return ConfigurationSpace(
             {
                 "n_components": Integer("n_components", (1, MAX_INT), default=10),
-                "kit_size": Integer("kit_size", (1, self._max_kit_size), default=5),
-                "n_kit": Integer("n_kit", (1, self._max_n_kit), default=5),
+                "kit_size": Integer("kit_size", (1, self._max_kit_size)),
+                "n_kit": Integer("n_kit", (1, self._max_n_kit)),
                 "n_robots": Integer("n_robots", (1, MAX_INT), default=5),
                 "combination_idx": (0, MAX_INT),
             }

@@ -82,9 +82,7 @@ class ReplenishGenerator(Generator):
                 ),
                 "n_drawers": Integer("n_drawers", (1, MAX_INT), default=20),
                 "goal_sequence_length": Integer(
-                    "goal_sequence_length",
-                    (1, self._max_goal_sequence_length),
-                    default=20,
+                    "goal_sequence_length", (1, self._max_goal_sequence_length)
                 ),
                 "sequence_seed": (0, MAX_INT),
             }
