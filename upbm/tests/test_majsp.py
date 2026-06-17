@@ -18,10 +18,12 @@ class TestMaJSP(BaseDomainTest):
         return MaJSPGenerator
 
     def _get_configs(self):
-        default_config = (
-            MaJSPGenerator.get_domain_parameter_space().get_default_configuration()
+
+        domain_config = Configuration(
+            MaJSPGenerator.get_domain_parameter_space(),
+            {"version": 1, "variant": "allow_extra_locations"},
         )
-        gen = MaJSPGenerator(default_config)
+        gen = MaJSPGenerator(domain_config)
         instance_space = gen.instance_parameter_space
         instance_1 = Configuration(
             instance_space,
@@ -33,7 +35,7 @@ class TestMaJSP(BaseDomainTest):
             {"n_pallets": 1, "n_robots": 1, "n_positions": 2, "n_treatments": 1},
         )
 
-        return [(default_config, instance_1), (default_config, instance_2)]
+        return [(domain_config, instance_1), (domain_config, instance_2)]
 
     @property
     def plannable(self):
