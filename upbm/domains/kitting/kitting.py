@@ -77,15 +77,21 @@ class KittingGenerator(Generator):
 
     @property
     def instance_parameter_space(self) -> ConfigurationSpace:
-        return ConfigurationSpace(
-            {
-                "n_components": Integer("n_components", (1, MAX_INT), default=10),
-                "kit_size": Integer("kit_size", (0, self._max_kit_size)),
-                "n_kit": Integer("n_kit", (1, self._max_n_kit)),
-                "n_robots": Integer("n_robots", (1, MAX_INT), default=5),
-                "combination_idx": Integer("combination_idx", (0, MAX_INT)),
-            }
-        )
+        mapping = {}
+        mapping["n_components"] = Integer("n_components", (1, MAX_INT), default=10)
+        mapping["n_robots"] = Integer("n_robots", (1, MAX_INT), default=5)
+        mapping["combination_idx"] = Integer("combination_idx", (0, MAX_INT))
+
+        if self._max_kit_size == 0:
+            mapping["kit_size"] = Constant("kit_size", 0)
+        else:
+            mapping["kit_size"] = Integer("kit_size", (0, self._max_kit_size))
+
+        if self._max_n_kit == 1:
+            mapping["n_kit"] = Constant("n_kit", 1)
+        else:
+            mapping["n_kit"] = Integer("n_kit", (1, self._max_n_kit))
+        return ConfigurationSpace(mapping)
 
     @property
     def name(self) -> str:
