@@ -24,6 +24,7 @@ from ConfigSpace import (
     Integer,
     Constant,
     Categorical,
+    UniformIntegerHyperparameter,
 )
 from typing import Any
 
@@ -77,7 +78,7 @@ class KittingGenerator(Generator):
 
     @property
     def instance_parameter_space(self) -> ConfigurationSpace:
-        mapping = {}
+        mapping: Dict[str, Union[Constant, UniformIntegerHyperparameter]] = {}
         mapping["n_components"] = Integer("n_components", (1, MAX_INT), default=10)
         mapping["n_robots"] = Integer("n_robots", (1, MAX_INT), default=5)
         mapping["combination_idx"] = Integer("combination_idx", (0, MAX_INT))
