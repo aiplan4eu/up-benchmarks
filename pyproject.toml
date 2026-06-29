@@ -7,6 +7,8 @@ name = "unified-planning-benchmarks"
 version = "0.1.0"
 description = "A collection of planning problems"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 dependencies = [
     "unified-planning",
