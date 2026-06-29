@@ -1,6 +1,6 @@
 # UP-Benchmarks
 
-WIP - some features in this readme might be not yet present, some instructions might be currently inaccurate
+NOTE - this library is still in development - behaviour might be instable
 
 Planning Benchmarks Manager. This library provides a centralized repository and a unified interface to generate, sample, and manage planning problem instances.
 
@@ -44,12 +44,18 @@ Save to a specific file:
 python3 main.py mkinstance matchcellar -d variant ipc -p n_matches 5 -o problem.pddl -D domain.pddl
 ```
 
+Note that if the requested instance is unsolvable an error will be raised
+
 ### Sample Instances
 
-Sample 5 instances with random parameters, fixing some of them:
+Sample 5 instances with random parameters, fixing some of them and giving a range for others:
 ```bash
-python3 main.py sample matchcellar 5 -d variant ipc -p n_matches 3 -o ./samples
+python3 main.py sample matchcellar 5 -d variant ipc -p n_fuses 5 -r n_matches 3 10 -o ./samples
 ```
+
+Use `-p parameter_name fixed_value` to fix a parameter value and `-r parameter_name min_value max_value` to specify a range.
+
+If no constraint is specified for one parameter, it will be sampled from the maximum possible size (usually from the range [1, 2^31])
 
 ### Generate a Dataset from Spec
 
@@ -96,9 +102,14 @@ print(f"Problem name: {problem.name}")
 
 ```python
 from upbm import dump_instance
+from upbm.utils import get_reduced_instance_space
+
+# Create smaller parameter space
+largest_possible_space = factory.get_instance_parameter_space(domain="matchcellar", domain_params=domain_params)
+reduced_space = get_reduced_instance_space(largest_possible_space, {"n_matches": 10, "n_fuses": (5, 20)})
 
 # Sample 10 instances
-problems = factory.sample_instances("matchcellar", domain_params, n=10, fixed_instance_params={"n_matches": 3})
+problems = factory.sample_instances("matchcellar", domain_params, n=10, instance_parameter_space=reduced_space)
 
 # Save the first one as PDDL
 dump_instance(problems[0], Format.PDDL, "prob.pddl", "dom.pddl")
@@ -118,16 +129,16 @@ dump_instance(problems[0], Format.PDDL, "prob.pddl", "dom.pddl")
   - Format: UP
   - Features: Bounded Numbers, Bounded Numeric Params
   - Hardness: "Looping Behavior", "Numeric Indexing Goals"
-- **Painter (AAAI 20)**
+- **Painter (AAAI 20)** _not yet implemented_
   - Format: ANML
   - Features: ICE, Bounded Numbers, Required Concurrency
-- **Temporal Sailing (ICAPS 26)**
+- **Temporal Sailing (ICAPS 26)** _not yet implemented_
   - Format: PDDL
   - Features: Numbers, Timed Effects, Required Concurrency with Deadline
-- **Temporal Plant Watering (ICAPS 26)**
+- **Temporal Plant Watering (ICAPS 26)** _not yet implemented_
   - Format: PDDL
   - Features: Numbers, Required Concurrency
-- **SimpleMAIS/HSP (AAAI 2019 but extended)**
+- **SimpleMAIS/HSP (AAAI 2019 but extended)** _not yet implemented_
   - Format: ANML/TPACK
   - Features: ICE, Numbers, Bounded Numeric Params, Required Concurrency
 
@@ -135,10 +146,10 @@ dump_instance(problems[0], Format.PDDL, "prob.pddl", "dom.pddl")
 - **MatchCellar (Crickey) + modifications**
   - Format: UP/PDDL
   - Features: Required Concurrency
-- **Driverlog**: PDDL
-- **Satellite**: PDDL
-- **Parking**: PDDL
-- **FloorTile**: PDDL
-- **TurnAndOpen**: PDDL
-- **MapAnalyser**: PDDL
-- **TMS**: PDDL
+- **Driverlog** _not yet implemented_: PDDL
+- **Satellite** _not yet implemented_: PDDL
+- **Parking** _not yet implemented_: PDDL
+- **FloorTile** _not yet implemented_: PDDL
+- **TurnAndOpen** _not yet implemented_: PDDL
+- **MapAnalyser** _not yet implemented_: PDDL
+- **TMS** _not yet implemented_: PDDL
