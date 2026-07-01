@@ -48,7 +48,7 @@ def test_cli_domain_params():
     # Check for specific parameters
     assert "variant" in result.stdout
     assert "Categorical" in result.stdout
-    assert "{ipc, variable_duration}" in result.stdout
+    assert "{ipc, variable_duration, legacy}" in result.stdout
 
 
 def test_cli_instance_params():
