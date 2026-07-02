@@ -72,9 +72,6 @@ class KittingGenerator(Generator):
         mapping["version"] = Constant("version", 1)
         mapping["max_kit_size"] = Integer("max_kit_size", (1, MAX_INT), default=5)
         mapping["max_n_kit"] = Integer("max_n_kit", (1, MAX_INT), default=5)
-        mapping["isomorphic_instances"] = Categorical(
-            "isomorphic_instances", [True, False], default=True
-        )
         return ConfigurationSpace(name=mapping)
 
     def __init__(self, domain_params: Configuration) -> None:
@@ -85,7 +82,6 @@ class KittingGenerator(Generator):
 
         self._max_kit_size = domain_params["max_kit_size"]
         self._max_n_kit = domain_params["max_n_kit"]
-        self._isomorphic_instances = domain_params["isomorphic_instances"]
 
         self._object_cache: Dict[Tuple[str, UserType], Object] = {}
         self._domain = self._build_domain()
@@ -290,20 +286,13 @@ class KittingGenerator(Generator):
         self, n_components: int, length: int
     ) -> list[tuple[up.model.Object, ...]]:
         Component = self._domain.user_type("Component")
-        if not self._isomorphic_instances:
-            components_dict = {
-                i: self._get_object(f"c{i}", Component)
-                for i in range(1, n_components + 1)
-            }
-            not_iso_combinations = []
-            for comb in generate_partitions_list(n_components, length):
-                not_iso_combinations.append(tuple(components_dict[i] for i in comb))
-            return not_iso_combinations
-        else:
-            components_list = [
-                self._get_object(f"c{i}", Component) for i in range(1, n_components + 1)
-            ]
-            return list(itertools.product(components_list, repeat=length))
+        components_dict = {
+            i: self._get_object(f"c{i}", Component) for i in range(1, n_components + 1)
+        }
+        not_iso_combinations = []
+        for comb in generate_partitions_list(n_components, length):
+            not_iso_combinations.append(tuple(components_dict[i] for i in comb))
+        return not_iso_combinations
 
     def get_objects(self, params: Configuration) -> Iterable[Object]:
         params.check_valid_configuration()
