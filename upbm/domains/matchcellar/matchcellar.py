@@ -14,6 +14,7 @@
 
 from pathlib import Path
 from typing import Any, Optional, List
+from fractions import Fraction
 
 from ConfigSpace import (
     ConfigurationSpace,
@@ -22,13 +23,16 @@ from ConfigSpace import (
     Categorical,
     Constant,
 )
-from unified_planning.io import PDDLReader  # type: ignore[import-untyped]
-from unified_planning.model import Problem, Object, FNode  # type: ignore[import-untyped]
-from unified_planning.shortcuts import TRUE, UserType  # type: ignore[import-untyped]
+from unified_planning.io import PDDLReader
+from unified_planning.model import Problem, Object, FNode
+from unified_planning.shortcuts import TRUE, UserType, Real, FALSE, Int
 from typing import Any
+import math
 
 from upbm.generator import Generator
 from upbm.utils import MAX_INT, is_subspace, hyperparam_range
+
+from upbm.domains.matchcellar.legacy_variant import get_legacy_domain
 
 
 SCRIPT_PATH = Path(__file__).absolute().parent
@@ -41,7 +45,9 @@ class MatchCellarGenerator(Generator):
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
         mapping["variant"] = Categorical(
-            "variant", ["ipc", "variable_duration"], default="ipc"
+            "variant",
+            ["ipc", "variable_duration", "legacy"],
+            default="ipc",
         )
         return ConfigurationSpace(name=mapping)
 
@@ -56,10 +62,15 @@ class MatchCellarGenerator(Generator):
         self.version = domain_params["version"]
         self.variant = domain_params["variant"]
         self._domain = self._mk_domain()
+        assert isinstance(self._domain, Problem)
         self._Match = self._domain.user_type("match")
         self._Fuse = self._domain.user_type("fuse")
-        self._mended = self._domain.fluent("mended")
-        self._unused = self._domain.fluent("unused")
+        if self.variant == "legacy":
+            self._mended = self._domain.fluent("fuse_mended")
+            self._match_used = self._domain.fluent("match_used")
+        else:
+            self._mended = self._domain.fluent("mended")
+            self._unused = self._domain.fluent("unused")
         self._handfree = self._domain.fluent("handfree")
 
         self._object_cache: dict[tuple[str, Any], Object] = {}
@@ -68,13 +79,21 @@ class MatchCellarGenerator(Generator):
     @property
     def instance_parameter_space(self) -> ConfigurationSpace:
         mapping: dict[str, Any] = {}
-        mapping["n_matches"] = Integer("n_matches", (0, MAX_INT), default=10)
-        mapping["n_fuses"] = Integer("n_fuses", (0, MAX_INT), default=16)
+        if self.variant in ["ipc", "variable_duration"]:
+            mapping["n_matches"] = Integer("n_matches", (0, MAX_INT), default=10)
+            mapping["n_fuses"] = Integer("n_fuses", (0, MAX_INT), default=16)
+        elif self.variant == "legacy":
+            mapping["n_matches_fuses"] = Integer(
+                "n_matches_fuses", (1, MAX_INT), default=10
+            )
+            mapping["total"] = Integer("total", (1, MAX_INT), default=15)
+        else:
+            raise ValueError(f"invalid variant {self.variant}")
         return ConfigurationSpace(name=mapping)
 
     @property
     def name(self) -> str:
-        return f"MatchCellar V{self.version}"
+        return f"MatchCellar V{self.version} ({self.variant})"
 
     @property
     def domain(self) -> Problem:
@@ -91,6 +110,8 @@ class MatchCellarGenerator(Generator):
                 return reader.parse_problem(
                     str(RESOURCES_PATH / f"matchcellar_variable_duration.pddl")
                 )
+            elif self.variant == "legacy":
+                return get_legacy_domain()
         raise ValueError(
             f"Unknown domain version {self.version} or variant {self.variant}"
         )
@@ -104,62 +125,99 @@ class MatchCellarGenerator(Generator):
 
     def get_objects(self, params) -> list[Object]:
         params.check_valid_configuration()
+        objs = []
         if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
 
-        if self.variant == "ipc" and params["n_fuses"] > 2 * params["n_matches"]:
+        if not self.check_instance_parameters(params):
             raise ValueError(f"Requested instance is unsolvable")
-
-        objs = []
-        for i in range(params["n_matches"]):
-            objs.append(self._get_object(f"match{i}", self._Match))
-        for i in range(params["n_fuses"]):
-            objs.append(self._get_object(f"fuse{i}", self._Fuse))
+        if self.variant in ["ipc", "variable_duration"]:
+            for i in range(params["n_matches"]):
+                objs.append(self._get_object(f"match{i}", self._Match))
+            for i in range(params["n_fuses"]):
+                objs.append(self._get_object(f"fuse{i}", self._Fuse))
+        elif self.variant == "legacy":
+            for i in range(params["n_matches_fuses"]):
+                objs.append(self._get_object(f"m{i+1}", self._Match))
+                objs.append(self._get_object(f"f{i+1}", self._Fuse))
+        else:
+            raise ValueError(f"invalid variant {self.variant}")
         return objs
 
     def object_universe(
         self, instance_parameters_space: Optional[ConfigurationSpace] = None
     ):
-        if instance_parameters_space is None:
-            instance_parameters_space = self.instance_parameter_space
-        _, matches_upper = hyperparam_range(instance_parameters_space["n_matches"])
-        _, fuses_upper = hyperparam_range(instance_parameters_space["n_fuses"])
-        return [
-            self._get_object(f"match{i}", self._Match) for i in range(matches_upper)
-        ] + [self._get_object(f"fuse{i}", self._Fuse) for i in range(fuses_upper)]
+        if self.variant in ["ipc", "variable_duration"]:
+            if instance_parameters_space is None:
+                instance_parameters_space = self.instance_parameter_space
+            _, matches_upper = hyperparam_range(instance_parameters_space["n_matches"])
+            _, fuses_upper = hyperparam_range(instance_parameters_space["n_fuses"])
+            return [
+                self._get_object(f"match{i}", self._Match) for i in range(matches_upper)
+            ] + [self._get_object(f"fuse{i}", self._Fuse) for i in range(fuses_upper)]
+        elif self.variant == "legacy":
+            if instance_parameters_space is None:
+                instance_parameters_space = self.instance_parameter_space
+            _, matches_upper = hyperparam_range(
+                instance_parameters_space["n_matches_fuses"]
+            )
+            _, total_upper = hyperparam_range(instance_parameters_space["total"])
+            actual_upper_limit = max(matches_upper, total_upper)
+            return [
+                self._get_object(f"m{i+1}", self._Match)
+                for i in range(actual_upper_limit)
+            ] + [
+                self._get_object(f"f{i+1}", self._Fuse)
+                for i in range(actual_upper_limit)
+            ]
+        else:
+            raise ValueError(f"invalid variant {self.variant}")
 
     def get_goal(self, params) -> list[FNode]:
         params.check_valid_configuration()
         if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
-
         res = []
-        for i in range(params["n_fuses"]):
-            res.append(self._mended(self._get_object(f"fuse{i}", self._Fuse)))
+        if self.variant in ["ipc", "variable_duration"]:
+            for i in range(params["n_fuses"]):
+                res.append(self._mended(self._get_object(f"fuse{i}", self._Fuse)))
+        elif self.variant == "legacy":
+            for i in range(params["n_matches_fuses"]):
+                res.append(self._mended(self._get_object(f"f{i+1}", self._Fuse)))
+        else:
+            raise ValueError(f"invalid variant {self.variant}")
         return res
 
     def get_initial_state(self, params) -> dict[FNode, FNode]:
         params.check_valid_configuration()
         if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
-
         res = {self._handfree(): TRUE()}
-        for i in range(params["n_matches"]):
-            res[self._unused(self._get_object(f"match{i}", self._Match))] = TRUE()
-
-        if self.variant == "variable_duration":
+        if self.variant in ["ipc", "variable_duration"]:
             for i in range(params["n_matches"]):
+                res[self._unused(self._get_object(f"match{i}", self._Match))] = TRUE()
+
+            if self.variant == "variable_duration":
+                for i in range(params["n_matches"]):
+                    res[
+                        self._domain.fluent("match-duration")(
+                            self._get_object(f"match{i}", self._Match)
+                        )
+                    ] = 5
+                for i in range(params["n_fuses"]):
+                    res[
+                        self._domain.fluent("fuse-duration")(
+                            self._get_object(f"fuse{i}", self._Fuse)
+                        )
+                    ] = 2
+        elif self.variant == "legacy":
+            res[self._domain.fluent("mend_fuse_duration")()] = Real(Fraction(6, 1))
+            for i in range(params["n_matches_fuses"]):
                 res[
-                    self._domain.fluent("match-duration")(
-                        self._get_object(f"match{i}", self._Match)
-                    )
-                ] = 5
-            for i in range(params["n_fuses"]):
-                res[
-                    self._domain.fluent("fuse-duration")(
-                        self._get_object(f"fuse{i}", self._Fuse)
-                    )
-                ] = 2
+                    self._match_used(self._get_object(f"m{i+1}", self._Match))
+                ] = FALSE()
+        else:
+            raise ValueError(f"invalid variant {self.variant}")
         return res
 
     def check_instance_parameters(self, params: Configuration):
@@ -171,4 +229,7 @@ class MatchCellarGenerator(Generator):
         ):
             # NOTE seems that for now the durations are hardcoded to be set the same way as ipc
             return False
+        if self.variant in ["legacy"]:
+            # this specific variants are always valid
+            return True
         return True
