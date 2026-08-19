@@ -23,11 +23,31 @@ from unified_planning.plans import Plan
 from unified_planning.io import PDDLWriter, ANMLWriter  # type: ignore[import-untyped]
 from fractions import Fraction
 import re
+import warnings
 
 
 class Format(str, Enum):
     PDDL = "pddl"
     ANML = "anml"
+
+
+def warn_if_metric_lost(instance: Problem) -> None:
+    """Warn that the quality metrics of *instance* are not written to ANML.
+
+    ANML has no syntax for plan quality metrics, so a problem that defines one
+    loses it when it is written out in that format. This is only a warning: a
+    plan for the resulting problem is still a valid plan, it is just not
+    optimised for the metric.
+    """
+    if instance.quality_metrics:
+        metrics = ", ".join(str(m) for m in instance.quality_metrics)
+        warnings.warn(
+            f"The ANML format cannot express plan quality metrics, so "
+            f"[{metrics}] will not appear in the output. The problem is still "
+            f"written and remains solvable, but not optimisable.",
+            UserWarning,
+            stacklevel=2,
+        )
 
 
 def dump_instance(
@@ -50,6 +70,7 @@ def dump_instance(
         writer.write_domain(str(output_dom))
         writer.write_problem(str(output_prob))
     elif format == Format.ANML:
+        warn_if_metric_lost(instance)
         writer = ANMLWriter(instance)
         writer.write_problem(str(output_prob))
     else:
@@ -63,6 +84,7 @@ def print_instance(instance: Problem, format: Format) -> None:
         writer.print_domain()
         writer.print_problem()
     elif format == Format.ANML:
+        warn_if_metric_lost(instance)
         writer = ANMLWriter(instance)
         writer.print_problem()
     else:
