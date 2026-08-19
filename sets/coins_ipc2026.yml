@@ -1,0 +1,88 @@
+# The 20 coins instances of the IPC 2026 dataset.
+# Every instance uses the same five denominations (1, 2, 3, 5, 7), only the
+# target changes, so the instances are named after the original problem files.
+domain: coins
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: pfile01
+    params:
+      n_coins: 5
+      target: 29
+  - name: pfile02
+    params:
+      n_coins: 5
+      target: 38
+  - name: pfile03
+    params:
+      n_coins: 5
+      target: 48
+  - name: pfile04
+    params:
+      n_coins: 5
+      target: 62
+  - name: pfile05
+    params:
+      n_coins: 5
+      target: 79
+  - name: pfile06
+    params:
+      n_coins: 5
+      target: 100
+  - name: pfile07
+    params:
+      n_coins: 5
+      target: 128
+  - name: pfile08
+    params:
+      n_coins: 5
+      target: 163
+  - name: pfile09
+    params:
+      n_coins: 5
+      target: 208
+  - name: pfile10
+    params:
+      n_coins: 5
+      target: 265
+  - name: pfile11
+    params:
+      n_coins: 5
+      target: 338
+  - name: pfile12
+    params:
+      n_coins: 5
+      target: 431
+  - name: pfile13
+    params:
+      n_coins: 5
+      target: 549
+  - name: pfile14
+    params:
+      n_coins: 5
+      target: 700
+  - name: pfile15
+    params:
+      n_coins: 5
+      target: 892
+  - name: pfile16
+    params:
+      n_coins: 5
+      target: 1137
+  - name: pfile17
+    params:
+      n_coins: 5
+      target: 1449
+  - name: pfile18
+    params:
+      n_coins: 5
+      target: 1847
+  - name: pfile19
+    params:
+      n_coins: 5
+      target: 2354
+  - name: pfile20
+    params:
+      n_coins: 5
+      target: 3000
