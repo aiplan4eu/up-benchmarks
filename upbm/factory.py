@@ -57,6 +57,10 @@ class DomainFactory:
 
         self._registry["replenish"] = ReplenishGenerator
 
+        from upbm.domains.ztalloc_sum import ZtallocSumGenerator
+
+        self._registry["ztalloc-sum"] = ZtallocSumGenerator
+
     def register(self, name: str, generator_class: Type[Generator]) -> None:
         """Manually register a generator class under *name*."""
         self._registry[name] = generator_class
