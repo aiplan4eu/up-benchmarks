@@ -217,6 +217,7 @@ The bundled generator classes are:
 | kitting | `from upbm.domains.kitting import KittingGenerator` |
 | replenish | `from upbm.domains.replenish import ReplenishGenerator` |
 | coins | `from upbm.domains.coins import CoinsGenerator` |
+| ztalloc-sum | `from upbm.domains.ztalloc_sum import ZtallocSumGenerator` |
 
 ### Registering domains via `.upbm` plugins
 
@@ -247,6 +248,7 @@ The following domains are implemented and registered today:
 | **Replenish** + modifications | UP | Bounded Numbers, Bounded Numeric Params | Hardness: Looping Behavior, Numeric Indexing Goals |
 | **MatchCellar** (IPC) + modifications | UP/PDDL | Required Concurrency | Running example throughout this README |
 | **Coins** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Hardness: finding a feasible plan is easy, finding an optimal one is hard |
+| **Ztalloc-Sum** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Reversed Collatz: registers start at 1 and must add up to a target |
 
 ### Planned
 
