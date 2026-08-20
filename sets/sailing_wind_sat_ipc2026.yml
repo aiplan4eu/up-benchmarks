@@ -1,0 +1,113 @@
+# The 20 sailing-wind instances of the IPC 2026 satisficing track
+# (ipc2026-dataset/sailing-wind-sat).
+#
+# The boat keeps 90% of its speed when it turns (r = 0.9), which makes stopping
+# next to a person much harder than in the optimal track. Every person waits on
+# a circle of radius 100 around the boat, at a multiple of 45 degrees;
+# direction i means 45 * i degrees, so 0 is due east and 2 is due north.
+# A direction_1 of -1 means the instance has a single person.
+domain: sailing-wind
+params:
+  version: 1
+  variant: sat
+instances:
+  # 90 degrees
+  - name: problem_0
+    params:
+      direction_0: 2
+      direction_1: -1
+  # 45 degrees
+  - name: problem_1
+    params:
+      direction_0: 1
+      direction_1: -1
+  # 0 degrees
+  - name: problem_2
+    params:
+      direction_0: 0
+      direction_1: -1
+  # 315 degrees
+  - name: problem_3
+    params:
+      direction_0: 7
+      direction_1: -1
+  # 270 degrees
+  - name: problem_4
+    params:
+      direction_0: 6
+      direction_1: -1
+  # 45 degrees and 315 degrees
+  - name: problem_5
+    params:
+      direction_0: 1
+      direction_1: 7
+  # 45 degrees and 270 degrees
+  - name: problem_6
+    params:
+      direction_0: 1
+      direction_1: 6
+  # 45 degrees and 225 degrees
+  - name: problem_7
+    params:
+      direction_0: 1
+      direction_1: 5
+  # 45 degrees and 180 degrees
+  - name: problem_8
+    params:
+      direction_0: 1
+      direction_1: 4
+  # 45 degrees and 135 degrees
+  - name: problem_9
+    params:
+      direction_0: 1
+      direction_1: 3
+  # 0 degrees and 315 degrees
+  - name: problem_10
+    params:
+      direction_0: 0
+      direction_1: 7
+  # 0 degrees and 270 degrees
+  - name: problem_11
+    params:
+      direction_0: 0
+      direction_1: 6
+  # 0 degrees and 225 degrees
+  - name: problem_12
+    params:
+      direction_0: 0
+      direction_1: 5
+  # 0 degrees and 180 degrees
+  - name: problem_13
+    params:
+      direction_0: 0
+      direction_1: 4
+  # 315 degrees and 270 degrees
+  - name: problem_14
+    params:
+      direction_0: 7
+      direction_1: 6
+  # 315 degrees and 225 degrees
+  - name: problem_15
+    params:
+      direction_0: 7
+      direction_1: 5
+  # 90 degrees and 45 degrees
+  - name: problem_16
+    params:
+      direction_0: 2
+      direction_1: 1
+  # 90 degrees and 0 degrees
+  - name: problem_17
+    params:
+      direction_0: 2
+      direction_1: 0
+  # 90 degrees and 315 degrees
+  - name: problem_18
+    params:
+      direction_0: 2
+      direction_1: 7
+  # 90 degrees and 270 degrees
+  - name: problem_19
+    params:
+      direction_0: 2
+      direction_1: 6
