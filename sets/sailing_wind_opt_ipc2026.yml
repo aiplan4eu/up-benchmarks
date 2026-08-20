@@ -1,0 +1,71 @@
+# The 20 sailing-wind instances of the IPC 2026 optimal track
+# (ipc2026-dataset/sailing-wind-opt).
+#
+# The boat always starts stopped at the origin and keeps half its speed when it
+# turns (r = 0.5). The single person to rescue sits on a diagonal ramp at
+# (5 + 0.4 step, 15.5 + 0.4 step), so `step` is the only thing that changes.
+domain: sailing-wind
+params:
+  version: 1
+  variant: opt
+instances:
+  - name: problem_0
+    params:
+      step: 0
+  - name: problem_1
+    params:
+      step: 1
+  - name: problem_2
+    params:
+      step: 2
+  - name: problem_3
+    params:
+      step: 3
+  - name: problem_4
+    params:
+      step: 4
+  - name: problem_5
+    params:
+      step: 5
+  - name: problem_6
+    params:
+      step: 6
+  - name: problem_7
+    params:
+      step: 7
+  - name: problem_8
+    params:
+      step: 8
+  - name: problem_9
+    params:
+      step: 9
+  - name: problem_10
+    params:
+      step: 10
+  - name: problem_11
+    params:
+      step: 11
+  - name: problem_12
+    params:
+      step: 12
+  - name: problem_13
+    params:
+      step: 13
+  - name: problem_14
+    params:
+      step: 14
+  - name: problem_15
+    params:
+      step: 15
+  - name: problem_16
+    params:
+      step: 16
+  - name: problem_17
+    params:
+      step: 17
+  - name: problem_18
+    params:
+      step: 18
+  - name: problem_19
+    params:
+      step: 19
