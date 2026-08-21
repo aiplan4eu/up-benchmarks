@@ -1,0 +1,93 @@
+# The 20 expedition instances of the IPC 2026 dataset.
+#
+# Every instance has two sleds with a capacity of 4 that start holding one
+# supply each, and every chain of waypoints starts with a depot of 1000
+# supplies. Only two things change across the set:
+#   n_waypoints - how long each chain is (6 to 15)
+#   n_chains    - 1 means both sleds share a chain and must both reach its end,
+#                 2 means each sled gets its own chain and its own depot
+domain: expedition
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: pfile1
+    params:
+      n_waypoints: 6
+      n_chains: 1
+  - name: pfile2
+    params:
+      n_waypoints: 7
+      n_chains: 1
+  - name: pfile3
+    params:
+      n_waypoints: 8
+      n_chains: 1
+  - name: pfile4
+    params:
+      n_waypoints: 9
+      n_chains: 1
+  - name: pfile5
+    params:
+      n_waypoints: 10
+      n_chains: 1
+  - name: pfile6
+    params:
+      n_waypoints: 11
+      n_chains: 1
+  - name: pfile7
+    params:
+      n_waypoints: 6
+      n_chains: 2
+  - name: pfile8
+    params:
+      n_waypoints: 12
+      n_chains: 1
+  - name: pfile9
+    params:
+      n_waypoints: 13
+      n_chains: 1
+  - name: pfile10
+    params:
+      n_waypoints: 7
+      n_chains: 2
+  - name: pfile11
+    params:
+      n_waypoints: 14
+      n_chains: 1
+  - name: pfile12
+    params:
+      n_waypoints: 15
+      n_chains: 1
+  - name: pfile13
+    params:
+      n_waypoints: 8
+      n_chains: 2
+  - name: pfile14
+    params:
+      n_waypoints: 9
+      n_chains: 2
+  - name: pfile15
+    params:
+      n_waypoints: 10
+      n_chains: 2
+  - name: pfile16
+    params:
+      n_waypoints: 11
+      n_chains: 2
+  - name: pfile17
+    params:
+      n_waypoints: 12
+      n_chains: 2
+  - name: pfile18
+    params:
+      n_waypoints: 13
+      n_chains: 2
+  - name: pfile19
+    params:
+      n_waypoints: 14
+      n_chains: 2
+  - name: pfile20
+    params:
+      n_waypoints: 15
+      n_chains: 2
