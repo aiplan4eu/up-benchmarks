@@ -21,7 +21,7 @@ from unified_planning.engines.plan_validator import SequentialPlanValidator
 from unified_planning.engines.results import ValidationResultStatus
 
 from upbm.domains.coins import CoinsGenerator
-from upbm.domains.coins.coins import IPC_DENOMINATIONS
+from upbm.domains.coins.coins import denominations
 from upbm.io import Format, dump_instance, parse_plan_string
 from upbm.tests.base_domain_test import BaseDomainTest
 
@@ -89,15 +89,30 @@ class TestCoins(BaseDomainTest):
                 self.assertEqual(v_res.status, expected, f"bad res:\n{v_res}")
 
     def test_denominations(self):
-        domain_config, instance_config = self._get_configs()[0]
+        # 1 followed by the first primes
+        self.assertEqual(denominations(1), [1])
+        self.assertEqual(denominations(5), [1, 2, 3, 5, 7])
+        self.assertEqual(denominations(8), [1, 2, 3, 5, 7, 11, 13, 17])
+
+    def _instance_denominations(self, n_coins):
+        domain_config, _ = self._get_configs()[0]
         gen = CoinsGenerator(domain_config)
+        instance_config = Configuration(
+            gen.instance_parameter_space, {"n_coins": n_coins, "target": 5}
+        )
         problem = gen.get_instance(instance_config)
         denomination = problem.fluent("denomination")
-        values = [
+        return [
             int(problem.initial_value(denomination(coin)).constant_value())
             for coin in problem.objects(problem.user_type("coin"))
         ]
-        self.assertEqual(values, IPC_DENOMINATIONS)
+
+    def test_instance_denominations(self):
+        # the 5 coins of the IPC instances
+        self.assertEqual(self._instance_denominations(5), [1, 2, 3, 5, 7])
+        # n_coins is a free parameter, the values follow it
+        self.assertEqual(self._instance_denominations(3), [1, 2, 3])
+        self.assertEqual(self._instance_denominations(7), [1, 2, 3, 5, 7, 11, 13])
 
     def test_metric_is_kept_in_every_instance(self):
         for domain_config, instance_config in self._get_configs():

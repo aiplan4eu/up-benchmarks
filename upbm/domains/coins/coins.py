@@ -15,6 +15,8 @@
 from pathlib import Path
 from typing import Any, Optional, List
 
+from sympy import sieve
+
 from ConfigSpace import (
     ConfigurationSpace,
     Configuration,
@@ -34,8 +36,19 @@ from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
-# The denominations used by every IPC instance.
-IPC_DENOMINATIONS = [1, 2, 3, 5, 7]
+# Number of coins of every IPC instance, used as the default.
+IPC_N_COINS = 5
+
+
+def denominations(n_coins: int) -> List[int]:
+    """Return the value of each coin of an instance.
+
+    The first coin is always worth 1, the others are worth the first
+    `n_coins - 1` prime numbers. With the 5 coins of the IPC instances this
+    gives the denominations 1, 2, 3, 5 and 7.
+    """
+    # sympy's sieve is 1-indexed and grows on demand, sieve[1] is 2
+    return [1] + [int(sieve[i]) for i in range(1, n_coins)]
 
 
 class CoinsGenerator(Generator):
@@ -76,8 +89,8 @@ class CoinsGenerator(Generator):
         mapping: dict[str, Any] = {}
         if self.variant != "ipc":
             raise ValueError(f"invalid variant {self.variant}")
-        # every IPC instance uses the same five denominations
-        mapping["n_coins"] = Constant("n_coins", len(IPC_DENOMINATIONS))
+        # the coin values are derived from their number, see denominations()
+        mapping["n_coins"] = Integer("n_coins", (1, MAX_INT), default=IPC_N_COINS)
         mapping["target"] = Integer("target", (1, MAX_INT), default=100)
         return ConfigurationSpace(name=mapping)
 
@@ -149,7 +162,8 @@ class CoinsGenerator(Generator):
             self._coin_count(): 0,
             self._penalty(): 0,
         }
-        for coin, value in zip(self.get_objects(params), IPC_DENOMINATIONS):
+        coin_values = denominations(params["n_coins"])
+        for coin, value in zip(self.get_objects(params), coin_values):
             res[self._denomination(coin)] = value
             # Every coin starts with a penalty of one. Re-using the same coin
             # costs one more each time, see update-penalty in the domain file.
