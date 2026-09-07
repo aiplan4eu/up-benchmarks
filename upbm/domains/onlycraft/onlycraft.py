@@ -61,7 +61,10 @@ class OnlyCraftGenerator(Generator):
 
     def __init__(self, domain_params: Configuration):
         domain_params.check_valid_configuration()
-        if domain_params.config_space != OnlyCraftGenerator.get_domain_parameter_space():
+        if (
+            domain_params.config_space
+            != OnlyCraftGenerator.get_domain_parameter_space()
+        ):
             raise ValueError(f"Invalid domain parameters: {domain_params}")
 
         self.version = domain_params["version"]
