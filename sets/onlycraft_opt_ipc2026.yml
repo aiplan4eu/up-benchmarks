@@ -1,0 +1,88 @@
+# The 20 onlycraft instances of the optimal track of the IPC 2026 dataset.
+# n_cells and n_pogo_sticks are the only things that change; the number of
+# trees follows from n_pogo_sticks, see n_trees_for() in the generator.
+domain: onlycraft
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: P01_opt
+    params:
+      n_cells: 9
+      n_pogo_sticks: 1
+  - name: P02_opt
+    params:
+      n_cells: 9
+      n_pogo_sticks: 2
+  - name: P03_opt
+    params:
+      n_cells: 16
+      n_pogo_sticks: 3
+  - name: P04_opt
+    params:
+      n_cells: 16
+      n_pogo_sticks: 4
+  - name: P05_opt
+    params:
+      n_cells: 25
+      n_pogo_sticks: 5
+  - name: P06_opt
+    params:
+      n_cells: 25
+      n_pogo_sticks: 6
+  - name: P07_opt
+    params:
+      n_cells: 36
+      n_pogo_sticks: 7
+  - name: P08_opt
+    params:
+      n_cells: 36
+      n_pogo_sticks: 8
+  - name: P09_opt
+    params:
+      n_cells: 36
+      n_pogo_sticks: 9
+  - name: P10_opt
+    params:
+      n_cells: 49
+      n_pogo_sticks: 10
+  - name: P11_opt
+    params:
+      n_cells: 49
+      n_pogo_sticks: 11
+  - name: P12_opt
+    params:
+      n_cells: 49
+      n_pogo_sticks: 12
+  - name: P13_opt
+    params:
+      n_cells: 49
+      n_pogo_sticks: 13
+  - name: P14_opt
+    params:
+      n_cells: 64
+      n_pogo_sticks: 14
+  - name: P15_opt
+    params:
+      n_cells: 64
+      n_pogo_sticks: 15
+  - name: P16_opt
+    params:
+      n_cells: 64
+      n_pogo_sticks: 16
+  - name: P17_opt
+    params:
+      n_cells: 64
+      n_pogo_sticks: 17
+  - name: P18_opt
+    params:
+      n_cells: 81
+      n_pogo_sticks: 18
+  - name: P19_opt
+    params:
+      n_cells: 81
+      n_pogo_sticks: 19
+  - name: P20_opt
+    params:
+      n_cells: 81
+      n_pogo_sticks: 20

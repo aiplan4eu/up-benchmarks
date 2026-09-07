@@ -1,0 +1,88 @@
+# The 20 onlycraft instances of the satisficing track of the IPC 2026 dataset.
+# n_cells and n_pogo_sticks are the only things that change; the number of
+# trees follows from n_pogo_sticks, see n_trees_for() in the generator.
+domain: onlycraft
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: P01_sat
+    params:
+      n_cells: 9
+      n_pogo_sticks: 1
+  - name: P02_sat
+    params:
+      n_cells: 9
+      n_pogo_sticks: 2
+  - name: P03_sat
+    params:
+      n_cells: 16
+      n_pogo_sticks: 3
+  - name: P04_sat
+    params:
+      n_cells: 16
+      n_pogo_sticks: 4
+  - name: P05_sat
+    params:
+      n_cells: 25
+      n_pogo_sticks: 5
+  - name: P06_sat
+    params:
+      n_cells: 25
+      n_pogo_sticks: 6
+  - name: P07_sat
+    params:
+      n_cells: 36
+      n_pogo_sticks: 7
+  - name: P08_sat
+    params:
+      n_cells: 36
+      n_pogo_sticks: 8
+  - name: P09_sat
+    params:
+      n_cells: 36
+      n_pogo_sticks: 9
+  - name: P10_sat
+    params:
+      n_cells: 49
+      n_pogo_sticks: 12
+  - name: P11_sat
+    params:
+      n_cells: 64
+      n_pogo_sticks: 16
+  - name: P12_sat
+    params:
+      n_cells: 81
+      n_pogo_sticks: 21
+  - name: P13_sat
+    params:
+      n_cells: 100
+      n_pogo_sticks: 28
+  - name: P14_sat
+    params:
+      n_cells: 144
+      n_pogo_sticks: 38
+  - name: P15_sat
+    params:
+      n_cells: 196
+      n_pogo_sticks: 50
+  - name: P16_sat
+    params:
+      n_cells: 256
+      n_pogo_sticks: 66
+  - name: P17_sat
+    params:
+      n_cells: 324
+      n_pogo_sticks: 87
+  - name: P18_sat
+    params:
+      n_cells: 441
+      n_pogo_sticks: 115
+  - name: P19_sat
+    params:
+      n_cells: 576
+      n_pogo_sticks: 151
+  - name: P20_sat
+    params:
+      n_cells: 729
+      n_pogo_sticks: 200
