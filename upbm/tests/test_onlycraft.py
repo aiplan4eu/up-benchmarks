@@ -40,12 +40,8 @@ class TestOnlyCraft(BaseDomainTest):
         gen = OnlyCraftGenerator(default_config)
         instance_space = gen.instance_parameter_space
         # the smallest instance the domain allows, smaller than any IPC one
-        instance_1 = Configuration(
-            instance_space, {"n_cells": 4, "n_pogo_sticks": 1}
-        )
-        instance_2 = Configuration(
-            instance_space, {"n_cells": 9, "n_pogo_sticks": 2}
-        )
+        instance_1 = Configuration(instance_space, {"n_cells": 4, "n_pogo_sticks": 1})
+        instance_2 = Configuration(instance_space, {"n_cells": 9, "n_pogo_sticks": 2})
         return [(default_config, instance_1), (default_config, instance_2)]
 
     @property
