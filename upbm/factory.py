@@ -59,6 +59,9 @@ class DomainFactory:
         from upbm.domains.expedition import ExpeditionGenerator
 
         self._registry["expedition"] = ExpeditionGenerator
+        from upbm.domains.gear_car import GearCarGenerator
+
+        self._registry["gear-car"] = GearCarGenerator
 
         from upbm.domains.coins import CoinsGenerator
 
