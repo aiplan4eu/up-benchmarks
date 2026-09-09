@@ -1,0 +1,153 @@
+# The 20 petri-net instances of the IPC 2026 dataset.
+#
+# The 20 files are only 3 distinct nets: the :init blocks of prob06 and prob08
+# are identical, as are those of prob09 and prob10, and prob07 is its own. Each
+# net is fixed data rather than a parameter, because the hyper-edges that feed
+# the goal place have a fixed arity - `(three-to-one a7 b7 c7 g)` needs exactly
+# three branches, `(two-to-one p8 q8 g)` exactly two - so the shape of a net
+# cannot be varied without inventing a new net.
+#
+#   net 0  prob06 / prob08  26 places, three branches of eight that recycle
+#                           tokens back into their hub
+#   net 1  prob07           18 places, two branches with a sink and a place
+#                           that doubles its own tokens
+#   net 2  prob09 / prob10  13 places, three short branches funnelling into a
+#                           shared pair of places
+#
+# What varies is only the goal: how many tokens the goal place g must hold, and
+# one condition on a few other places. Each net ships with its own goal shapes,
+# picked by goal_style:
+#
+#   net 0, style 0  (prob06)  each of a4, b4, c4 holds goal_amount
+#   net 0, style 1  (prob08)  a7 + b7 + c7 >= goal_amount
+#   net 1, style 0  (prob07)  p5 and q5 hold goal_amount, and nothing is left
+#                             in p2..p4 or q2..q4
+#   net 2, style 0  (prob09)  a3 + b3 + c3 = goal_amount
+#   net 2, style 1  (prob10)  each of a3, b3, c3 holds goal_amount
+#
+# Every place starts empty in all 20 instances, so nothing else is stated here.
+domain: petri-net
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: "prob06-1"
+    params:
+      net: 0
+      goal_style: 0
+      goal_tokens: 3
+      goal_amount: 2
+  - name: "prob06-2"
+    params:
+      net: 0
+      goal_style: 0
+      goal_tokens: 2
+      goal_amount: 2
+  - name: "prob06-3"
+    params:
+      net: 0
+      goal_style: 0
+      goal_tokens: 3
+      goal_amount: 1
+  - name: "prob06-4"
+    params:
+      net: 0
+      goal_style: 0
+      goal_tokens: 2
+      goal_amount: 1
+  - name: "prob07-1"
+    params:
+      net: 1
+      goal_style: 0
+      goal_tokens: 3
+      goal_amount: 2
+  - name: "prob07-2"
+    params:
+      net: 1
+      goal_style: 0
+      goal_tokens: 3
+      goal_amount: 1
+  - name: "prob07-3"
+    params:
+      net: 1
+      goal_style: 0
+      goal_tokens: 2
+      goal_amount: 1
+  - name: "prob07-4"
+    params:
+      net: 1
+      goal_style: 0
+      goal_tokens: 1
+      goal_amount: 1
+  - name: "prob08-1"
+    params:
+      net: 0
+      goal_style: 1
+      goal_tokens: 3
+      goal_amount: 3
+  - name: "prob08-2"
+    params:
+      net: 0
+      goal_style: 1
+      goal_tokens: 2
+      goal_amount: 3
+  - name: "prob08-3"
+    params:
+      net: 0
+      goal_style: 1
+      goal_tokens: 3
+      goal_amount: 1
+  - name: "prob08-4"
+    params:
+      net: 0
+      goal_style: 1
+      goal_tokens: 2
+      goal_amount: 2
+  - name: "prob09-1"
+    params:
+      net: 2
+      goal_style: 0
+      goal_tokens: 5
+      goal_amount: 1
+  - name: "prob09-2"
+    params:
+      net: 2
+      goal_style: 0
+      goal_tokens: 4
+      goal_amount: 1
+  - name: "prob09-3"
+    params:
+      net: 2
+      goal_style: 0
+      goal_tokens: 3
+      goal_amount: 1
+  - name: "prob09-4"
+    params:
+      net: 2
+      goal_style: 0
+      goal_tokens: 2
+      goal_amount: 1
+  - name: "prob10-1"
+    params:
+      net: 2
+      goal_style: 1
+      goal_tokens: 5
+      goal_amount: 0
+  - name: "prob10-2"
+    params:
+      net: 2
+      goal_style: 1
+      goal_tokens: 4
+      goal_amount: 0
+  - name: "prob10-3"
+    params:
+      net: 2
+      goal_style: 1
+      goal_tokens: 3
+      goal_amount: 0
+  - name: "prob10-4"
+    params:
+      net: 2
+      goal_style: 1
+      goal_tokens: 2
+      goal_amount: 0
