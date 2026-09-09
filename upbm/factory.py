@@ -56,6 +56,9 @@ class DomainFactory:
         from upbm.domains.replenish import ReplenishGenerator
 
         self._registry["replenish"] = ReplenishGenerator
+        from upbm.domains.factory_robot import FactoryRobotGenerator
+
+        self._registry["factory-robot"] = FactoryRobotGenerator
 
         from upbm.domains.coins import CoinsGenerator
 
