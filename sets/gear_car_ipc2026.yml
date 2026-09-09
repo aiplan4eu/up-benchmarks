@@ -1,0 +1,157 @@
+# The 20 gear-car instances of the IPC 2026 dataset.
+#
+# The car itself is not a parameter: the speed band, acceleration limits and
+# the three fuel tables of each gear all follow from n_gears, and every shipped
+# instance agrees on max_acceleration 2, min_acceleration -1 and acc_step 1.
+# What changes is how many gears the car has, how far it must go, how much fuel
+# it carries, and the two price coefficients of (:metric minimize (cost)).
+#
+# alpha is a big-M that makes elapsed time dominate fuel in the metric: in 19 of
+# the 20 instances alpha = beta * (fuel + 1). p000 is the exception - a warm-up
+# copied from p01 that kept p01's alpha and beta while its fuel was lowered - so
+# alpha is stated per instance rather than derived.
+domain: gear-car
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: p000
+    params:
+      n_gears: 2
+      target_distance: 50
+      fuel: 200
+      alpha: 19536
+      beta: 48
+  - name: p01
+    params:
+      n_gears: 2
+      target_distance: 260
+      fuel: 406
+      alpha: 19536
+      beta: 48
+  - name: p02
+    params:
+      n_gears: 2
+      target_distance: 290
+      fuel: 450
+      alpha: 23903
+      beta: 53
+  - name: p03
+    params:
+      n_gears: 2
+      target_distance: 320
+      fuel: 482
+      alpha: 27048
+      beta: 56
+  - name: p04
+    params:
+      n_gears: 2
+      target_distance: 360
+      fuel: 536
+      alpha: 33294
+      beta: 62
+  - name: p05
+    params:
+      n_gears: 2
+      target_distance: 410
+      fuel: 612
+      alpha: 43523
+      beta: 71
+  - name: p06
+    params:
+      n_gears: 3
+      target_distance: 470
+      fuel: 456
+      alpha: 28334
+      beta: 62
+  - name: p07
+    params:
+      n_gears: 3
+      target_distance: 540
+      fuel: 513
+      alpha: 35466
+      beta: 69
+  - name: p08
+    params:
+      n_gears: 3
+      target_distance: 620
+      fuel: 579
+      alpha: 44660
+      beta: 77
+  - name: p09
+    params:
+      n_gears: 3
+      target_distance: 710
+      fuel: 648
+      alpha: 55814
+      beta: 86
+  - name: p10
+    params:
+      n_gears: 3
+      target_distance: 810
+      fuel: 727
+      alpha: 69160
+      beta: 95
+  - name: p11
+    params:
+      n_gears: 4
+      target_distance: 920
+      fuel: 582
+      alpha: 52470
+      beta: 90
+  - name: p12
+    params:
+      n_gears: 4
+      target_distance: 1040
+      fuel: 649
+      alpha: 64350
+      beta: 99
+  - name: p13
+    params:
+      n_gears: 4
+      target_distance: 1170
+      fuel: 716
+      alpha: 78153
+      beta: 109
+  - name: p14
+    params:
+      n_gears: 4
+      target_distance: 1310
+      fuel: 792
+      alpha: 95160
+      beta: 120
+  - name: p15
+    params:
+      n_gears: 4
+      target_distance: 1460
+      fuel: 867
+      alpha: 112840
+      beta: 130
+  - name: p16
+    params:
+      n_gears: 5
+      target_distance: 1620
+      fuel: 708
+      alpha: 90043
+      beta: 127
+  - name: p17
+    params:
+      n_gears: 5
+      target_distance: 1790
+      fuel: 765
+      alpha: 104176
+      beta: 136
+  - name: p18
+    params:
+      n_gears: 5
+      target_distance: 1970
+      fuel: 830
+      alpha: 122157
+      beta: 147
+  - name: p19
+    params:
+      n_gears: 5
+      target_distance: 2160
+      fuel: 902
+      alpha: 143577
+      beta: 159

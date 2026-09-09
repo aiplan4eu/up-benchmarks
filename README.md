@@ -92,6 +92,8 @@ python3 main.py mkinstance matchcellar -d variant ipc -p n_matches 5 --format an
 
 PDDL output produces a separate domain and problem file; ANML output produces a single file. Generating PDDL for a domain that is not PDDL-expressible raises an error.
 
+ANML has no syntax for plan quality metrics, so a domain that defines one (for example `gear-car`) loses it when written as ANML. This only prints a warning: the problem is still written and remains solvable, it just carries no metric to optimise.
+
 ## Dataset Specification (YAML)
 
 A `mkset` spec selects a domain, fixes the domain-level parameters, and lists named instances with their instance-level parameters:
@@ -214,6 +216,7 @@ The bundled generator classes are:
 | majsp | `from upbm.domains.majsp import MaJSPGenerator` |
 | kitting | `from upbm.domains.kitting import KittingGenerator` |
 | replenish | `from upbm.domains.replenish import ReplenishGenerator` |
+| gear-car | `from upbm.domains.gear_car import GearCarGenerator` |
 
 ### Registering domains via `.upbm` plugins
 
@@ -243,6 +246,7 @@ The following domains are implemented and registered today:
 | **Kitting** (AAAI 2021) + modifications | UP | ICE, Bounded Numbers, Bounded Numeric Params, Required Concurrency | Hardness: Looping Behavior, Numeric Indexing Goals |
 | **Replenish** + modifications | UP | Bounded Numbers, Bounded Numeric Params | Hardness: Looping Behavior, Numeric Indexing Goals |
 | **MatchCellar** (IPC) + modifications | UP/PDDL | Required Concurrency | Running example throughout this README |
+| **Gear Car** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Hardness: the metric makes elapsed time dominate fuel, so the gears have to be worked |
 
 ### Planned
 
