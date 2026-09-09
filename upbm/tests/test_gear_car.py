@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import tempfile
+import warnings
+from pathlib import Path
+
 from ConfigSpace import Configuration
 from unified_planning.engines.plan_validator import (
     SequentialPlanValidator,
@@ -19,7 +23,7 @@ from unified_planning.engines.plan_validator import (
 )
 
 from upbm.domains.gear_car import GearCarGenerator
-from upbm.io import parse_plan_string
+from upbm.io import Format, dump_instance, parse_plan_string
 from upbm.tests.base_domain_test import BaseDomainTest
 
 
@@ -175,6 +179,28 @@ class TestGearCar(BaseDomainTest):
             self.assertEqual(
                 init[problem.fluent("max_speed")()].constant_value(), 2 * n_gears
             )
+
+    def test_metric_is_kept_in_every_instance(self):
+        for domain_config, instance_config in self._get_configs():
+            gen = GearCarGenerator(domain_config)
+            problem = gen.get_instance(instance_config)
+            self.assertEqual(len(problem.quality_metrics), 1)
+            self.assertIn("cost", str(problem.quality_metrics[0]))
+
+    def test_anml_warns_about_lost_metric(self):
+        domain_config, instance_config = self._get_configs()[0]
+        gen = GearCarGenerator(domain_config)
+        problem = gen.get_instance(instance_config)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "problem.anml"
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                dump_instance(problem, Format.ANML, out)
+            # the warning must not stop the file from being written
+            self.assertTrue(out.exists())
+            self.assertEqual(len(caught), 1)
+            self.assertIn("metric", str(caught[0].message))
 
     def test_check_instance_parameters_rejects_too_little_fuel(self):
         """A car that cannot possibly carry enough fuel is refused."""
