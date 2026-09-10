@@ -214,6 +214,7 @@ The bundled generator classes are:
 | majsp | `from upbm.domains.majsp import MaJSPGenerator` |
 | kitting | `from upbm.domains.kitting import KittingGenerator` |
 | replenish | `from upbm.domains.replenish import ReplenishGenerator` |
+| 2048 | `from upbm.domains.twenty_forty_eight import TwentyFortyEightGenerator` |
 
 ### Registering domains via `.upbm` plugins
 
@@ -243,6 +244,7 @@ The following domains are implemented and registered today:
 | **Kitting** (AAAI 2021) + modifications | UP | ICE, Bounded Numbers, Bounded Numeric Params, Required Concurrency | Hardness: Looping Behavior, Numeric Indexing Goals |
 | **Replenish** + modifications | UP | Bounded Numbers, Bounded Numeric Params | Hardness: Looping Behavior, Numeric Indexing Goals |
 | **MatchCellar** (IPC) + modifications | UP/PDDL | Required Concurrency | Running example throughout this README |
+| **2048** (IPC 2026) | UP/PDDL | Numbers | The sliding tile puzzle; a phase state machine sequences shift, combine and shift again for each move |
 
 ### Planned
 
