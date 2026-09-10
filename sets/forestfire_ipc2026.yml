@@ -1,0 +1,536 @@
+# The 20 forestfire instances of the IPC 2026 dataset.
+#
+# This set uses the `ipc` variant, which exists to reproduce these 20 files.
+# For new instances use the `random` variant instead - it is the default, and
+# it draws the fires from a range plus a seed rather than needing one
+# parameter per burning cell.
+#
+# Everything except the fires follows one layout rule, verified across all 20:
+# a width x height grid, fully connected to its four neighbours both ways; row
+# 2 is bushes apart from the middle column, which is grass and carries a tree;
+# max-water is 1 on every bushes cell; ponds sit in both top corners; and the
+# bot and the axe both start on the top-left one. So an instance is its grid,
+# four numbers, and its fires.
+#
+# `tree_amount` against `durability` is the difficulty dial. At 3 against 3 the
+# gate tree can be chopped once and the middle column is open for good; at 6
+# against 3 it cannot be chopped at all, so every drop of water has to cross a
+# bushes cell, and leaving one needs has-water <= 1 - a single unit per trip.
+#
+# `fire_spread` picks which columns of a burning row are alight, and the four
+# values are nested:
+##   0  far corner
+#   1  both corners
+#   2  corners and middle
+#   3  whole row
+#
+# `fire_NN` slots are read in the order the fire region is walked - top burning
+# row first, then left to right. Slots past the end of the region are ignored,
+# so each instance lists only the ones it uses.
+#
+# `layout_quirk` covers the two one-off deviations: 1 is prob12's second tree
+# below the gate, 2 is prob15's row of trees across row 5. They are stated as
+# data in the generator rather than as parameters, because exactly one instance
+# each would ever use them.
+domain: forestfire
+params:
+  version: 1
+  variant: ipc
+instances:
+  # prob01 - 3x3, far corner of the last row
+  #    .  .  .
+  #    .  .  .
+  #    .  .  5
+  - name: "prob01"
+    params:
+      width: 3
+      height: 3
+      water_capacity: 3
+      durability: 3
+      tree_amount: 3
+      n_bots: 1
+      n_axes: 1
+      fire_rows: 1
+      fire_spread: 0
+      layout_quirk: 0
+      fire_00: 5
+  # prob02 - 3x3, both corners of the last row
+  #    .  .  .
+  #    .  .  .
+  #    3  .  3
+  - name: "prob02"
+    params:
+      width: 3
+      height: 3
+      water_capacity: 3
+      durability: 3
+      tree_amount: 3
+      n_bots: 1
+      n_axes: 1
+      fire_rows: 1
+      fire_spread: 1
+      layout_quirk: 0
+      fire_00: 3
+      fire_01: 3
+  # prob03 - 3x3, corners and middle of the last row
+  #    .  .  .
+  #    .  .  .
+  #    3  3  3
+  - name: "prob03"
+    params:
+      width: 3
+      height: 3
+      water_capacity: 3
+      durability: 3
+      tree_amount: 3
+      n_bots: 1
+      n_axes: 1
+      fire_rows: 1
+      fire_spread: 2
+      layout_quirk: 0
+      fire_00: 3
+      fire_01: 3
+      fire_02: 3
+  # prob04 - 5x4, far corner of the last row
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  6
+  - name: "prob04"
+    params:
+      width: 5
+      height: 4
+      water_capacity: 3
+      durability: 3
+      tree_amount: 3
+      n_bots: 1
+      n_axes: 1
+      fire_rows: 1
+      fire_spread: 0
+      layout_quirk: 0
+      fire_00: 6
+  # prob05 - 5x4, corners and middle of the last row
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    2  .  2  .  2
+  - name: "prob05"
+    params:
+      width: 5
+      height: 4
+      water_capacity: 6
+      durability: 3
+      tree_amount: 3
+      n_bots: 1
+      n_axes: 2
+      fire_rows: 1
+      fire_spread: 2
+      layout_quirk: 0
+      fire_00: 2
+      fire_01: 2
+      fire_02: 2
+  # prob06 - 5x6, corners and middle of the last row, gate tree cannot be chopped
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    3  .  3  .  3
+  - name: "prob06"
+    params:
+      width: 5
+      height: 6
+      water_capacity: 6
+      durability: 3
+      tree_amount: 6
+      n_bots: 1
+      n_axes: 2
+      fire_rows: 1
+      fire_spread: 2
+      layout_quirk: 0
+      fire_00: 3
+      fire_01: 3
+      fire_02: 3
+  # prob07 - 5x6, corners and middle of the last row, gate tree cannot be chopped
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    3  .  3  .  3
+  - name: "prob07"
+    params:
+      width: 5
+      height: 6
+      water_capacity: 3
+      durability: 3
+      tree_amount: 6
+      n_bots: 2
+      n_axes: 2
+      fire_rows: 1
+      fire_spread: 2
+      layout_quirk: 0
+      fire_00: 3
+      fire_01: 3
+      fire_02: 3
+  # prob08 - 5x6, corners and middle of the last row, gate tree cannot be chopped
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    3  .  3  .  3
+  - name: "prob08"
+    params:
+      width: 5
+      height: 6
+      water_capacity: 3
+      durability: 3
+      tree_amount: 6
+      n_bots: 3
+      n_axes: 2
+      fire_rows: 1
+      fire_spread: 2
+      layout_quirk: 0
+      fire_00: 3
+      fire_01: 3
+      fire_02: 3
+  # prob09 - 7x6, corners and middle of the last row, gate tree cannot be chopped
+  #    .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .
+  #    3  .  .  3  .  .  3
+  - name: "prob09"
+    params:
+      width: 7
+      height: 6
+      water_capacity: 5
+      durability: 3
+      tree_amount: 6
+      n_bots: 2
+      n_axes: 2
+      fire_rows: 1
+      fire_spread: 2
+      layout_quirk: 0
+      fire_00: 3
+      fire_01: 3
+      fire_02: 3
+  # prob10 - 7x8, both corners of the last row, gate tree cannot be chopped
+  #    .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .
+  #    6  .  .  .  .  .  6
+  - name: "prob10"
+    params:
+      width: 7
+      height: 8
+      water_capacity: 3
+      durability: 3
+      tree_amount: 6
+      n_bots: 2
+      n_axes: 2
+      fire_rows: 1
+      fire_spread: 1
+      layout_quirk: 0
+      fire_00: 6
+      fire_01: 6
+  # prob11 - 5x6, corners and middle of the last two rows, gate tree cannot be chopped
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    3  .  3  .  3
+  #    3  .  3  .  3
+  - name: "prob11"
+    params:
+      width: 5
+      height: 6
+      water_capacity: 6
+      durability: 3
+      tree_amount: 6
+      n_bots: 1
+      n_axes: 2
+      fire_rows: 2
+      fire_spread: 2
+      layout_quirk: 0
+      fire_00: 3
+      fire_01: 3
+      fire_02: 3
+      fire_03: 3
+      fire_04: 3
+      fire_05: 3
+  # prob12 - 5x6, corners and middle of the last two rows, gate tree cannot be chopped
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    3  .  3  .  3
+  #    3  .  3  .  3
+  - name: "prob12"
+    params:
+      width: 5
+      height: 6
+      water_capacity: 6
+      durability: 4
+      tree_amount: 6
+      n_bots: 1
+      n_axes: 3
+      fire_rows: 2
+      fire_spread: 2
+      layout_quirk: 1
+      fire_00: 3
+      fire_01: 3
+      fire_02: 3
+      fire_03: 3
+      fire_04: 3
+      fire_05: 3
+  # prob13 - 5x6, both corners of the last row, gate tree cannot be chopped
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    3  .  .  .  3
+  - name: "prob13"
+    params:
+      width: 5
+      height: 6
+      water_capacity: 3
+      durability: 3
+      tree_amount: 6
+      n_bots: 3
+      n_axes: 2
+      fire_rows: 1
+      fire_spread: 1
+      layout_quirk: 0
+      fire_00: 3
+      fire_01: 3
+  # prob14 - 5x6, whole row of the last two rows, gate tree cannot be chopped
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    2  1  2  1  1
+  #    3  1  2  1  3
+  - name: "prob14"
+    params:
+      width: 5
+      height: 6
+      water_capacity: 6
+      durability: 3
+      tree_amount: 6
+      n_bots: 1
+      n_axes: 2
+      fire_rows: 2
+      fire_spread: 3
+      layout_quirk: 0
+      fire_00: 2
+      fire_01: 1
+      fire_02: 2
+      fire_03: 1
+      fire_04: 1
+      fire_05: 3
+      fire_06: 1
+      fire_07: 2
+      fire_08: 1
+      fire_09: 3
+  # prob15 - 5x6, whole row of the last row
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    .  .  .  .  .
+  #    2  1  4  6  5
+  - name: "prob15"
+    params:
+      width: 5
+      height: 6
+      water_capacity: 6
+      durability: 3
+      tree_amount: 3
+      n_bots: 1
+      n_axes: 3
+      fire_rows: 1
+      fire_spread: 3
+      layout_quirk: 2
+      fire_00: 2
+      fire_01: 1
+      fire_02: 4
+      fire_03: 6
+      fire_04: 5
+  # prob16 - 7x5, whole row of the last row
+  #    .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .
+  #    5  4  1  3  3  5  7
+  - name: "prob16"
+    params:
+      width: 7
+      height: 5
+      water_capacity: 6
+      durability: 3
+      tree_amount: 3
+      n_bots: 1
+      n_axes: 2
+      fire_rows: 1
+      fire_spread: 3
+      layout_quirk: 0
+      fire_00: 5
+      fire_01: 4
+      fire_02: 1
+      fire_03: 3
+      fire_04: 3
+      fire_05: 5
+      fire_06: 7
+  # prob17 - 7x5, whole row of the last two rows
+  #    .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .
+  #    1  6  3  1  2  3  3
+  #    2  1  1  3  5  6  1
+  - name: "prob17"
+    params:
+      width: 7
+      height: 5
+      water_capacity: 12
+      durability: 3
+      tree_amount: 3
+      n_bots: 1
+      n_axes: 2
+      fire_rows: 2
+      fire_spread: 3
+      layout_quirk: 0
+      fire_00: 1
+      fire_01: 6
+      fire_02: 3
+      fire_03: 1
+      fire_04: 2
+      fire_05: 3
+      fire_06: 3
+      fire_07: 2
+      fire_08: 1
+      fire_09: 1
+      fire_10: 3
+      fire_11: 5
+      fire_12: 6
+      fire_13: 1
+  # prob18 - 9x6, whole row of the last two rows
+  #    .  .  .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .  .  .
+  #    2  1  3  1  1  3  1  3  1
+  #    2  1  2  1  3  1  1  1 13
+  - name: "prob18"
+    params:
+      width: 9
+      height: 6
+      water_capacity: 12
+      durability: 3
+      tree_amount: 3
+      n_bots: 1
+      n_axes: 2
+      fire_rows: 2
+      fire_spread: 3
+      layout_quirk: 0
+      fire_00: 2
+      fire_01: 1
+      fire_02: 3
+      fire_03: 1
+      fire_04: 1
+      fire_05: 3
+      fire_06: 1
+      fire_07: 3
+      fire_08: 1
+      fire_09: 2
+      fire_10: 1
+      fire_11: 2
+      fire_12: 1
+      fire_13: 3
+      fire_14: 1
+      fire_15: 1
+      fire_16: 1
+      fire_17: 13
+  # prob19 - 9x7, whole row of the last two rows
+  #    .  .  .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .  .  .
+  #    1  1  4  1  7  2  1  1  2
+  #    1  2  3  5  1  3  1  2  7
+  - name: "prob19"
+    params:
+      width: 9
+      height: 7
+      water_capacity: 9
+      durability: 3
+      tree_amount: 3
+      n_bots: 1
+      n_axes: 2
+      fire_rows: 2
+      fire_spread: 3
+      layout_quirk: 0
+      fire_00: 1
+      fire_01: 1
+      fire_02: 4
+      fire_03: 1
+      fire_04: 7
+      fire_05: 2
+      fire_06: 1
+      fire_07: 1
+      fire_08: 2
+      fire_09: 1
+      fire_10: 2
+      fire_11: 3
+      fire_12: 5
+      fire_13: 1
+      fire_14: 3
+      fire_15: 1
+      fire_16: 2
+      fire_17: 7
+  # prob20 - 9x7, whole row of the last two rows
+  #    .  .  .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .  .  .
+  #    .  .  .  .  .  .  .  .  .
+  #    4  7  4  7  3  5  4  4  8
+  #    6  8  3  1  2  8  4  5  1
+  - name: "prob20"
+    params:
+      width: 9
+      height: 7
+      water_capacity: 12
+      durability: 3
+      tree_amount: 3
+      n_bots: 1
+      n_axes: 2
+      fire_rows: 2
+      fire_spread: 3
+      layout_quirk: 0
+      fire_00: 4
+      fire_01: 7
+      fire_02: 4
+      fire_03: 7
+      fire_04: 3
+      fire_05: 5
+      fire_06: 4
+      fire_07: 4
+      fire_08: 8
+      fire_09: 6
+      fire_10: 8
+      fire_11: 3
+      fire_12: 1
+      fire_13: 2
+      fire_14: 8
+      fire_15: 4
+      fire_16: 5
+      fire_17: 1
