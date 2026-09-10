@@ -1,0 +1,510 @@
+# The 20 2048 instances of the IPC 2026 dataset.
+#
+# Every instance is the same 4x4 board scaffolding under a different starting
+# position. The board size is fixed by the domain file, which declares p11..p44
+# as :constants, and the pos-at / next / next-idx facts that drive the phase
+# machine are identical in all 20 shipped instances - so an instance is only
+# its 16 tiles plus the tile the goal asks for.
+#
+# Tiles are given as exponents: 0 is an empty cell and k stands for 2^k, so
+# tile_11: 5 is a 32. Writing them this way makes every board a legal 2048
+# board, since no tile can come out as anything but a power of two.
+#
+# All 16 tiles are listed for every instance on purpose. A tile left out would
+# fall back to its default, and the defaults spell out pfile8 rather than an
+# empty board.
+#
+# goal_tile is the value the goal collects into p11, and it must equal the sum
+# of the board: shifting only moves tiles and a merge turns two tiles worth v
+# into one worth 2v, so the board sum never changes. All 20 shipped instances
+# hold to that.
+#
+# The file names are the length of the solution sequence each shipped file
+# records in its header, which is how the instances were made: a random walk
+# backwards from the goal. That sequence is not a parameter - it is only how
+# the board was drawn - so it is not reproduced here.
+domain: "2048"
+params:
+  version: 1
+  variant: ipc
+instances:
+  # pfile8 - board:
+  #    4 |  0 | 32 |  2
+  #    4 |  0 |  2 |  0
+  #    0 | 32 |  0 |  0
+  #   32 |  4 |  0 | 16
+  - name: "pfile8"
+    params:
+      goal_tile: 128
+      tile_11: 2  # 4
+      tile_12: 0  # empty
+      tile_13: 5  # 32
+      tile_14: 1  # 2
+      tile_21: 2  # 4
+      tile_22: 0  # empty
+      tile_23: 1  # 2
+      tile_24: 0  # empty
+      tile_31: 0  # empty
+      tile_32: 5  # 32
+      tile_33: 0  # empty
+      tile_34: 0  # empty
+      tile_41: 5  # 32
+      tile_42: 2  # 4
+      tile_43: 0  # empty
+      tile_44: 4  # 16
+  # pfile9 - board:
+  #     0 |  32 |  64 | 256
+  #    32 | 128 |  32 |  32
+  #     8 |   8 |  16 |  64
+  #   128 | 128 |  64 |  32
+  - name: "pfile9"
+    params:
+      goal_tile: 1024
+      tile_11: 0  # empty
+      tile_12: 5  # 32
+      tile_13: 6  # 64
+      tile_14: 8  # 256
+      tile_21: 5  # 32
+      tile_22: 7  # 128
+      tile_23: 5  # 32
+      tile_24: 5  # 32
+      tile_31: 3  # 8
+      tile_32: 3  # 8
+      tile_33: 4  # 16
+      tile_34: 6  # 64
+      tile_41: 7  # 128
+      tile_42: 7  # 128
+      tile_43: 6  # 64
+      tile_44: 5  # 32
+  # pfile10 - board:
+  #   128 | 128 | 128 | 128
+  #    64 | 512 | 512 | 512
+  #   256 |   0 |   0 | 128
+  #   512 |  64 | 512 | 512
+  - name: "pfile10"
+    params:
+      goal_tile: 4096
+      tile_11: 7  # 128
+      tile_12: 7  # 128
+      tile_13: 7  # 128
+      tile_14: 7  # 128
+      tile_21: 6  # 64
+      tile_22: 9  # 512
+      tile_23: 9  # 512
+      tile_24: 9  # 512
+      tile_31: 8  # 256
+      tile_32: 0  # empty
+      tile_33: 0  # empty
+      tile_34: 7  # 128
+      tile_41: 9  # 512
+      tile_42: 6  # 64
+      tile_43: 9  # 512
+      tile_44: 9  # 512
+  # pfile11 - board:
+  #   2048 |    0 |    0 |    0
+  #      0 |   64 |  128 |   64
+  #     64 |    0 |  512 |   64
+  #     64 | 1024 |    0 |   64
+  - name: "pfile11"
+    params:
+      goal_tile: 4096
+      tile_11: 11  # 2048
+      tile_12: 0  # empty
+      tile_13: 0  # empty
+      tile_14: 0  # empty
+      tile_21: 0  # empty
+      tile_22: 6  # 64
+      tile_23: 7  # 128
+      tile_24: 6  # 64
+      tile_31: 6  # 64
+      tile_32: 0  # empty
+      tile_33: 9  # 512
+      tile_34: 6  # 64
+      tile_41: 6  # 64
+      tile_42: 10  # 1024
+      tile_43: 0  # empty
+      tile_44: 6  # 64
+  # pfile12 - board:
+  #   32 | 64 | 16 |  8
+  #   32 | 16 | 16 | 32
+  #    8 | 32 | 32 | 32
+  #   64 | 32 | 64 | 32
+  - name: "pfile12"
+    params:
+      goal_tile: 512
+      tile_11: 5  # 32
+      tile_12: 6  # 64
+      tile_13: 4  # 16
+      tile_14: 3  # 8
+      tile_21: 5  # 32
+      tile_22: 4  # 16
+      tile_23: 4  # 16
+      tile_24: 5  # 32
+      tile_31: 3  # 8
+      tile_32: 5  # 32
+      tile_33: 5  # 32
+      tile_34: 5  # 32
+      tile_41: 6  # 64
+      tile_42: 5  # 32
+      tile_43: 6  # 64
+      tile_44: 5  # 32
+  # pfile13 - board:
+  #     64 |   32 |   32 |  256
+  #   2048 |  128 |   64 |  128
+  #   2048 |  256 | 1024 | 1024
+  #      0 | 1024 |   32 |   32
+  - name: "pfile13"
+    params:
+      goal_tile: 8192
+      tile_11: 6  # 64
+      tile_12: 5  # 32
+      tile_13: 5  # 32
+      tile_14: 8  # 256
+      tile_21: 11  # 2048
+      tile_22: 7  # 128
+      tile_23: 6  # 64
+      tile_24: 7  # 128
+      tile_31: 11  # 2048
+      tile_32: 8  # 256
+      tile_33: 10  # 1024
+      tile_34: 10  # 1024
+      tile_41: 0  # empty
+      tile_42: 10  # 1024
+      tile_43: 5  # 32
+      tile_44: 5  # 32
+  # pfile14 - board:
+  #     0 |  16 | 256 |  16
+  #   256 |  64 |  64 |   0
+  #    16 |  64 |  64 |  16
+  #    64 |  64 |  64 |   0
+  - name: "pfile14"
+    params:
+      goal_tile: 1024
+      tile_11: 0  # empty
+      tile_12: 4  # 16
+      tile_13: 8  # 256
+      tile_14: 4  # 16
+      tile_21: 8  # 256
+      tile_22: 6  # 64
+      tile_23: 6  # 64
+      tile_24: 0  # empty
+      tile_31: 4  # 16
+      tile_32: 6  # 64
+      tile_33: 6  # 64
+      tile_34: 4  # 16
+      tile_41: 6  # 64
+      tile_42: 6  # 64
+      tile_43: 6  # 64
+      tile_44: 0  # empty
+  # pfile15 - board:
+  #    4 | 16 |  0 | 32
+  #    0 |  0 | 16 | 16
+  #   16 |  8 | 32 |  0
+  #   16 | 64 | 32 |  4
+  - name: "pfile15"
+    params:
+      goal_tile: 256
+      tile_11: 2  # 4
+      tile_12: 4  # 16
+      tile_13: 0  # empty
+      tile_14: 5  # 32
+      tile_21: 0  # empty
+      tile_22: 0  # empty
+      tile_23: 4  # 16
+      tile_24: 4  # 16
+      tile_31: 4  # 16
+      tile_32: 3  # 8
+      tile_33: 5  # 32
+      tile_34: 0  # empty
+      tile_41: 4  # 16
+      tile_42: 6  # 64
+      tile_43: 5  # 32
+      tile_44: 2  # 4
+  # pfile16 - board:
+  #   16 |  0 |  0 |  0
+  #    2 | 64 |  4 |  2
+  #    0 | 16 |  0 | 16
+  #    4 |  0 |  2 |  2
+  - name: "pfile16"
+    params:
+      goal_tile: 128
+      tile_11: 4  # 16
+      tile_12: 0  # empty
+      tile_13: 0  # empty
+      tile_14: 0  # empty
+      tile_21: 1  # 2
+      tile_22: 6  # 64
+      tile_23: 2  # 4
+      tile_24: 1  # 2
+      tile_31: 0  # empty
+      tile_32: 4  # 16
+      tile_33: 0  # empty
+      tile_34: 4  # 16
+      tile_41: 2  # 4
+      tile_42: 0  # empty
+      tile_43: 1  # 2
+      tile_44: 1  # 2
+  # pfile17 - board:
+  #     0 |  64 | 128 |   8
+  #     8 |   0 | 256 |  32
+  #   256 |  32 |  16 |  16
+  #    64 |  64 |  64 |  16
+  - name: "pfile17"
+    params:
+      goal_tile: 1024
+      tile_11: 0  # empty
+      tile_12: 6  # 64
+      tile_13: 7  # 128
+      tile_14: 3  # 8
+      tile_21: 3  # 8
+      tile_22: 0  # empty
+      tile_23: 8  # 256
+      tile_24: 5  # 32
+      tile_31: 8  # 256
+      tile_32: 5  # 32
+      tile_33: 4  # 16
+      tile_34: 4  # 16
+      tile_41: 6  # 64
+      tile_42: 6  # 64
+      tile_43: 6  # 64
+      tile_44: 4  # 16
+  # pfile18 - board:
+  #     8 |   4 |  32 | 128
+  #     4 | 512 |  32 |  64
+  #     4 |  32 |  64 |   8
+  #    32 |   4 |  64 |  32
+  - name: "pfile18"
+    params:
+      goal_tile: 1024
+      tile_11: 3  # 8
+      tile_12: 2  # 4
+      tile_13: 5  # 32
+      tile_14: 7  # 128
+      tile_21: 2  # 4
+      tile_22: 9  # 512
+      tile_23: 5  # 32
+      tile_24: 6  # 64
+      tile_31: 2  # 4
+      tile_32: 5  # 32
+      tile_33: 6  # 64
+      tile_34: 3  # 8
+      tile_41: 5  # 32
+      tile_42: 2  # 4
+      tile_43: 6  # 64
+      tile_44: 5  # 32
+  # pfile19 - board:
+  #     16 |   32 |   16 |  256
+  #    128 |  256 | 2048 |  256
+  #    512 |   32 |   64 |  128
+  #     16 |   64 |   16 |  256
+  - name: "pfile19"
+    params:
+      goal_tile: 4096
+      tile_11: 4  # 16
+      tile_12: 5  # 32
+      tile_13: 4  # 16
+      tile_14: 8  # 256
+      tile_21: 7  # 128
+      tile_22: 8  # 256
+      tile_23: 11  # 2048
+      tile_24: 8  # 256
+      tile_31: 9  # 512
+      tile_32: 5  # 32
+      tile_33: 6  # 64
+      tile_34: 7  # 128
+      tile_41: 4  # 16
+      tile_42: 6  # 64
+      tile_43: 4  # 16
+      tile_44: 8  # 256
+  # pfile20 - board:
+  #     32 | 2048 |  256 | 1024
+  #    256 |   64 | 1024 |  512
+  #    256 |  128 |  512 |  256
+  #    256 |   32 | 1024 |  512
+  - name: "pfile20"
+    params:
+      goal_tile: 8192
+      tile_11: 5  # 32
+      tile_12: 11  # 2048
+      tile_13: 8  # 256
+      tile_14: 10  # 1024
+      tile_21: 8  # 256
+      tile_22: 6  # 64
+      tile_23: 10  # 1024
+      tile_24: 9  # 512
+      tile_31: 8  # 256
+      tile_32: 7  # 128
+      tile_33: 9  # 512
+      tile_34: 8  # 256
+      tile_41: 8  # 256
+      tile_42: 5  # 32
+      tile_43: 10  # 1024
+      tile_44: 9  # 512
+  # pfile21 - board:
+  #      0 |    0 |  512 |    0
+  #    512 |    0 |   32 |    0
+  #   2048 |  256 |    0 |   64
+  #     64 |   32 |  512 |   64
+  - name: "pfile21"
+    params:
+      goal_tile: 4096
+      tile_11: 0  # empty
+      tile_12: 0  # empty
+      tile_13: 9  # 512
+      tile_14: 0  # empty
+      tile_21: 9  # 512
+      tile_22: 0  # empty
+      tile_23: 5  # 32
+      tile_24: 0  # empty
+      tile_31: 11  # 2048
+      tile_32: 8  # 256
+      tile_33: 0  # empty
+      tile_34: 6  # 64
+      tile_41: 6  # 64
+      tile_42: 5  # 32
+      tile_43: 9  # 512
+      tile_44: 6  # 64
+  # pfile22 - board:
+  #     2 |  32 |  16 |  64
+  #    64 |   8 | 128 |   8
+  #     4 |  32 |   4 | 128
+  #     2 |   4 |   8 |   8
+  - name: "pfile22"
+    params:
+      goal_tile: 512
+      tile_11: 1  # 2
+      tile_12: 5  # 32
+      tile_13: 4  # 16
+      tile_14: 6  # 64
+      tile_21: 6  # 64
+      tile_22: 3  # 8
+      tile_23: 7  # 128
+      tile_24: 3  # 8
+      tile_31: 2  # 4
+      tile_32: 5  # 32
+      tile_33: 2  # 4
+      tile_34: 7  # 128
+      tile_41: 1  # 2
+      tile_42: 2  # 4
+      tile_43: 3  # 8
+      tile_44: 3  # 8
+  # pfile23 - board:
+  #   128 |   4 |  64 |  32
+  #    16 |  32 |  16 |  64
+  #    32 |  32 | 512 |   4
+  #     4 |  16 |   4 |  64
+  - name: "pfile23"
+    params:
+      goal_tile: 1024
+      tile_11: 7  # 128
+      tile_12: 2  # 4
+      tile_13: 6  # 64
+      tile_14: 5  # 32
+      tile_21: 4  # 16
+      tile_22: 5  # 32
+      tile_23: 4  # 16
+      tile_24: 6  # 64
+      tile_31: 5  # 32
+      tile_32: 5  # 32
+      tile_33: 9  # 512
+      tile_34: 2  # 4
+      tile_41: 2  # 4
+      tile_42: 4  # 16
+      tile_43: 2  # 4
+      tile_44: 6  # 64
+  # pfile24 - board:
+  #    128 |   32 |    0 |    0
+  #   2048 |   64 | 2048 | 1024
+  #   2048 |  128 |    0 |  256
+  #     32 |  256 |    0 |  128
+  - name: "pfile24"
+    params:
+      goal_tile: 8192
+      tile_11: 7  # 128
+      tile_12: 5  # 32
+      tile_13: 0  # empty
+      tile_14: 0  # empty
+      tile_21: 11  # 2048
+      tile_22: 6  # 64
+      tile_23: 11  # 2048
+      tile_24: 10  # 1024
+      tile_31: 11  # 2048
+      tile_32: 7  # 128
+      tile_33: 0  # empty
+      tile_34: 8  # 256
+      tile_41: 5  # 32
+      tile_42: 8  # 256
+      tile_43: 0  # empty
+      tile_44: 7  # 128
+  # pfile25 - board:
+  #      8 |  256 |    8 |  256
+  #    512 |   32 |   32 |   16
+  #    256 | 2048 |   32 |   32
+  #      0 |   32 |  512 |   64
+  - name: "pfile25"
+    params:
+      goal_tile: 4096
+      tile_11: 3  # 8
+      tile_12: 8  # 256
+      tile_13: 3  # 8
+      tile_14: 8  # 256
+      tile_21: 9  # 512
+      tile_22: 5  # 32
+      tile_23: 5  # 32
+      tile_24: 4  # 16
+      tile_31: 8  # 256
+      tile_32: 11  # 2048
+      tile_33: 5  # 32
+      tile_34: 5  # 32
+      tile_41: 0  # empty
+      tile_42: 5  # 32
+      tile_43: 9  # 512
+      tile_44: 6  # 64
+  # pfile26 - board:
+  #     32 |    0 |  128 | 2048
+  #   1024 |   64 |  128 | 1024
+  #   1024 |    0 |  512 |   32
+  #   1024 |   64 |   64 | 1024
+  - name: "pfile26"
+    params:
+      goal_tile: 8192
+      tile_11: 5  # 32
+      tile_12: 0  # empty
+      tile_13: 7  # 128
+      tile_14: 11  # 2048
+      tile_21: 10  # 1024
+      tile_22: 6  # 64
+      tile_23: 7  # 128
+      tile_24: 10  # 1024
+      tile_31: 10  # 1024
+      tile_32: 0  # empty
+      tile_33: 9  # 512
+      tile_34: 5  # 32
+      tile_41: 10  # 1024
+      tile_42: 6  # 64
+      tile_43: 6  # 64
+      tile_44: 10  # 1024
+  # pfile29 - board:
+  #      0 |  128 |    0 |    8
+  #    512 |    0 |    0 |  128
+  #    128 |   32 |    8 | 1024
+  #      0 |   64 |    8 |    8
+  - name: "pfile29"
+    params:
+      goal_tile: 2048
+      tile_11: 0  # empty
+      tile_12: 7  # 128
+      tile_13: 0  # empty
+      tile_14: 3  # 8
+      tile_21: 9  # 512
+      tile_22: 0  # empty
+      tile_23: 0  # empty
+      tile_24: 7  # 128
+      tile_31: 7  # 128
+      tile_32: 5  # 32
+      tile_33: 3  # 8
+      tile_34: 10  # 1024
+      tile_41: 0  # empty
+      tile_42: 6  # 64
+      tile_43: 3  # 8
+      tile_44: 3  # 8
