@@ -56,6 +56,9 @@ class DomainFactory:
         from upbm.domains.replenish import ReplenishGenerator
 
         self._registry["replenish"] = ReplenishGenerator
+        from upbm.domains.twenty_forty_eight import TwentyFortyEightGenerator
+
+        self._registry["2048"] = TwentyFortyEightGenerator
 
     def register(self, name: str, generator_class: Type[Generator]) -> None:
         """Manually register a generator class under *name*."""
