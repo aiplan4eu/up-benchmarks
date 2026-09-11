@@ -12,17 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import tempfile
-import warnings
-from pathlib import Path
-
 from ConfigSpace import Configuration
 from unified_planning.engines.plan_validator import SequentialPlanValidator
 from unified_planning.engines.results import ValidationResultStatus
 
 from upbm.domains.coins import CoinsGenerator
 from upbm.domains.coins.coins import denominations
-from upbm.io import Format, dump_instance, parse_plan_string
+from upbm.io import parse_plan_string
 from upbm.tests.base_domain_test import BaseDomainTest
 
 
@@ -114,24 +110,11 @@ class TestCoins(BaseDomainTest):
         self.assertEqual(self._instance_denominations(3), [1, 2, 3])
         self.assertEqual(self._instance_denominations(7), [1, 2, 3, 5, 7, 11, 13])
 
+    # NOTE that ANML drops the metric is a property of upbm.io rather than of
+    # this domain, so it is tested once in test_io.py instead of here.
     def test_metric_is_kept_in_every_instance(self):
         for domain_config, instance_config in self._get_configs():
             gen = CoinsGenerator(domain_config)
             problem = gen.get_instance(instance_config)
             self.assertEqual(len(problem.quality_metrics), 1)
             self.assertIn("coin-count", str(problem.quality_metrics[0]))
-
-    def test_anml_warns_about_lost_metric(self):
-        domain_config, instance_config = self._get_configs()[0]
-        gen = CoinsGenerator(domain_config)
-        problem = gen.get_instance(instance_config)
-
-        with tempfile.TemporaryDirectory() as tmp:
-            out = Path(tmp) / "problem.anml"
-            with warnings.catch_warnings(record=True) as caught:
-                warnings.simplefilter("always")
-                dump_instance(problem, Format.ANML, out)
-            # the warning must not stop the file from being written
-            self.assertTrue(out.exists())
-            self.assertEqual(len(caught), 1)
-            self.assertIn("metric", str(caught[0].message))
