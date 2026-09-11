@@ -2,70 +2,96 @@
 # (ipc2026-dataset/sailing-wind-opt).
 #
 # The boat always starts stopped at the origin and keeps half its speed when it
-# turns (r = 0.5). The single person to rescue sits on a diagonal ramp at
+# turns. That is the `inertia` parameter, given as a whole percentage, so the
+# r = 0.5 of this track is written here as 50; every instance of the track uses
+# the same value. The single person to rescue sits on a diagonal ramp at
 # (5 + 0.4 step, 15.5 + 0.4 step), so `step` is the only thing that changes.
+#
+# The variant is named after that ramp rather than after the IPC track: the
+# inertia is no longer what tells the two layouts apart, so `line` and `circle`
+# say what the generator actually does.
 domain: sailing-wind
 params:
   version: 1
-  variant: opt
+  variant: line
 instances:
   - name: problem_0
     params:
       step: 0
+      inertia: 50
   - name: problem_1
     params:
       step: 1
+      inertia: 50
   - name: problem_2
     params:
       step: 2
+      inertia: 50
   - name: problem_3
     params:
       step: 3
+      inertia: 50
   - name: problem_4
     params:
       step: 4
+      inertia: 50
   - name: problem_5
     params:
       step: 5
+      inertia: 50
   - name: problem_6
     params:
       step: 6
+      inertia: 50
   - name: problem_7
     params:
       step: 7
+      inertia: 50
   - name: problem_8
     params:
       step: 8
+      inertia: 50
   - name: problem_9
     params:
       step: 9
+      inertia: 50
   - name: problem_10
     params:
       step: 10
+      inertia: 50
   - name: problem_11
     params:
       step: 11
+      inertia: 50
   - name: problem_12
     params:
       step: 12
+      inertia: 50
   - name: problem_13
     params:
       step: 13
+      inertia: 50
   - name: problem_14
     params:
       step: 14
+      inertia: 50
   - name: problem_15
     params:
       step: 15
+      inertia: 50
   - name: problem_16
     params:
       step: 16
+      inertia: 50
   - name: problem_17
     params:
       step: 17
+      inertia: 50
   - name: problem_18
     params:
       step: 18
+      inertia: 50
   - name: problem_19
     params:
       step: 19
+      inertia: 50
