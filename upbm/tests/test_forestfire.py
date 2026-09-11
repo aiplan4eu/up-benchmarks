@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import tempfile
-import warnings
-from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from ConfigSpace import Configuration
@@ -38,7 +35,7 @@ from upbm.domains.forestfire.forestfire import (
     is_bushes,
     mid_column,
 )
-from upbm.io import Format, dump_instance, parse_plan_string
+from upbm.io import parse_plan_string
 from upbm.tests.base_domain_test import BaseDomainTest
 
 
@@ -466,6 +463,8 @@ class TestForestFire(BaseDomainTest):
 
     # ---- the metric ---------------------------------------------------
 
+    # NOTE that ANML drops the metric is a property of upbm.io rather than of
+    # this domain, so it is tested once in test_io.py instead of here.
     def test_metric_is_kept_in_every_instance(self):
         for variant, overrides in (("ipc", PROB01), ("random", RANDOM_DEFAULTS)):
             domain_config, instance_config = self._get_configs(variant, **overrides)
@@ -473,18 +472,3 @@ class TestForestFire(BaseDomainTest):
             problem = gen.get_instance(instance_config)
             self.assertEqual(len(problem.quality_metrics), 1)
             self.assertIn("cost", str(problem.quality_metrics[0]))
-
-    def test_anml_warns_about_lost_metric(self):
-        domain_config, instance_config = self._get_configs("ipc", **PROB01)
-        gen = ForestFireGenerator(domain_config)
-        problem = gen.get_instance(instance_config)
-
-        with tempfile.TemporaryDirectory() as tmp:
-            out = Path(tmp) / "problem.anml"
-            with warnings.catch_warnings(record=True) as caught:
-                warnings.simplefilter("always")
-                dump_instance(problem, Format.ANML, out)
-            # the warning must not stop the file from being written
-            self.assertTrue(out.exists())
-            self.assertEqual(len(caught), 1)
-            self.assertIn("metric", str(caught[0].message))
