@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import random
 from fractions import Fraction
 from pathlib import Path
 from typing import Any, List, Optional
@@ -34,10 +35,18 @@ from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
-# How many robots the generator can describe. The IPC set uses 3 to 5, and each
-# robot needs its own load parameter (see instance_parameter_space), so the
-# number of those slots is what sets this ceiling.
+# How many robots the "ipc" variant can describe. The IPC set uses 3 to 5, and
+# there it needs one load parameter per robot (see instance_parameter_space),
+# so the number of those slots is what sets this ceiling. The "random" variant
+# draws the loads instead of listing them, so it has no such limit.
 MAX_ROBOTS = 5
+
+# How much the "random" variant shuffles the loads before handing them out:
+# one transfer per robot. That number is calibrated against the shipped set,
+# whose spread between the largest and smallest load, as a fraction of the
+# mean, averages 0.46 / 0.65 / 1.45 at imbalance 25 / 50 / 90. One transfer
+# per robot gives 0.44 / 0.91 / 1.41; two or more overshoot throughout.
+TRANSFERS_PER_ROBOT = 1
 
 
 class LineExchangeSnpGenerator(Generator):
@@ -45,10 +54,13 @@ class LineExchangeSnpGenerator(Generator):
     def get_domain_parameter_space():
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        # only the IPC variant exists for now, more can be added here later
+        # "ipc" reproduces the 20 shipped instances and needs one load
+        # parameter per robot to do it; "random" draws the loads from a mean
+        # and an imbalance instead, which is what the shipped file names say
+        # the original parameters actually were.
         mapping["variant"] = Categorical(
             "variant",
-            ["ipc"],
+            ["ipc", "random"],
             default="ipc",
         )
         return ConfigurationSpace(name=mapping)
@@ -79,21 +91,47 @@ class LineExchangeSnpGenerator(Generator):
     @property
     def instance_parameter_space(self) -> ConfigurationSpace:
         mapping: dict[str, Any] = {}
-        if self.variant != "ipc":
+        if self.variant not in ("ipc", "random"):
             raise ValueError(f"invalid variant {self.variant}")
+
+        # --- shared by both variants ---
+        #
         # The IPC set uses 3, 4 or 5 robots; two is the smallest line that can
-        # exchange anything at all.
-        mapping["n_robots"] = Integer("n_robots", (2, MAX_ROBOTS), default=3)
+        # exchange anything at all. Only "ipc" is capped, because only it needs
+        # a load slot per robot.
+        mapping["n_robots"] = Integer(
+            "n_robots",
+            (2, MAX_ROBOTS if self.variant == "ipc" else MAX_INT),
+            default=3,
+        )
         # The (D) function: each robot owns the segment [D*i, D*(i+1)]. The IPC
         # set uses 10, 50 and 100.
         mapping["segment_length"] = Integer("segment_length", (1, MAX_INT), default=50)
-        # One load per robot. The shipped instances draw these at random and
-        # record no seed, so the only way to reproduce them exactly is to state
-        # each load; the mean and imbalance in the file names cannot be
-        # inverted. Slots from n_robots upwards are ignored.
-        # The defaults reproduce the instance named 3_5_50_50.
-        for slot, default in enumerate([3, 6, 6, 0, 0]):
-            mapping[f"q_{slot}"] = Integer(f"q_{slot}", (0, MAX_INT), default=default)
+
+        if self.variant == "ipc":
+            # One load per robot. The shipped instances draw these at random
+            # and record no seed, so the only way to reproduce them exactly is
+            # to state each load; the mean and imbalance in the file names
+            # cannot be inverted. Slots from n_robots upwards are ignored.
+            # The defaults reproduce the instance named 3_5_50_50.
+            for slot, default in enumerate([3, 6, 6, 0, 0]):
+                mapping[f"q_{slot}"] = Integer(
+                    f"q_{slot}", (0, MAX_INT), default=default
+                )
+        else:
+            # The two knobs the shipped file names record, as knobs rather
+            # than as their outcome. Every shipped instance holds
+            # sum(q) = n_robots * mean_q, so asking for the mean instead of
+            # the totals makes the even split the generator's job rather than
+            # the caller's.
+            mapping["mean_load"] = Integer("mean_load", (0, MAX_INT), default=10)
+            # How far from that mean the loads are pushed, as a percentage of
+            # it: a single transfer moves up to mean_load * imbalance / 100
+            # units. The IPC set uses 25, 50 and 90. Zero hands every robot
+            # the mean, which is already the goal; above 100 just means a
+            # robot may hand over everything it has.
+            mapping["imbalance"] = Integer("imbalance", (0, MAX_INT), default=50)
+            mapping["seed"] = Integer("seed", (0, MAX_INT), default=42)
         return ConfigurationSpace(name=mapping)
 
     @property
@@ -129,10 +167,40 @@ class LineExchangeSnpGenerator(Generator):
     def _robot(self, i: int) -> Object:
         return self._get_object(f"r{i}", self._Robot)
 
+    def _loads(self, params) -> List[int]:
+        """The load of each robot, in order.
+
+        The "ipc" variant reads them off the q slots, ignoring the unused
+        ones; the "random" variant draws them.
+        """
+        if self.variant == "ipc":
+            return [params[f"q_{slot}"] for slot in range(params["n_robots"])]
+        return self._scrambled_loads(params)
+
     @staticmethod
-    def _loads(params) -> List[int]:
-        """The load of each robot, in order, ignoring the unused slots."""
-        return [params[f"q_{slot}"] for slot in range(params["n_robots"])]
+    def _scrambled_loads(params) -> List[int]:
+        """Loads drawn by undoing a few exchanges from the balanced state.
+
+        Everyone starts on the mean, which is exactly the goal, and then the
+        loads are scrambled by moving units between neighbours - the same
+        thing the `exch` actions do, just in reverse. So the scramble is a
+        witness plan and the instance is solvable by construction: the total
+        is conserved, so it still divides evenly, and no robot can hand over
+        more than it holds, so no load goes negative.
+        """
+        n_robots = params["n_robots"]
+        loads = [params["mean_load"]] * n_robots
+        # the most one transfer may move
+        step = params["mean_load"] * params["imbalance"] // 100
+        rng = random.Random(params["seed"])
+        for _ in range(n_robots * TRANSFERS_PER_ROBOT):
+            # pick a neighbouring pair, then which way round the unit goes
+            left = rng.randrange(n_robots - 1)
+            donor, receiver = (left, left + 1) if rng.randrange(2) else (left + 1, left)
+            amount = rng.randint(0, min(loads[donor], step))
+            loads[donor] -= amount
+            loads[receiver] += amount
+        return loads
 
     @staticmethod
     def _home(params, i: int) -> Fraction:
@@ -155,6 +223,9 @@ class LineExchangeSnpGenerator(Generator):
     ):
         if instance_parameters_space is None:
             instance_parameters_space = self.instance_parameter_space
+        # The universe is as big as the upper bound on n_robots, so for the
+        # "random" variant, whose bound is MAX_INT, pass a space narrowed with
+        # get_reduced_instance_space rather than the default one.
         _, robots_upper = hyperparam_range(instance_parameters_space["n_robots"])
         return [self._robot(i) for i in range(robots_upper)]
 
@@ -191,5 +262,9 @@ class LineExchangeSnpGenerator(Generator):
         # An exchange moves one unit from a robot to its neighbour, so the
         # total load never changes. The goal asks for every robot to hold the
         # same amount, which is only reachable when that total splits evenly.
-        loads = LineExchangeSnpGenerator._loads(params)
-        return sum(loads) % params["n_robots"] == 0
+        # The "random" variant scrambles a balanced start, so it always does;
+        # only the "ipc" variant, where the caller states the loads, can get
+        # this wrong.
+        if self.variant == "random":
+            return True
+        return sum(self._loads(params)) % params["n_robots"] == 0
