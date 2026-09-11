@@ -244,7 +244,7 @@ The following domains are implemented and registered today:
 | **Kitting** (AAAI 2021) + modifications | UP | ICE, Bounded Numbers, Bounded Numeric Params, Required Concurrency | Hardness: Looping Behavior, Numeric Indexing Goals |
 | **Replenish** + modifications | UP | Bounded Numbers, Bounded Numeric Params | Hardness: Looping Behavior, Numeric Indexing Goals |
 | **MatchCellar** (IPC) + modifications | UP/PDDL | Required Concurrency | Running example throughout this README |
-| **Line-Exchange-SNP** (IPC 2026) | UP/PDDL | Numbers | Robots confined to neighbouring segments meet at the boundary to even out their loads |
+| **Line-Exchange-SNP** (IPC 2026) | UP/PDDL | Numbers | Robots confined to neighbouring segments meet at the boundary to even out their loads. The `ipc` variant states each starting load, `random` draws them from a mean and an imbalance |
 
 ### Planned
 
