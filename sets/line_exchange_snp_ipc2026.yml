@@ -1,0 +1,198 @@
+# The 20 line-exchange-snp instances of the IPC 2026 dataset.
+#
+# Each entry is named after its original file, whose name encodes
+# <n_robots>_<mean_q>_<imbalance%>_<D>. Only n_robots and D are real
+# parameters here: robot i owns the segment [D*i, D*(i+1)] and starts in the
+# middle of it, at D/2 + i*D, which is also where it has to end up.
+#
+# mean_q and imbalance are NOT parameters. The loads were drawn at random and
+# no seed was recorded, and imbalance does not determine them (the two
+# imbalance=90 instances below hold [10, 9, 11] and [35, 6, 4]), so the only
+# faithful way to reproduce the set is to state each load with q_0 .. q_4.
+# Slots at or above n_robots are unused and left out.
+domain: line-exchange-snp
+params:
+  version: 1
+  variant: ipc
+instances:
+  # mean_q=10, imbalance=50%  (sum=30 = 3 x 10)
+  - name: "3_10_50_10"
+    params:
+      n_robots: 3
+      segment_length: 10
+      q_0: 12
+      q_1: 12
+      q_2: 6
+  # mean_q=10, imbalance=90%  (sum=30 = 3 x 10)
+  - name: "3_10_90_50"
+    params:
+      n_robots: 3
+      segment_length: 50
+      q_0: 10
+      q_1: 9
+      q_2: 11
+  # mean_q=15, imbalance=25%  (sum=45 = 3 x 15)
+  - name: "3_15_25_100"
+    params:
+      n_robots: 3
+      segment_length: 100
+      q_0: 14
+      q_1: 19
+      q_2: 12
+  # mean_q=15, imbalance=90%  (sum=45 = 3 x 15)
+  - name: "3_15_90_10"
+    params:
+      n_robots: 3
+      segment_length: 10
+      q_0: 35
+      q_1: 6
+      q_2: 4
+  # mean_q=5, imbalance=50%  (sum=15 = 3 x 5)
+  - name: "3_5_50_50"
+    params:
+      n_robots: 3
+      segment_length: 50
+      q_0: 3
+      q_1: 6
+      q_2: 6
+  # mean_q=5, imbalance=90%  (sum=15 = 3 x 5)
+  - name: "3_5_90_100"
+    params:
+      n_robots: 3
+      segment_length: 100
+      q_0: 3
+      q_1: 3
+      q_2: 9
+  # mean_q=10, imbalance=25%  (sum=40 = 4 x 10)
+  - name: "4_10_25_10"
+    params:
+      n_robots: 4
+      segment_length: 10
+      q_0: 11
+      q_1: 12
+      q_2: 8
+      q_3: 9
+  # mean_q=10, imbalance=50%  (sum=40 = 4 x 10)
+  - name: "4_10_50_50"
+    params:
+      n_robots: 4
+      segment_length: 50
+      q_0: 13
+      q_1: 9
+      q_2: 5
+      q_3: 13
+  # mean_q=10, imbalance=90%  (sum=40 = 4 x 10)
+  - name: "4_10_90_100"
+    params:
+      n_robots: 4
+      segment_length: 100
+      q_0: 2
+      q_1: 18
+      q_2: 3
+      q_3: 17
+  # mean_q=15, imbalance=50%  (sum=60 = 4 x 15)
+  - name: "4_15_50_10"
+    params:
+      n_robots: 4
+      segment_length: 10
+      q_0: 13
+      q_1: 12
+      q_2: 17
+      q_3: 18
+  # mean_q=15, imbalance=90%  (sum=60 = 4 x 15)
+  - name: "4_15_90_50"
+    params:
+      n_robots: 4
+      segment_length: 50
+      q_0: 24
+      q_1: 12
+      q_2: 18
+      q_3: 6
+  # mean_q=5, imbalance=25%  (sum=20 = 4 x 5)
+  - name: "4_5_25_50"
+    params:
+      n_robots: 4
+      segment_length: 50
+      q_0: 6
+      q_1: 4
+      q_2: 4
+      q_3: 6
+  # mean_q=5, imbalance=50%  (sum=20 = 4 x 5)
+  - name: "4_5_50_100"
+    params:
+      n_robots: 4
+      segment_length: 100
+      q_0: 4
+      q_1: 4
+      q_2: 8
+      q_3: 4
+  # mean_q=10, imbalance=25%  (sum=50 = 5 x 10)
+  - name: "5_10_25_50"
+    params:
+      n_robots: 5
+      segment_length: 50
+      q_0: 7
+      q_1: 10
+      q_2: 11
+      q_3: 12
+      q_4: 10
+  # mean_q=10, imbalance=50%  (sum=50 = 5 x 10)
+  - name: "5_10_50_100"
+    params:
+      n_robots: 5
+      segment_length: 100
+      q_0: 9
+      q_1: 9
+      q_2: 13
+      q_3: 9
+      q_4: 10
+  # mean_q=15, imbalance=25%  (sum=75 = 5 x 15)
+  - name: "5_15_25_10"
+    params:
+      n_robots: 5
+      segment_length: 10
+      q_0: 14
+      q_1: 15
+      q_2: 12
+      q_3: 18
+      q_4: 16
+  # mean_q=15, imbalance=50%  (sum=75 = 5 x 15)
+  - name: "5_15_50_50"
+    params:
+      n_robots: 5
+      segment_length: 50
+      q_0: 20
+      q_1: 12
+      q_2: 14
+      q_3: 15
+      q_4: 14
+  # mean_q=15, imbalance=90%  (sum=75 = 5 x 15)
+  - name: "5_15_90_100"
+    params:
+      n_robots: 5
+      segment_length: 100
+      q_0: 6
+      q_1: 3
+      q_2: 37
+      q_3: 16
+      q_4: 13
+  # mean_q=5, imbalance=25%  (sum=25 = 5 x 5)
+  - name: "5_5_25_100"
+    params:
+      n_robots: 5
+      segment_length: 100
+      q_0: 4
+      q_1: 6
+      q_2: 4
+      q_3: 7
+      q_4: 4
+  # mean_q=5, imbalance=90%  (sum=25 = 5 x 5)
+  - name: "5_5_90_10"
+    params:
+      n_robots: 5
+      segment_length: 10
+      q_0: 1
+      q_1: 7
+      q_2: 1
+      q_3: 7
+      q_4: 9

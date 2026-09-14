@@ -56,6 +56,9 @@ class DomainFactory:
         from upbm.domains.replenish import ReplenishGenerator
 
         self._registry["replenish"] = ReplenishGenerator
+        from upbm.domains.line_exchange_snp import LineExchangeSnpGenerator
+
+        self._registry["line-exchange-snp"] = LineExchangeSnpGenerator
 
     def register(self, name: str, generator_class: Type[Generator]) -> None:
         """Manually register a generator class under *name*."""

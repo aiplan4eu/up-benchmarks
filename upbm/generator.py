@@ -205,7 +205,7 @@ class Generator(object):
         self, instance_parameters_space: Optional[ConfigurationSpace] = None
     ) -> Iterator[Configuration]:
         if instance_parameters_space is None:
-            instance_parameters_space == self.instance_parameter_space
+            instance_parameters_space = self.instance_parameter_space
         assert instance_parameters_space is not None
         if not is_subspace(instance_parameters_space, self.instance_parameter_space):
             raise ValueError(
