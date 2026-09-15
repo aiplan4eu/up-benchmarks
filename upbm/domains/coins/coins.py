@@ -36,18 +36,13 @@ from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
-# Number of coins of every IPC instance, used as the default.
-IPC_N_COINS = 5
-
 
 def denominations(n_coins: int) -> List[int]:
     """Return the value of each coin of an instance.
 
     The first coin is always worth 1, the others are worth the first
-    `n_coins - 1` prime numbers. With the 5 coins of the IPC instances this
-    gives the denominations 1, 2, 3, 5 and 7.
+    `n_coins - 1` prime numbers.
     """
-    # sympy's sieve is 1-indexed and grows on demand, sieve[1] is 2
     return [1] + [int(sieve[i]) for i in range(1, n_coins)]
 
 
@@ -56,7 +51,6 @@ class CoinsGenerator(Generator):
     def get_domain_parameter_space():
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        # only the IPC variant exists for now, more can be added here later
         mapping["variant"] = Categorical(
             "variant",
             ["ipc"],
@@ -89,8 +83,7 @@ class CoinsGenerator(Generator):
         mapping: dict[str, Any] = {}
         if self.variant != "ipc":
             raise ValueError(f"invalid variant {self.variant}")
-        # the coin values are derived from their number, see denominations()
-        mapping["n_coins"] = Integer("n_coins", (1, MAX_INT), default=IPC_N_COINS)
+        mapping["n_coins"] = Integer("n_coins", (1, MAX_INT), default=5)
         mapping["target"] = Integer("target", (1, MAX_INT), default=100)
         return ConfigurationSpace(name=mapping)
 
@@ -165,8 +158,6 @@ class CoinsGenerator(Generator):
         coin_values = denominations(params["n_coins"])
         for coin, value in zip(self.get_objects(params), coin_values):
             res[self._denomination(coin)] = value
-            # Every coin starts with a penalty of one. Re-using the same coin
-            # costs one more each time, see update-penalty in the domain file.
             res[self._denomination_penalty(coin)] = 1
             res[self._no_coin_update(coin)] = TRUE()
         return res
