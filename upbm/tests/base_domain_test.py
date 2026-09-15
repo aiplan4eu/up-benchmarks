@@ -16,11 +16,13 @@ import unittest
 from upbm.factory import DomainFactory
 from unified_planning.shortcuts import OneshotPlanner
 from unified_planning.engines.plan_validator import (
+    SequentialPlanValidator,
     TimeTriggeredPlanValidator,
     ValidationResultStatus,
 )
 from unified_planning.engines.results import POSITIVE_OUTCOMES
 from unified_planning.exceptions import UPNoSuitableEngineAvailableException
+from unified_planning.plans import SequentialPlan
 from pytest import skip
 from typing import Any, List, Tuple
 from ConfigSpace import Configuration
@@ -55,7 +57,8 @@ class BaseDomainTest(unittest.TestCase):
         Returns a list of validation cases. Every case is a tuple:
             - a generator domain configuration
             - a problem instance configuration
-            - the plan we want to validate on the problem, encoded as a string
+            - the plan we want to validate on the problem, encoded as a string,
+              either sequential or time triggered (see upbm.io.parse_plan_string)
             - the expected result from the validation
         """
         return []
@@ -99,7 +102,14 @@ class BaseDomainTest(unittest.TestCase):
             gen = self.generator(domain_config)
             problem = gen.get_instance(problem_config)
             plan = parse_plan_string(problem, plan_str)
-            with TimeTriggeredPlanValidator() as validator:
+            validator_class: (
+                type[SequentialPlanValidator] | type[TimeTriggeredPlanValidator]
+            )
+            if isinstance(plan, SequentialPlan):
+                validator_class = SequentialPlanValidator
+            else:
+                validator_class = TimeTriggeredPlanValidator
+            with validator_class() as validator:
                 v_res = validator.validate(problem, plan)
                 print(v_res)
                 self.assertEqual(v_res.status, expected_status, f"bad res:\n{v_res}")
