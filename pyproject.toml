@@ -13,7 +13,8 @@ requires-python = ">=3.10"
 dependencies = [
     "unified-planning",
     "ConfigSpace",
-    "pyyaml"
+    "pyyaml",
+    "sympy"
 ]
 
 [tool.setuptools.packages.find]
