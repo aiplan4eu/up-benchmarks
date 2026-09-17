@@ -13,11 +13,9 @@
 # limitations under the License.
 
 from ConfigSpace import Configuration
-from unified_planning.engines.plan_validator import SequentialPlanValidator
 from unified_planning.engines.results import ValidationResultStatus
 
 from upbm.domains.ztalloc_sum import ZtallocSumGenerator
-from upbm.io import parse_plan_string
 from upbm.tests.base_domain_test import BaseDomainTest
 
 
@@ -65,46 +63,35 @@ class TestZtallocSum(BaseDomainTest):
         # double, m1d3-start, m1d3-copy-reset, m1d3-div-step and m1d3-finish
         return [(*config, 5) for config in self._get_configs()]
 
-    # NOTE the validation cases of the base class use the temporal plan
-    # validator, while ztalloc-sum is an instantaneous domain, so the sequential
-    # plans are validated here instead.
-    def test_sequential_validation(self):
+    @property
+    def validation_cases(self):
         domain_config, instance_config = self._get_configs()[0]
+        # a single double takes the register from 1 to the target of 2
+        valid_plan = "(double r1)"
+        # doing nothing leaves the register at 1, so the sum is wrong
+        invalid_plan = ""
+        # one register going 1 -> 2 -> 4 -> 8 -> 16, where the m1d3 gadget then
+        # gives (16 - 1) / 3 = 5, so the division really computes what it claims
         gen = ZtallocSumGenerator(domain_config)
-        problem = gen.get_instance(instance_config)
-
-        for plan_str, expected in [
-            # a single double takes the register from 1 to the target of 2
-            ("(double r1)", ValidationResultStatus.VALID),
-            # doing nothing leaves the register at 1, so the sum is wrong
-            ("", ValidationResultStatus.INVALID),
-        ]:
-            plan = parse_plan_string(problem, plan_str)
-            with SequentialPlanValidator() as validator:
-                v_res = validator.validate(problem, plan)
-                self.assertEqual(v_res.status, expected, f"bad res:\n{v_res}")
-
-    def test_reversed_collatz_step(self):
-        """1 -> 2 -> 4 -> 8 -> 16, then the m1d3 gadget gives (16 - 1) / 3 = 5."""
-        domain_config = (
-            ZtallocSumGenerator.get_domain_parameter_space().get_default_configuration()
-        )
-        gen = ZtallocSumGenerator(domain_config)
-        instance_config = Configuration(
+        collatz_config = Configuration(
             gen.instance_parameter_space, {"n_registers": 1, "target": 5}
         )
-        problem = gen.get_instance(instance_config)
-
-        plan_str = "\n".join(
+        collatz_plan = "\n".join(
             ["(double r1)"] * 4
             + ["(m1d3-start r1)", "(m1d3-copy-reset r1)"]
             + ["(m1d3-div-step r1)"] * 5
             + ["(m1d3-finish r1)"]
         )
-        plan = parse_plan_string(problem, plan_str)
-        with SequentialPlanValidator() as validator:
-            v_res = validator.validate(problem, plan)
-            self.assertEqual(v_res.status, ValidationResultStatus.VALID, f"{v_res}")
+        return [
+            (domain_config, instance_config, valid_plan, ValidationResultStatus.VALID),
+            (
+                domain_config,
+                instance_config,
+                invalid_plan,
+                ValidationResultStatus.INVALID,
+            ),
+            (domain_config, collatz_config, collatz_plan, ValidationResultStatus.VALID),
+        ]
 
     def test_initial_state_and_goal(self):
         domain_config, instance_config = self._get_configs()[2]
