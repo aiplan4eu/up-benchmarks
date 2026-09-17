@@ -35,7 +35,6 @@ from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
-# Every register of every IPC instance starts holding this value.
 INITIAL_REGISTER_VALUE = 1
 
 
@@ -44,7 +43,6 @@ class ZtallocSumGenerator(Generator):
     def get_domain_parameter_space():
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        # only the IPC variant exists for now, more can be added here later
         mapping["variant"] = Categorical(
             "variant",
             ["ipc"],
@@ -79,8 +77,6 @@ class ZtallocSumGenerator(Generator):
         mapping: dict[str, Any] = {}
         if self.variant != "ipc":
             raise ValueError(f"invalid variant {self.variant}")
-        # the IPC instances use 3 to 6 registers and targets from 187 to 12347,
-        # the defaults here reproduce the smallest one
         mapping["n_registers"] = Integer("n_registers", (1, MAX_INT), default=3)
         mapping["target"] = Integer("target", (1, MAX_INT), default=187)
         return ConfigurationSpace(name=mapping)
@@ -99,9 +95,6 @@ class ZtallocSumGenerator(Generator):
             domain = reader.parse_problem(
                 str(RESOURCES_PATH / f"ztalloc_sum_v{self.version}.pddl")
             )
-            # The domain counts every operation in total-cost, and the point is
-            # reaching the target in as few steps as possible, so the metric
-            # belongs to the domain. Problem.clone() copies it into instances.
             domain.add_quality_metric(
                 MinimizeExpressionOnFinalState(domain.fluent("total-cost")())
             )
@@ -142,8 +135,6 @@ class ZtallocSumGenerator(Generator):
         if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
         registers = self.get_objects(params)
-        # the registers must add up to the target, and every one of them has to
-        # be back to a normal state, so no half finished division is counted
         total = reduce(Plus, [self._value(r) for r in registers])
         res = [Equals(total, params["target"]), self._free()]
         for r in registers:

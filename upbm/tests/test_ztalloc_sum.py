@@ -36,8 +36,6 @@ class TestZtallocSum(BaseDomainTest):
         )
         gen = ZtallocSumGenerator(default_config)
         space = gen.instance_parameter_space
-        # one register that only needs a double, and two registers where the
-        # second one has to be emptied
         tiny = Configuration(space, {"n_registers": 1, "target": 2})
         small = Configuration(space, {"n_registers": 2, "target": 1})
         # the smallest instance of the IPC set
@@ -46,7 +44,6 @@ class TestZtallocSum(BaseDomainTest):
 
     @property
     def plannable(self):
-        # only the two tiny ones, the IPC targets need a long search
         return self._get_configs()[:2]
 
     @property
@@ -60,18 +57,13 @@ class TestZtallocSum(BaseDomainTest):
 
     @property
     def problem_actions(self):
-        # double, m1d3-start, m1d3-copy-reset, m1d3-div-step and m1d3-finish
         return [(*config, 5) for config in self._get_configs()]
 
     @property
     def validation_cases(self):
         domain_config, instance_config = self._get_configs()[0]
-        # a single double takes the register from 1 to the target of 2
         valid_plan = "(double r1)"
-        # doing nothing leaves the register at 1, so the sum is wrong
         invalid_plan = ""
-        # one register going 1 -> 2 -> 4 -> 8 -> 16, where the m1d3 gadget then
-        # gives (16 - 1) / 3 = 5, so the division really computes what it claims
         gen = ZtallocSumGenerator(domain_config)
         collatz_config = Configuration(
             gen.instance_parameter_space, {"n_registers": 1, "target": 5}
@@ -107,7 +99,6 @@ class TestZtallocSum(BaseDomainTest):
             )
         total_cost = problem.initial_value(problem.fluent("total-cost")())
         self.assertEqual(total_cost.constant_value(), 0)
-        # the sum goal plus free, and normal / work-value for each register
         self.assertEqual(len(problem.goals), 2 + 2 * 3)
 
     # NOTE that ANML drops the metric is a property of upbm.io rather than of
