@@ -13,14 +13,10 @@
 # limitations under the License.
 
 from ConfigSpace import Configuration, ConfigurationSpace, Constant, Integer
-from unified_planning.engines.plan_validator import (
-    SequentialPlanValidator,
-    ValidationResultStatus,
-)
+from unified_planning.engines.plan_validator import ValidationResultStatus
 
 from upbm.domains.factory_robot import FactoryRobotGenerator
 from upbm.domains.factory_robot.factory_robot import draw, stations
-from upbm.io import parse_plan_string
 from upbm.tests.base_domain_test import BaseDomainTest
 
 
@@ -128,24 +124,17 @@ class TestFactoryRobot(BaseDomainTest):
         # lifted, so the count does not depend on the factory size
         return [(domain_config, instance_config, 13)]
 
-    def test_sequential_plan_validation(self):
-        """Run one robot through the whole cycle by hand.
-
-        The base class validates with TimeTriggeredPlanValidator, which only
-        suits temporal domains; factory-robot is instantaneous, so it is
-        checked here with the sequential validator instead.
+    @property
+    def validation_cases(self):
+        """One robot run through the whole cycle by hand.
 
         The plan works, cools off, moves, works again, recharges and finishes
         the last task, which touches every mechanic the goal depends on. The
         robot starts on the cooling station with 77 energy and work-cost 8,
         and each work adds 1 workload and 3 temperature.
         """
-        domain_config, gen = self._gen()
-        config = self._config(gen, n_robots=1, n_stations=3, workload=3, max_temp=20)
-        problem = gen.get_instance(config)
-        plan = parse_plan_string(
-            problem,
-            """
+        domain_config, instance_config = self._get_configs()[0]
+        plan = """
             (work r0 cooling)
             (work r0 cooling)
             (cool-down r0 cooling)
@@ -155,11 +144,8 @@ class TestFactoryRobot(BaseDomainTest):
             (move r0 assembly0 charging)
             (recharge r0 charging)
             (work r0 charging)
-            """,
-        )
-        with SequentialPlanValidator(problem_kind=problem.kind) as validator:
-            res = validator.validate(problem, plan)
-            self.assertEqual(res.status, ValidationResultStatus.VALID, f"{res}")
+            """
+        return [(domain_config, instance_config, plan, ValidationResultStatus.VALID)]
 
     def test_reconstructed_generator_matches_the_ipc_set(self):
         """The random data is reconstructed, so pin it to the shipped files.
