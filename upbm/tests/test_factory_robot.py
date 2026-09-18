@@ -121,9 +121,6 @@ class TestFactoryRobot(BaseDomainTest):
     @property
     def problem_actions(self):
         domain_config, instance_config = self._get_configs()[0]
-        # recharge, work, cool-down, the four set-*-power actions, overdrive,
-        # overcharge, precision-work, move, turbo-work, calibrate; they are
-        # lifted, so the count does not depend on the factory size
         return [(domain_config, instance_config, 13)]
 
     @property
@@ -235,7 +232,6 @@ class TestFactoryRobot(BaseDomainTest):
                 self.assertEqual(
                     init[problem.fluent(fluent)(robot)].constant_value(), 0, fluent
                 )
-        # the charger and the calibrator sit on their own stations
         self.assertTrue(
             init[
                 problem.fluent("has-charger")(problem.object("charging"))
