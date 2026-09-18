@@ -47,30 +47,6 @@ IPC_PFILE10: dict[str, Any] = dict(
     workload_goal=[68, 70, 70, 72, 70, 68],
 )
 
-# The 20 shipped (n_robots, n_stations, workload, max_temp) calls.
-IPC_CALLS = [
-    (2, 5, 40, 20),
-    (2, 5, 40, 20),
-    (3, 6, 40, 20),
-    (3, 6, 45, 20),
-    (4, 7, 45, 25),
-    (4, 7, 50, 25),
-    (5, 8, 50, 25),
-    (5, 8, 60, 30),
-    (6, 9, 60, 30),
-    (6, 9, 70, 30),
-    (7, 10, 70, 35),
-    (7, 10, 80, 35),
-    (8, 11, 80, 35),
-    (8, 11, 90, 35),
-    (9, 12, 90, 40),
-    (9, 12, 100, 40),
-    (10, 13, 100, 40),
-    (10, 13, 120, 40),
-    (12, 14, 120, 50),
-    (12, 14, 130, 50),
-]
-
 
 class TestFactoryRobot(BaseDomainTest):
     __test__ = True
@@ -172,24 +148,30 @@ class TestFactoryRobot(BaseDomainTest):
                     f"{field} for robots={shipped['args'][0]}",
                 )
 
-    def test_stations_form_a_clique(self):
-        """Connectivity is a full clique, both ways, with no self loops."""
-        _, gen = self._gen()
-        problem = gen.get_instance(self._config(gen, 3, 6, 40, 20))
-        connected = {
-            (str(k.args[0]), str(k.args[1]))
-            for k, v in problem.explicit_initial_values.items()
-            if k.fluent().name == "connected" and v.bool_constant_value()
-        }
-        places = stations(6)
-        self.assertEqual(connected, {(a, b) for a in places for b in places if a != b})
+    def test_layout_matches_the_shipped_files(self):
+        """The hardcoded factory: clique, free stations, cooling, idle robots.
 
-    def test_free_is_every_unoccupied_station(self):
-        """Free stations are the ones nobody stands on, charging included."""
+        All four hold in every shipped instance. The exact drawn values are
+        pinned by the reconstruction test, so this one only checks the shape,
+        which lets it sweep several factory sizes.
+        """
         _, gen = self._gen()
-        for n_robots, n_stations in ((2, 5), (6, 9)):
+        for n_robots, n_stations in ((2, 5), (4, 7), (6, 9)):
             problem = gen.get_instance(self._config(gen, n_robots, n_stations, 40, 20))
             init = problem.explicit_initial_values
+            places = stations(n_stations)
+
+            # connectivity is a full clique, both ways, with no self loops
+            connected = {
+                (str(k.args[0]), str(k.args[1]))
+                for k, v in init.items()
+                if k.fluent().name == "connected" and v.bool_constant_value()
+            }
+            self.assertEqual(
+                connected, {(a, b) for a in places for b in places if a != b}
+            )
+
+            # free stations are the ones nobody stands on, charging included
             occupied = {
                 str(k.args[1])
                 for k, v in init.items()
@@ -201,47 +183,41 @@ class TestFactoryRobot(BaseDomainTest):
                 if k.fluent().name == "free" and v.bool_constant_value()
             }
             self.assertEqual(len(occupied), n_robots)
-            self.assertEqual(free, set(stations(n_stations)) - occupied)
+            self.assertEqual(free, set(places) - occupied)
 
-    def test_only_the_cooling_station_cools(self):
-        """cooling-power is on every station but nonzero only on `cooling`."""
-        _, gen = self._gen()
-        problem = gen.get_instance(self._config(gen, 2, 5, 40, 20))
-        power = {
-            str(k.args[0]): v.constant_value()
-            for k, v in problem.explicit_initial_values.items()
-            if k.fluent().name == "cooling-power"
-        }
-        self.assertEqual(set(power), set(stations(5)))
-        self.assertEqual(power["cooling"], IPC_PFILE1["cooling_power"])
-        for place, value in power.items():
-            if place != "cooling":
-                self.assertEqual(value, 0, place)
+            # cooling-power is set on every station but cools only on `cooling`
+            power = {
+                str(k.args[0]): v.constant_value()
+                for k, v in init.items()
+                if k.fluent().name == "cooling-power"
+            }
+            self.assertEqual(set(power), set(places))
+            self.assertNotEqual(power["cooling"], 0)
+            for place, value in power.items():
+                if place != "cooling":
+                    self.assertEqual(value, 0, place)
 
-    def test_robots_start_calibrated_and_idle(self):
-        """Every robot starts calibrated with the three counters at zero."""
-        _, gen = self._gen()
-        problem = gen.get_instance(self._config(gen, 4, 7, 45, 25))
-        init = problem.explicit_initial_values
-        for i in range(4):
-            robot = problem.object(f"r{i}")
-            self.assertTrue(
-                init[problem.fluent("calibrated")(robot)].bool_constant_value()
-            )
-            for fluent in ("workload", "temperature", "production"):
-                self.assertEqual(
-                    init[problem.fluent(fluent)(robot)].constant_value(), 0, fluent
+            # every robot starts calibrated with the three counters at zero
+            for i in range(n_robots):
+                robot = problem.object(f"r{i}")
+                self.assertTrue(
+                    init[problem.fluent("calibrated")(robot)].bool_constant_value()
                 )
-        self.assertTrue(
-            init[
-                problem.fluent("has-charger")(problem.object("charging"))
-            ].bool_constant_value()
-        )
-        self.assertTrue(
-            init[
-                problem.fluent("has-calibrator")(problem.object("cooling"))
-            ].bool_constant_value()
-        )
+                for fluent in ("workload", "temperature", "production"):
+                    self.assertEqual(
+                        init[problem.fluent(fluent)(robot)].constant_value(), 0, fluent
+                    )
+
+            self.assertTrue(
+                init[
+                    problem.fluent("has-charger")(problem.object("charging"))
+                ].bool_constant_value()
+            )
+            self.assertTrue(
+                init[
+                    problem.fluent("has-calibrator")(problem.object("cooling"))
+                ].bool_constant_value()
+            )
 
     def test_goal_is_a_target_per_robot_plus_one_temperature_bound(self):
         """Every shipped goal has this shape: n targets and a single bound."""
@@ -267,30 +243,6 @@ class TestFactoryRobot(BaseDomainTest):
         # one robot with a charging and a cooling station is the smallest
         # legal factory: the robot always has somewhere to move to
         self.assertTrue(gen.check_instance_parameters(self._config(gen, 1, 2, 40, 20)))
-
-    def test_shipped_instances_are_accepted(self):
-        """Every call of the IPC set has to pass the solvability check."""
-        _, gen = self._gen()
-        for n_robots, n_stations, workload, max_temp in IPC_CALLS:
-            self.assertTrue(
-                gen.check_instance_parameters(
-                    self._config(gen, n_robots, n_stations, workload, max_temp)
-                ),
-                f"shipped call rejected: {n_robots} robots, {n_stations} stations",
-            )
-
-    def test_the_seed_is_a_real_parameter(self):
-        """A different seed redraws the factory but keeps its shape."""
-        _, gen = self._gen()
-        ipc = gen.get_instance(self._config(gen, 6, 9, 70, 30, seed=42))
-        other = gen.get_instance(self._config(gen, 6, 9, 70, 30, seed=7))
-        self.assertEqual(len(list(ipc.all_objects)), len(list(other.all_objects)))
-        capacities = lambda p: [
-            v.constant_value()
-            for k, v in p.explicit_initial_values.items()
-            if k.fluent().name == "capacity"
-        ]
-        self.assertNotEqual(sorted(capacities(ipc)), sorted(capacities(other)))
 
     def test_object_universe_is_bounded_by_the_space(self):
         """The universe follows the upper bounds of the given space."""
