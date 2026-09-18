@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
+
 from ConfigSpace import Configuration, ConfigurationSpace, Constant, Integer
 from unified_planning.engines.plan_validator import ValidationResultStatus
 
@@ -22,7 +24,7 @@ from upbm.tests.base_domain_test import BaseDomainTest
 
 # Two shipped instances read straight off the dataset files, used to pin the
 # reconstructed RNG. If the call sequence in `draw` ever drifts, these break.
-IPC_PFILE1 = dict(
+IPC_PFILE1: dict[str, Any] = dict(
     args=(2, 5, 40, 20, 42),
     capacity=[80, 80],
     energy=[79, 80],
@@ -33,7 +35,7 @@ IPC_PFILE1 = dict(
     at=["assembly1", "cooling"],
     workload_goal=[38, 39],
 )
-IPC_PFILE10 = dict(
+IPC_PFILE10: dict[str, Any] = dict(
     args=(6, 9, 70, 30, 42),
     capacity=[80, 80, 120, 100, 100, 100],
     energy=[76, 74, 110, 97, 98, 88],
