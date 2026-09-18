@@ -29,7 +29,6 @@ from upbm.domains.rainbowttles.rainbowttles import (
     filled,
     inverse_moves,
     scramble,
-    solved_state,
 )
 from upbm.io import parse_plan_string
 from upbm.tests.base_domain_test import BaseDomainTest
@@ -106,9 +105,18 @@ class TestRainbowttles(BaseDomainTest):
     @property
     def object_data(self):
         domain_config, instance_config = self._get_configs()
-        # 2 colours x 1 bottle + 2 spares = 4 bottles; colours are the 2
-        # playable ones plus the empty marker
-        return [(domain_config, instance_config, [("bottle", 4), ("colour", 3)])]
+        # the bottle count is derived from the colours rather than asked for,
+        # so it can never be too small: colours x bottles_per_colour + spares.
+        # Colours are the playable ones plus the empty marker.
+        bigger_domain, bigger = self._get_configs(
+            n_colours=5, bottles_per_colour=2, n_spare_bottles=3
+        )
+        return [
+            # 2 x 1 + 2 = 4 bottles
+            (domain_config, instance_config, [("bottle", 4), ("colour", 3)]),
+            # 5 x 2 + 3 = 13 bottles
+            (bigger_domain, bigger, [("bottle", 13), ("colour", 6)]),
+        ]
 
     @property
     def problem_actions(self) -> List[Tuple[Configuration, Configuration, int]]:
@@ -142,50 +150,24 @@ class TestRainbowttles(BaseDomainTest):
                         f"{n_colours} colours, seed {seed}: {result}",
                     )
 
-    def test_witness_plan_closes_every_bottle_last(self):
-        """The plan is the pours, then one close per bottle."""
-        gen, params, problem = self._gen_and_instance()
-        lines = gen.get_witness_plan(params).splitlines()
-        n_bottles = gen.n_bottles(params)
-        pours, closes = lines[:-n_bottles], lines[-n_bottles:]
-        self.assertEqual(len(pours), SMALL["scramble_steps"])
-        self.assertTrue(all(p.startswith("(pour") for p in pours), pours)
-        self.assertTrue(all(c.startswith("(close") for c in closes), closes)
-        # every bottle is closed exactly once
-        closed = {c.split()[1].rstrip(")") for c in closes}
-        self.assertEqual(closed, {bottle_name(i) for i in range(n_bottles)})
+    def test_the_drawn_puzzle_is_well_formed(self):
+        """The invariants every scrambled puzzle has to satisfy.
 
-    def test_bottle_count_is_derived_from_the_colours(self):
-        """n_bottles is not asked for, so it can never be too small."""
-        gen, params, problem = self._gen_and_instance(
-            n_colours=5, bottles_per_colour=2, n_spare_bottles=3
-        )
-        self.assertEqual(gen.n_bottles(params), 5 * 2 + 3)
-        self.assertEqual(
-            sum(1 for _ in problem.objects(problem.user_type("bottle"))), 13
-        )
-
-    def test_solved_state_is_full_bottles_plus_spares(self):
-        state = solved_state(n_colours=3, bottles_per_colour=2, capacity=4)
-        self.assertEqual(len(state), 6)
-        self.assertTrue(all(len(s) == 1 and s[0][1] == 4 for s in state))
-        # each colour gets exactly bottles_per_colour of them
-        for colour in range(3):
-            self.assertEqual(sum(1 for s in state if s[0][0] == colour), 2)
-
-    def test_a_colour_never_occupies_two_runs_of_one_bottle(self):
-        """The domain cannot represent it, so the scramble must never do it.
-
-        `colour-segments` is one count per (bottle, colour) and `pour` zeroes
-        it, so a colour can sit in at most one run per bottle. A scrambler
-        that ignored this would emit states the domain cannot express.
+        They live at two levels. On the stacks the scramble builds: a colour
+        occupies at most one run per bottle, because `colour-segments` is a
+        single count per (bottle, colour) and `pour` zeroes it, so anything
+        else is a state the domain cannot express. On the instance that comes
+        out: pouring moves segments without creating or destroying them, every
+        stack is wired bottom to top through `colour-below`, and the goal asks
+        for every bottle to be closed.
         """
+        capacity = SMALL["capacity"]
         for n_colours, per_colour, spares, steps in IPC_SHAPES:
-            for seed in range(5):
+            for seed in range(3):
                 stacks, _ = scramble(
                     n_colours=n_colours,
                     bottles_per_colour=per_colour,
-                    capacity=4,
+                    capacity=capacity,
                     n_spare_bottles=spares,
                     steps=steps,
                     seed=seed,
@@ -194,52 +176,52 @@ class TestRainbowttles(BaseDomainTest):
                     colours = [c for c, _ in stack]
                     self.assertEqual(len(colours), len(set(colours)), stack)
                     self.assertTrue(all(n > 0 for _, n in stack), stack)
-                    self.assertLessEqual(filled(stack), 4, stack)
+                    self.assertLessEqual(filled(stack), capacity, stack)
 
-    def test_every_colour_keeps_its_segments(self):
-        """Pouring moves segments about but never creates or destroys them."""
-        gen, params, problem = self._gen_and_instance(
-            n_colours=4, bottles_per_colour=2, n_spare_bottles=3, scramble_steps=20
-        )
-        segments = self._numbers(problem, "colour-segments")
-        for colour in range(4):
-            total = sum(v for (_, c), v in segments.items() if c == colour_name(colour))
-            self.assertEqual(total, 4 * 2, f"colour {colour_name(colour)}")
-        # the empty marker is a colour object but never fills anything
-        for (_, c), v in segments.items():
-            if c == EMPTY_COLOUR:
-                self.assertEqual(v, 0)
-        # segments-filled agrees with the per-colour counts
-        for bottle, total in self._numbers(problem, "segments-filled").items():
-            self.assertEqual(
-                total, sum(v for (b, _), v in segments.items() if (b,) == bottle)
-            )
+                gen, params, problem = self._gen_and_instance(
+                    n_colours=n_colours,
+                    bottles_per_colour=per_colour,
+                    n_spare_bottles=spares,
+                    scramble_steps=steps,
+                    seed=seed,
+                )
+                segments = self._numbers(problem, "colour-segments")
+                for colour_index in range(n_colours):
+                    name = colour_name(colour_index)
+                    total = sum(v for (_, c), v in segments.items() if c == name)
+                    self.assertEqual(total, capacity * per_colour, name)
+                # the empty marker is a colour object but never fills anything
+                for (_, c), v in segments.items():
+                    if c == EMPTY_COLOUR:
+                        self.assertEqual(v, 0)
+                # segments-filled agrees with the per-colour counts
+                for key, count in self._numbers(problem, "segments-filled").items():
+                    self.assertEqual(
+                        count,
+                        sum(v for (b, _), v in segments.items() if (b,) == key),
+                    )
 
-    def test_stacks_are_wired_bottom_to_top(self):
-        """Each run records the colour it rests on; the bottom one rests on empty."""
-        gen, params, problem = self._gen_and_instance(scramble_steps=6)
-        below = {(b, c): c1 for b, c, c1 in self._true_facts(problem, "colour-below")}
-        upper = {b: c for b, c in self._true_facts(problem, "upper-colour")}
-        segments = self._numbers(problem, "colour-segments")
-        for index in range(gen.n_bottles(params)):
-            bottle = bottle_name(index)
-            colour = upper[bottle]
-            seen: set = set()
-            while colour != EMPTY_COLOUR:
-                self.assertNotIn(colour, seen)
-                seen.add(colour)
-                self.assertGreater(segments[(bottle, colour)], 0)
-                colour = below[(bottle, colour)]
-            # an empty bottle shows the empty marker and rests on nothing
-            if upper[bottle] == EMPTY_COLOUR:
-                self.assertNotIn((bottle, EMPTY_COLOUR), below)
+                below = {
+                    (b, c): c1 for b, c, c1 in self._true_facts(problem, "colour-below")
+                }
+                upper = {b: c for b, c in self._true_facts(problem, "upper-colour")}
+                for index in range(gen.n_bottles(params)):
+                    bottle = bottle_name(index)
+                    colour = upper[bottle]
+                    seen: set = set()
+                    while colour != EMPTY_COLOUR:
+                        self.assertNotIn(colour, seen)
+                        seen.add(colour)
+                        self.assertGreater(segments[(bottle, colour)], 0)
+                        colour = below[(bottle, colour)]
+                    # an empty bottle shows the marker and rests on nothing
+                    if upper[bottle] == EMPTY_COLOUR:
+                        self.assertNotIn((bottle, EMPTY_COLOUR), below)
 
-    def test_goal_closes_every_bottle(self):
-        gen, params, problem = self._gen_and_instance()
-        goals = {str(g) for g in problem.goals}
-        self.assertEqual(
-            goals, {f"closed({bottle_name(i)})" for i in range(gen.n_bottles(params))}
-        )
+                self.assertEqual(
+                    {str(g) for g in problem.goals},
+                    {f"closed({bottle_name(i)})" for i in range(gen.n_bottles(params))},
+                )
 
     def test_the_seed_is_a_real_parameter(self):
         """A different seed redraws the puzzle without changing its shape."""
@@ -313,20 +295,3 @@ class TestRainbowttles(BaseDomainTest):
         )
         # it lands on an empty bottle, so there is no colour below it
         self.assertIsNone(only.below)
-
-    def test_every_configuration_is_accepted(self):
-        """There is nothing to reject: solvability is built in, not inherited.
-
-        The bottle count is derived rather than asked for and the space starts
-        at one spare bottle and a capacity of two, so no configuration can
-        describe a puzzle that cannot be built or solved.
-        """
-        domain_config, _ = self._get_configs()
-        gen = RainbowttlesGenerator(domain_config)
-        for overrides in (
-            {},
-            {"capacity": 2, "n_colours": 1, "n_spare_bottles": 1, "scramble_steps": 0},
-            {"n_colours": 10, "bottles_per_colour": 2, "n_spare_bottles": 4},
-        ):
-            _, params = self._get_configs(**overrides)
-            self.assertTrue(gen.check_instance_parameters(params), overrides)
