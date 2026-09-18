@@ -217,6 +217,7 @@ The bundled generator classes are:
 | kitting | `from upbm.domains.kitting import KittingGenerator` |
 | replenish | `from upbm.domains.replenish import ReplenishGenerator` |
 | coins | `from upbm.domains.coins import CoinsGenerator` |
+| rainbowttles | `from upbm.domains.rainbowttles import RainbowttlesGenerator` |
 
 ### Registering domains via `.upbm` plugins
 
@@ -247,6 +248,7 @@ The following domains are implemented and registered today:
 | **Replenish** + modifications | UP | Bounded Numbers, Bounded Numeric Params | Hardness: Looping Behavior, Numeric Indexing Goals |
 | **MatchCellar** (IPC) + modifications | UP/PDDL | Required Concurrency | Running example throughout this README |
 | **Coins** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Hardness: finding a feasible plan is easy, finding an optimal one is hard |
+| **Rainbowttles** (IPC 2026 domain, own instances) | UP/PDDL | Numbers | Colour-sorting bottle puzzle; instances are drawn by scrambling a solved puzzle backwards, so each one comes with a plan that solves it |
 
 ### Planned
 
