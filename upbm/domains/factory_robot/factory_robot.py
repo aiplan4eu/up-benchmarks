@@ -34,20 +34,13 @@ from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
-# The two special stations. Every instance has exactly one of each, and the
-# rest are general-purpose assembly stations.
 CHARGING = "charging"
 COOLING = "cooling"
 
-# Every robot starts idle, cool and calibrated in all 20 shipped instances.
 START_WORKLOAD = 0
 START_TEMPERATURE = 0
 START_PRODUCTION = 0
 
-# Only the cooling station cools; every other station has cooling-power 0.
-NO_COOLING = 0
-
-# The draw pools of the original generate.py, recovered from the dataset.
 CAPACITY_CHOICES = [80, 100, 120, 150]
 WORK_COST_CHOICES = [8, 10, 12, 15]
 EFFICIENCY_CHOICES = [2, 3, 4]
@@ -55,10 +48,6 @@ MAX_TEMP_SPREAD = 5  # max-temp is the argument plus 0..5
 COOLING_POWER_RANGE = (4, 6)
 ENERGY_DEFICIT = 20  # energy is capacity minus 0..20
 WORKLOAD_SPREAD = 2  # the goal is the argument plus -2..2
-
-# The seed the IPC set was generated with. Every one of the 20 instances
-# records `--seed 42` in its header.
-IPC_SEED = 42
 
 
 class RobotData(NamedTuple):
@@ -112,7 +101,6 @@ def draw(
     work_cost = [rng.choice(WORK_COST_CHOICES) for _ in range(n_robots)]
     max_temps = [max_temp + rng.randint(0, MAX_TEMP_SPREAD) for _ in range(n_robots)]
     efficiency = [rng.choice(EFFICIENCY_CHOICES) for _ in range(n_robots)]
-    # one draw for the cooling station, not one per robot
     cooling_power = rng.randint(*COOLING_POWER_RANGE)
     places = stations(n_stations)
     rng.shuffle(places)
@@ -139,7 +127,6 @@ class FactoryRobotGenerator(Generator):
     def get_domain_parameter_space():
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        # only the IPC variant exists for now, more can be added here later
         mapping["variant"] = Categorical(
             "variant",
             ["ipc"],
@@ -185,23 +172,11 @@ class FactoryRobotGenerator(Generator):
         mapping: dict[str, Any] = {}
         if self.variant != "ipc":
             raise ValueError(f"invalid variant {self.variant}")
-        # These are the four arguments of the original generate.py, which
-        # every shipped instance records in its header. The IPC set uses 2 to
-        # 12 robots with n_robots + 3 stations (n_robots + 2 for the largest).
         mapping["n_robots"] = Integer("n_robots", (1, MAX_INT), default=2)
-        # At least a charging and a cooling station, and one more than there
-        # are robots so that somebody can always move; see
-        # check_instance_parameters.
         mapping["n_stations"] = Integer("n_stations", (2, MAX_INT), default=5)
-        # The workload each robot must reach, give or take 2.
         mapping["workload"] = Integer("workload", (0, MAX_INT), default=40)
-        # The temperature ceiling: the goal bound, and the base of each
-        # robot's own max-temp.
         mapping["max_temp"] = Integer("max_temp", (0, MAX_INT), default=20)
-        # The generator's own --seed. It is 42 in all 20 shipped instances, so
-        # the default reproduces the IPC set; changing it draws a different
-        # factory of the same shape.
-        mapping["seed"] = Integer("seed", (0, MAX_INT), default=IPC_SEED)
+        mapping["seed"] = Integer("seed", (0, MAX_INT), default=42)
         return ConfigurationSpace(name=mapping)
 
     @property
@@ -268,11 +243,6 @@ class FactoryRobotGenerator(Generator):
     def get_goal(self, params) -> List[FNode]:
         self._check_params(params)
         data = self._draw(params)
-        # Each robot has to reach its own workload target, and the first robot
-        # additionally has to stay below the temperature ceiling. Every
-        # shipped instance has exactly this shape - one temperature bound, on
-        # r0 only, at the max_temp argument rather than the robot's own drawn
-        # max-temp.
         goals: List[FNode] = [
             GE(self._workload(self._robot(i)), target)
             for i, target in enumerate(data.workload_goal)
@@ -302,17 +272,14 @@ class FactoryRobotGenerator(Generator):
 
         res[self._has_charger(self._station(CHARGING))] = TRUE()
         res[self._has_calibrator(self._station(COOLING))] = TRUE()
-        # Every station nobody is standing on is free, the two special ones
-        # included.
         occupied = set(data.at)
         for place in places:
             station = self._station(place)
             if place not in occupied:
                 res[self._free(station)] = TRUE()
             res[self._cooling_power(station)] = (
-                data.cooling_power if place == COOLING else NO_COOLING
+                data.cooling_power if place == COOLING else 0
             )
-        # The stations form a full clique, both directions, no self loops.
         for a in places:
             for b in places:
                 if a != b:
@@ -320,8 +287,7 @@ class FactoryRobotGenerator(Generator):
         return res
 
     def check_instance_parameters(self, params: Configuration):
-        # NOTE this is a necessary condition, not a full solvability check, in
-        # the same spirit as the expedition and gear-car ports.
+        # NOTE this is a necessary condition, not a full solvability check.
         #
         # Every robot stands on its own station, and there has to be one to
         # spare. That is not a nicety: `move` requires the target station to
