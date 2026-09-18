@@ -1,0 +1,88 @@
+# The 20 ztalloc-sum instances of the IPC 2026 dataset.
+# Every register starts holding 1; the instances differ only in how many
+# registers there are and what the register values have to add up to.
+domain: ztalloc-sum
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: pfile1
+    params:
+      n_registers: 3
+      target: 187
+  - name: pfile2
+    params:
+      n_registers: 3
+      target: 233
+  - name: pfile3
+    params:
+      n_registers: 3
+      target: 329
+  - name: pfile4
+    params:
+      n_registers: 3
+      target: 489
+  - name: pfile5
+    params:
+      n_registers: 3
+      target: 705
+  - name: pfile6
+    params:
+      n_registers: 4
+      target: 873
+  - name: pfile7
+    params:
+      n_registers: 4
+      target: 1163
+  - name: pfile8
+    params:
+      n_registers: 4
+      target: 1474
+  - name: pfile9
+    params:
+      n_registers: 4
+      target: 1898
+  - name: pfile10
+    params:
+      n_registers: 4
+      target: 2466
+  - name: pfile11
+    params:
+      n_registers: 5
+      target: 2922
+  - name: pfile12
+    params:
+      n_registers: 5
+      target: 4269
+  - name: pfile13
+    params:
+      n_registers: 5
+      target: 5057
+  - name: pfile14
+    params:
+      n_registers: 5
+      target: 5842
+  - name: pfile15
+    params:
+      n_registers: 5
+      target: 7135
+  - name: pfile16
+    params:
+      n_registers: 6
+      target: 8763
+  - name: pfile17
+    params:
+      n_registers: 6
+      target: 9902
+  - name: pfile18
+    params:
+      n_registers: 6
+      target: 10860
+  - name: pfile19
+    params:
+      n_registers: 6
+      target: 11681
+  - name: pfile20
+    params:
+      n_registers: 6
+      target: 12347
