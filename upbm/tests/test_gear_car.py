@@ -13,13 +13,9 @@
 # limitations under the License.
 
 from ConfigSpace import Configuration
-from unified_planning.engines.plan_validator import (
-    SequentialPlanValidator,
-    ValidationResultStatus,
-)
+from unified_planning.engines.plan_validator import ValidationResultStatus
 
 from upbm.domains.gear_car import GearCarGenerator
-from upbm.io import parse_plan_string
 from upbm.tests.base_domain_test import BaseDomainTest
 
 
@@ -64,35 +60,75 @@ class TestGearCar(BaseDomainTest):
     def generator(self):
         return GearCarGenerator
 
-    def _get_configs(self):
-        default_config = (
-            GearCarGenerator.get_domain_parameter_space().get_default_configuration()
-        )
-        gen = GearCarGenerator(default_config)
+    def _domain_config(self):
+        return GearCarGenerator.get_domain_parameter_space().get_default_configuration()
+
+    def _params(self, **overrides) -> Configuration:
+        """A full instance configuration, IPC car unless told otherwise.
+
+        Everything the IPC set fixes is a parameter now, so the defaults are
+        the shipped car and an override is a different one.
+        """
+        gen = GearCarGenerator(self._domain_config())
         space = gen.instance_parameter_space
+        values = dict(space.get_default_configuration())
         # Deliberately NOT an IPC instance: the shipped ones ask for hundreds
         # of units of distance and are far too slow for a unit test. This car
         # only has to creep two units forward and stop again.
-        tiny = Configuration(
-            space,
-            {
-                "n_gears": 2,
-                "target_distance": 2,
-                "fuel": 100,
-                "alpha": 1,
-                "beta": 1,
-            },
-        )
-        return [(default_config, tiny)]
+        values.update({"target_distance": 2, "fuel": 100, "alpha": 1, "beta": 1})
+        values.update(overrides)
+        return Configuration(space, values)
+
+    def _get_configs(self):
+        return [(self._domain_config(), self._params())]
 
     @property
     def plannable(self):
-        return self._get_configs()
+        # the shipped car, and one the IPC set could not describe: wider gears,
+        # a stronger engine and the tightest goal window there is. Against an
+        # even target a window of 1 pins the distance exactly, since only even
+        # distances are reachable at all.
+        return self._get_configs() + [
+            (
+                self._domain_config(),
+                self._params(
+                    speed_per_gear=3,
+                    max_acceleration=3,
+                    min_acceleration=-2,
+                    goal_distance_tolerance=1,
+                ),
+            )
+        ]
 
     @property
     def object_data(self):
-        domain_config, instance_config = self._get_configs()[0]
-        return [(domain_config, instance_config, [("gear", 2)])]
+        domain_config = self._domain_config()
+        return [
+            (domain_config, self._params(), [("gear", 2)]),
+            # n_gears is no longer capped at the dataset's 5
+            (domain_config, self._params(n_gears=8), [("gear", 8)]),
+        ]
+
+    @property
+    def validation_cases(self):
+        # Creep one unit forward, then bleed the speed back off so the car
+        # ends stopped, in first gear, with the acceleration back at zero.
+        plan = """
+        (accelerate g1)
+        (drive_aligned_gear g1)
+        (decelerate g1)
+        (decelerate g1)
+        (drive_aligned_gear g1)
+        (accelerate g1)
+        """
+        return [
+            (
+                self._domain_config(),
+                self._params(),
+                plan,
+                ValidationResultStatus.VALID,
+            )
+        ]
 
     @property
     def problem_actions(self):
@@ -101,44 +137,13 @@ class TestGearCar(BaseDomainTest):
         # actions; they are lifted, so the count does not depend on the gears
         return [(domain_config, instance_config, 7)]
 
-    def test_sequential_plan_validation(self):
-        """Validate a plan by hand.
-
-        The base class validates with TimeTriggeredPlanValidator, which only
-        suits temporal domains; gear-car is instantaneous, so it is checked
-        here with the sequential validator instead.
-        """
-        domain_config, instance_config = self._get_configs()[0]
-        gen = GearCarGenerator(domain_config)
-        problem = gen.get_instance(instance_config)
-        # Creep one unit forward, then bleed the speed back off so the car
-        # ends stopped, in first gear, with the acceleration back at zero.
-        plan = parse_plan_string(
-            problem,
-            """
-            (accelerate g1)
-            (drive_aligned_gear g1)
-            (decelerate g1)
-            (decelerate g1)
-            (drive_aligned_gear g1)
-            (accelerate g1)
-            """,
-        )
-        with SequentialPlanValidator(problem_kind=problem.kind) as validator:
-            res = validator.validate(problem, plan)
-            self.assertEqual(res.status, ValidationResultStatus.VALID, f"{res}")
-
     def test_gear_tables_match_the_ipc_set(self):
         """The per-gear tables are computed, so pin them to the shipped values.
 
         gear_fuel_over depends on how many gears the car has, so every gear
         count the dataset uses is checked, not just one.
         """
-        domain_config = (
-            GearCarGenerator.get_domain_parameter_space().get_default_configuration()
-        )
-        gen = GearCarGenerator(domain_config)
-        space = gen.instance_parameter_space
+        gen = GearCarGenerator(self._domain_config())
         fluents = [
             "gear_v_min",
             "gear_v_max",
@@ -149,18 +154,7 @@ class TestGearCar(BaseDomainTest):
             "gear_fuel_over",
         ]
         for n_gears, expected in IPC_GEAR_TABLES.items():
-            problem = gen.get_instance(
-                Configuration(
-                    space,
-                    {
-                        "n_gears": n_gears,
-                        "target_distance": 2,
-                        "fuel": 100,
-                        "alpha": 1,
-                        "beta": 1,
-                    },
-                )
-            )
+            problem = gen.get_instance(self._params(n_gears=n_gears))
             init = problem.explicit_initial_values
             for i, row in enumerate(expected):
                 gear = problem.object(f"g{i + 1}")
@@ -171,7 +165,8 @@ class TestGearCar(BaseDomainTest):
                         want,
                         f"{name}(g{i + 1}) with {n_gears} gears",
                     )
-            # the top speed the gears add up to
+            # the top speed the gears add up to, the only global fluent that is
+            # computed rather than copied from a parameter
             self.assertEqual(
                 init[problem.fluent("max_speed")()].constant_value(), 2 * n_gears
             )
@@ -184,70 +179,3 @@ class TestGearCar(BaseDomainTest):
             problem = gen.get_instance(instance_config)
             self.assertEqual(len(problem.quality_metrics), 1)
             self.assertIn("cost", str(problem.quality_metrics[0]))
-
-    def test_check_instance_parameters_rejects_too_little_fuel(self):
-        """A car that cannot possibly carry enough fuel is refused."""
-        domain_config = (
-            GearCarGenerator.get_domain_parameter_space().get_default_configuration()
-        )
-        gen = GearCarGenerator(domain_config)
-        space = gen.instance_parameter_space
-        base = {"n_gears": 2, "fuel": 100, "alpha": 1, "beta": 1}
-        # 100 fuel buys 11 drive steps in first gear, each covering at most
-        # 2 * max_speed = 8, so 88 is reachable and 89 is not.
-        self.assertTrue(
-            gen.check_instance_parameters(
-                Configuration(space, {**base, "target_distance": 88})
-            )
-        )
-        self.assertFalse(
-            gen.check_instance_parameters(
-                Configuration(space, {**base, "target_distance": 89})
-            )
-        )
-
-    def test_shipped_instances_are_accepted(self):
-        """Every instance of the IPC set has to pass the solvability check."""
-        domain_config = (
-            GearCarGenerator.get_domain_parameter_space().get_default_configuration()
-        )
-        gen = GearCarGenerator(domain_config)
-        space = gen.instance_parameter_space
-        # (n_gears, target_distance, fuel) of the 20 shipped instances
-        shipped = [
-            (2, 50, 200),
-            (2, 260, 406),
-            (2, 290, 450),
-            (2, 320, 482),
-            (2, 360, 536),
-            (2, 410, 612),
-            (3, 470, 456),
-            (3, 540, 513),
-            (3, 620, 579),
-            (3, 710, 648),
-            (3, 810, 727),
-            (4, 920, 582),
-            (4, 1040, 649),
-            (4, 1170, 716),
-            (4, 1310, 792),
-            (4, 1460, 867),
-            (5, 1620, 708),
-            (5, 1790, 765),
-            (5, 1970, 830),
-            (5, 2160, 902),
-        ]
-        for n_gears, target, fuel in shipped:
-            config = Configuration(
-                space,
-                {
-                    "n_gears": n_gears,
-                    "target_distance": target,
-                    "fuel": fuel,
-                    "alpha": 1,
-                    "beta": 1,
-                },
-            )
-            self.assertTrue(
-                gen.check_instance_parameters(config),
-                f"shipped instance rejected: {n_gears} gears, d={target}, fuel={fuel}",
-            )
