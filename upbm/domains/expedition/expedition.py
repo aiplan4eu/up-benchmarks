@@ -33,18 +33,33 @@ from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
-# Every shipped instance agrees on all of these, so they are fixed here rather
-# than exposed as parameters.
-N_SLEDS = 2
-SLED_CAPACITY = 4
+# The values every shipped instance agrees on. The first two are parameters
+# with these as their defaults, the last two are still fixed here.
+IPC_N_SLEDS = 2
+IPC_SLED_CAPACITY = 4
+
 SLED_INITIAL_SUPPLIES = 1
 # The first waypoint of every chain is a depot holding this much; every other
-# waypoint starts empty.
+# waypoint starts empty. NOTE 1000 is meant as "effectively unlimited" and is
+# enough for anything near the size of the original IPC instances, but it is not
+# infinite: a long enough chain, or a small enough sled capacity, needs more
+# than this to be crossable at all. Make it a parameter if that ever bites.
 DEPOT_SUPPLIES = 1000
 
-# The IPC set uses at most two chains, named with the prefixes below: waypoints
-# are wa0, wa1, ... on the first chain and wb0, wb1, ... on the second.
-CHAIN_PREFIXES = ["wa", "wb"]
+
+def chain_prefix(chain: int) -> str:
+    """The waypoint name prefix of a chain: wa, wb, ... wz, waa, wab, ...
+
+    The IPC set only ever uses the first two, and those keep the shipped names
+    wa and wb; the rest carry on with the same spreadsheet-column scheme so
+    that any number of chains has a name.
+    """
+    letters = ""
+    n = chain
+    while n >= 0:
+        letters = chr(ord("a") + n % 26) + letters
+        n = n // 26 - 1
+    return f"w{letters}"
 
 
 class ExpeditionGenerator(Generator):
@@ -93,8 +108,29 @@ class ExpeditionGenerator(Generator):
         # to have somewhere to go.
         mapping["n_waypoints"] = Integer("n_waypoints", (2, MAX_INT), default=6)
         # The set comes in two halves: ten instances where both sleds share one
-        # chain, and ten where each sled gets a chain of its own.
-        mapping["n_chains"] = Integer("n_chains", (1, len(CHAIN_PREFIXES)), default=1)
+        # chain, and ten where each sled gets a chain of its own. Nothing in the
+        # domain stops at two. Chains never interact - is_next only ever links
+        # waypoints of the same chain - so an instance with more of them is
+        # simply several expeditions side by side, and the plan for it is the
+        # per chain plans concatenated. Measured with tamerlite on chains of
+        # three: one sled per chain, 1 to 6 chains, gives plans of exactly
+        # 3, 6, 9, 12, 15, 18 actions in 0.02s to 0.83s, so the count scales the
+        # instance rather than changing its nature. A chain with no sled on it
+        # is legal but inert: nothing starts there and no goal mentions it, so
+        # it only costs the planner grounding.
+        mapping["n_chains"] = Integer("n_chains", (1, MAX_INT), default=1)
+        mapping["n_sleds"] = Integer("n_sleds", (1, MAX_INT), default=IPC_N_SLEDS)
+        # How much a sled can carry. Against the chain length this is the whole
+        # difficulty of the domain: a sled burns one supply per move, so to get
+        # further than its own load it has to cache supplies along the way.
+        # Below 3 it cannot cache at all - a trip from the depot to the next
+        # waypoint and back costs 2, so it needs a third supply to leave one
+        # behind - and chains past the second waypoint stop being solvable.
+        # That is a solvability question, so it is not rejected here; see
+        # check_instance_parameters.
+        mapping["sled_capacity"] = Integer(
+            "sled_capacity", (1, MAX_INT), default=IPC_SLED_CAPACITY
+        )
         return ConfigurationSpace(name=mapping)
 
     @property
@@ -131,13 +167,14 @@ class ExpeditionGenerator(Generator):
         return self._get_object(f"s{i}", self._Sled)
 
     def _waypoint(self, chain: int, i: int) -> Object:
-        return self._get_object(f"{CHAIN_PREFIXES[chain]}{i}", self._Waypoint)
+        return self._get_object(f"{chain_prefix(chain)}{i}", self._Waypoint)
 
     def _chain_of(self, sled_index: int, n_chains: int) -> int:
         """Which chain a sled starts on.
 
-        With one chain both sleds share it, with two they get one each, which
-        is exactly what the two halves of the IPC set do.
+        Round robin: with one chain the sleds all share it, with as many chains
+        as sleds they get one each, which is exactly what the two halves of the
+        IPC set do. In between, the sleds spread as evenly as they can.
         """
         return sled_index % n_chains
 
@@ -145,7 +182,7 @@ class ExpeditionGenerator(Generator):
         self._check_params(params)
         if not self.check_instance_parameters(params):
             raise ValueError(f"Requested instance is unsolvable")
-        objs: List[Object] = [self._sled(i) for i in range(N_SLEDS)]
+        objs: List[Object] = [self._sled(i) for i in range(params["n_sleds"])]
         for chain in range(params["n_chains"]):
             for i in range(params["n_waypoints"]):
                 objs.append(self._waypoint(chain, i))
@@ -158,7 +195,8 @@ class ExpeditionGenerator(Generator):
             instance_parameters_space = self.instance_parameter_space
         _, waypoints_upper = hyperparam_range(instance_parameters_space["n_waypoints"])
         _, chains_upper = hyperparam_range(instance_parameters_space["n_chains"])
-        objs: List[Object] = [self._sled(i) for i in range(N_SLEDS)]
+        _, sleds_upper = hyperparam_range(instance_parameters_space["n_sleds"])
+        objs: List[Object] = [self._sled(i) for i in range(sleds_upper)]
         for chain in range(chains_upper):
             for i in range(waypoints_upper):
                 objs.append(self._waypoint(chain, i))
@@ -173,7 +211,7 @@ class ExpeditionGenerator(Generator):
                 self._sled(i),
                 self._waypoint(self._chain_of(i, params["n_chains"]), last),
             )
-            for i in range(N_SLEDS)
+            for i in range(params["n_sleds"])
         ]
 
     def get_initial_state(self, params) -> dict[FNode, FNode]:
@@ -188,10 +226,10 @@ class ExpeditionGenerator(Generator):
                 res[self._waypoint_supplies(waypoint)] = DEPOT_SUPPLIES if i == 0 else 0
                 if i + 1 < n_waypoints:
                     res[self._is_next(waypoint, self._waypoint(chain, i + 1))] = TRUE()
-        for i in range(N_SLEDS):
+        for i in range(params["n_sleds"]):
             sled = self._sled(i)
             res[self._at(sled, self._waypoint(self._chain_of(i, n_chains), 0))] = TRUE()
-            res[self._sled_capacity(sled)] = SLED_CAPACITY
+            res[self._sled_capacity(sled)] = params["sled_capacity"]
             res[self._sled_supplies(sled)] = SLED_INITIAL_SUPPLIES
         # `at` and `is_next` both default to false, so the pairs that are not
         # listed here are false, exactly as in the shipped instances.
@@ -200,11 +238,21 @@ class ExpeditionGenerator(Generator):
     def check_instance_parameters(self, params: Configuration):
         # NOTE no real solvability check is done here. Reaching the end of a
         # chain is a supply ferrying problem: a sled carries at most
-        # SLED_CAPACITY and burns one supply per move, so it has to shuttle
+        # sled_capacity and burns one supply per move, so it has to shuttle
         # supplies forward and cache them along the way, and the cost of that
         # grows quickly with the length of the chain. With a depot of
         # DEPOT_SUPPLIES a long enough chain stops being solvable, but working
         # out exactly where that happens is itself a hard problem, so nothing
-        # is rejected here. The shipped instances (chains of 6 to 15) all sit
-        # inside the solvable range.
+        # is rejected here. The shipped instances (chains of 6 to 15, capacity
+        # 4) all sit inside the solvable range.
+        #
+        # Since sled_capacity became a parameter there is a second, much
+        # simpler way to ask for something unsolvable: a capacity below 3
+        # cannot cache anything, so the sled never gets past the second
+        # waypoint. Confirmed with tamerlite on a chain of four waypoints -
+        # capacities 1 and 2 come back unsolvable, 3 and up plan in 5 actions.
+        # That one would be easy to reject, but it is left in for the same
+        # reason - it is a question about solvability, not about well formed
+        # parameters, and a check here that rejects whole regions of the space
+        # can leave Generator.sample() with no draw it will accept.
         return True

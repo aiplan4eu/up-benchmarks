@@ -19,8 +19,8 @@ from unified_planning.engines.results import ValidationResultStatus
 from upbm.domains.expedition import ExpeditionGenerator
 from upbm.domains.expedition.expedition import (
     DEPOT_SUPPLIES,
-    N_SLEDS,
-    SLED_CAPACITY,
+    IPC_N_SLEDS,
+    IPC_SLED_CAPACITY,
     SLED_INITIAL_SUPPLIES,
 )
 from upbm.io import parse_plan_string
@@ -30,6 +30,18 @@ from upbm.utils import get_reduced_instance_space
 
 def _domain_config():
     return ExpeditionGenerator.get_domain_parameter_space().get_default_configuration()
+
+
+def _params(**overrides) -> Configuration:
+    """A full instance configuration, the IPC expedition unless told otherwise.
+
+    Every parameter has to be present, so an override is a change to the two
+    sleds of capacity 4 the shipped set uses.
+    """
+    space = ExpeditionGenerator(_domain_config()).instance_parameter_space
+    values = dict(space.get_default_configuration())
+    values.update(overrides)
+    return Configuration(space, values)
 
 
 class TestExpedition(BaseDomainTest):
@@ -45,30 +57,43 @@ class TestExpedition(BaseDomainTest):
 
     def _get_configs(self):
         config = _domain_config()
-        space = ExpeditionGenerator(config).instance_parameter_space
         return [
             # the shortest chain there can be: one move each and they are done
-            (config, Configuration(space, {"n_waypoints": 2, "n_chains": 1})),
+            (config, _params(n_waypoints=2, n_chains=1)),
             # short enough to plan, long enough to need the depot
-            (config, Configuration(space, {"n_waypoints": 3, "n_chains": 1})),
+            (config, _params(n_waypoints=3, n_chains=1)),
             # the two chain half of the set, one sled and one depot each
-            (config, Configuration(space, {"n_waypoints": 3, "n_chains": 2})),
+            (config, _params(n_waypoints=3, n_chains=2)),
         ]
 
     @property
     def plannable(self):
         # all three are tiny; the IPC chains of 6+ need a lot of ferrying and
         # are far too slow for a unit test
-        return self._get_configs()
+        return self._get_configs() + [
+            # an expedition the IPC set could not describe: one sled, a chain
+            # of its own, and a bigger load than the shipped capacity of 4
+            (
+                _domain_config(),
+                _params(n_waypoints=3, n_chains=1, n_sleds=1, sled_capacity=6),
+            ),
+        ]
 
     @property
     def object_data(self):
         tiny, short, two_chains = self._get_configs()
         return [
-            (*tiny, [("sled", N_SLEDS), ("waypoint", 2)]),
-            (*short, [("sled", N_SLEDS), ("waypoint", 3)]),
+            (*tiny, [("sled", IPC_N_SLEDS), ("waypoint", 2)]),
+            (*short, [("sled", IPC_N_SLEDS), ("waypoint", 3)]),
             # two chains of three waypoints
-            (*two_chains, [("sled", N_SLEDS), ("waypoint", 6)]),
+            (*two_chains, [("sled", IPC_N_SLEDS), ("waypoint", 6)]),
+            # neither count stops at the dataset's two: four chains of two, one
+            # sled each, which needs the prefixes past wa and wb
+            (
+                _domain_config(),
+                _params(n_waypoints=2, n_chains=4, n_sleds=4),
+                [("sled", 4), ("waypoint", 8)],
+            ),
         ]
 
     @property
@@ -142,7 +167,8 @@ class TestExpedition(BaseDomainTest):
         supplies = problem.fluent("sled_supplies")
         for sled in problem.objects(problem.user_type("sled")):
             self.assertEqual(
-                problem.initial_value(capacity(sled)).constant_value(), SLED_CAPACITY
+                problem.initial_value(capacity(sled)).constant_value(),
+                IPC_SLED_CAPACITY,
             )
             self.assertEqual(
                 problem.initial_value(supplies(sled)).constant_value(),
@@ -159,7 +185,10 @@ class TestExpedition(BaseDomainTest):
     def test_object_universe_is_bounded_by_the_space(self):
         gen = ExpeditionGenerator(_domain_config())
         reduced = get_reduced_instance_space(
-            gen.instance_parameter_space, {"n_waypoints": 4, "n_chains": 2}
+            gen.instance_parameter_space,
+            # n_sleds has to be pinned too now: every parameter that maps to an
+            # object has to be bounded for the universe to be finite
+            {"n_waypoints": 4, "n_chains": 2, "n_sleds": 2},
         )
         names = sorted(o.name for o in gen.object_universe(reduced))
         self.assertEqual(
