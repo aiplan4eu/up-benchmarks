@@ -124,18 +124,12 @@ def inverse_moves(stacks: List[Stack], capacity: int) -> List[Pour]:
             continue
         colour, run = stack[-1]
         for take in range(1, run + 1):
-            # Taking the whole run is only undoable if it left the bottle
-            # empty: `pour` needs the colour still showing on the bottle it
-            # poured onto, and `pour-to-empty-bottle` needs that bottle to
-            # have been empty beforehand. Anything in between is unreachable.
             if take == run and len(stack) > 1:
                 continue
             to_empty_bottle = take == run
             for target, other in enumerate(stacks):
                 if target == source:
                     continue
-                # The pour zeroes the colour on the bottle it leaves, so that
-                # bottle cannot have held the colour anywhere else.
                 if any(c == colour for c, _ in other):
                     continue
                 if filled(other) + take > capacity:
@@ -170,7 +164,6 @@ def lands_on_solved(stacks: List[Stack], move: "Pour", capacity: int) -> bool:
             )
         elif index == move.target:
             stack = stack + [(move.colour, move.take)]
-        # solved means every bottle is empty or holds one full colour
         if stack and not (len(stack) == 1 and stack[0][1] == capacity):
             return False
     return True
@@ -233,10 +226,6 @@ class RainbowttlesGenerator(Generator):
     def get_domain_parameter_space():
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        # "random" rather than "ipc": this generator draws its own puzzles
-        # instead of reproducing the shipped ones, whose scramble was never
-        # published. An "ipc" variant can be added beside it if that script
-        # ever turns up.
         mapping["variant"] = Categorical(
             "variant",
             ["random"],
@@ -275,33 +264,17 @@ class RainbowttlesGenerator(Generator):
         mapping: dict[str, Any] = {}
         if self.variant != "random":
             raise ValueError(f"invalid variant {self.variant}")
-        # How many segments a bottle holds. 4 in every shipped instance.
-        # Two is the smallest that makes a puzzle: with room for one segment
-        # every bottle is always either empty or full, so every state already
-        # satisfies the goal and there is nothing to sort.
+        # How many segments a bottle holds, minimum 2 or the problem is always solved.
         mapping["capacity"] = Integer("capacity", (2, MAX_INT), default=4)
-        # How many playable colours there are, not counting the empty marker.
+        # colours (the problem will end up with this +1 empty marker)
         mapping["n_colours"] = Integer("n_colours", (1, MAX_INT), default=3)
-        # How many bottles each colour fills once the puzzle is solved. The
-        # IPC set uses 1 for p11-p40 and 2 for p41-p50.
         mapping["bottles_per_colour"] = Integer(
             "bottles_per_colour", (1, MAX_INT), default=1
         )
-        # The bottles left empty in the solved puzzle. This is the room there
-        # is to manoeuvre, so it is the real difficulty dial: the IPC set
-        # always uses 2 to 4. At least one is needed or nothing can be poured
-        # anywhere and the puzzle would be born solved.
         mapping["n_spare_bottles"] = Integer("n_spare_bottles", (1, MAX_INT), default=2)
         # How many pours to walk backwards from the solved puzzle. An upper
         # bound: a state with nowhere left to pour stops the walk early.
         mapping["scramble_steps"] = Integer("scramble_steps", (0, MAX_INT), default=6)
-        # Which puzzle to draw. Changing it redraws the bottles without
-        # changing the shape of the instance.
-        #
-        # NOTE this is OUR scramble's seed, not the one in the shipped
-        # headers. Their seeds follow seed(k) = 9973 * k + 2026, but their
-        # scramble algorithm was never published, so feeding one of their
-        # seeds in here does not reproduce their instance.
         mapping["seed"] = Integer("seed", (0, MAX_INT), default=42)
         return ConfigurationSpace(name=mapping)
 
@@ -316,8 +289,6 @@ class RainbowttlesGenerator(Generator):
     def _mk_domain(self):
         if self.version == 1:
             reader = PDDLReader()
-            # No metric: none of the 40 shipped instances defines one, and the
-            # domain declares :action-costs without ever using it.
             return reader.parse_problem(
                 str(RESOURCES_PATH / f"rainbowttles_v{self.version}.pddl")
             )
@@ -383,8 +354,6 @@ class RainbowttlesGenerator(Generator):
         ) + [[] for _ in range(params["n_spare_bottles"])]
         lines = []
         for move in undo:
-            # The pour runs the opposite way round to the scramble step: the
-            # bottle the scramble dropped segments on gives them back.
             bottle = bottle_name(move.target)
             other = bottle_name(move.source)
             colour = colour_name(move.colour)
@@ -397,8 +366,6 @@ class RainbowttlesGenerator(Generator):
             else:
                 lines.append(f"(pour {bottle} {colour} {below} {other})")
         for index, stack in enumerate(solved):
-            # Back in the solved state every bottle is either full of one
-            # colour or empty, so exactly one of the two closes applies.
             if stack:
                 lines.append(
                     f"(close-bottle {bottle_name(index)} {colour_name(stack[0][0])})"
@@ -435,8 +402,6 @@ class RainbowttlesGenerator(Generator):
 
     def get_goal(self, params) -> List[FNode]:
         self._check_params(params)
-        # Every shipped instance asks for exactly this: every bottle closed,
-        # which means each one is either full of a single colour or empty.
         return [self._closed(self._bottle(i)) for i in range(self.n_bottles(params))]
 
     def get_initial_state(self, params) -> dict[FNode, FNode]:
@@ -457,14 +422,10 @@ class RainbowttlesGenerator(Generator):
                 res[self._colour_segments(bottle, self._colour(colour))] = counts.get(
                     colour, 0
                 )
-            # The empty marker is a colour object like any other, and the
-            # shipped instances state its count too.
             res[self._colour_segments(bottle, self._colour(None))] = 0
             res[self._segments_filled(bottle)] = filled(stack)
             if stack:
                 res[self._upper_colour(bottle, self._colour(stack[-1][0]))] = TRUE()
-                # Each run records what it is sitting on; the bottom one sits
-                # on the empty marker.
                 below: Optional[int] = None
                 for colour, _ in stack:
                     res[
@@ -478,12 +439,6 @@ class RainbowttlesGenerator(Generator):
         return res
 
     def check_instance_parameters(self, params: Configuration):
-        # Nothing to reject. Unlike the ports that reproduce the IPC set, this
-        # one does not inherit solvability from known-good instances - it
-        # builds it: every instance starts from a solved puzzle and is walked
-        # backwards along legal pours, so the scramble reversed is always a
-        # plan. The parameter space carries the two conditions that could
-        # otherwise go wrong, rather than checking them here: the bottle count
-        # is derived from the colours instead of being asked for, and
-        # n_spare_bottles starts at 1 so there is always somewhere to pour.
+        # The problem is built by starting from a goal state and applying reverse steps,
+        # therefore all generated instances are solvable.
         return True

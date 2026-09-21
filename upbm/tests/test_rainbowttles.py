@@ -85,8 +85,6 @@ class TestRainbowttles(BaseDomainTest):
                     seed=seed,
                 )
                 gen = RainbowttlesGenerator(domain_config)
-                # the plan is derived from the same parameters as the instance,
-                # so it does not need the problem to be built first
                 cases.append(
                     (
                         domain_config,
