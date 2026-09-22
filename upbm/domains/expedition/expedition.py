@@ -100,7 +100,7 @@ class ExpeditionGenerator(Generator):
         mapping["n_chains"] = Integer("n_chains", (1, MAX_INT), default=1)
         mapping["n_sleds"] = Integer("n_sleds", (1, MAX_INT), default=2)
         # sled capacity 3 is necessary to allow bringing supplies up the chain
-        mapping["sled_capacity"] = Integer("sled_capacity", (4, MAX_INT), default=3)
+        mapping["sled_capacity"] = Integer("sled_capacity", (3, MAX_INT), default=4)
         return ConfigurationSpace(name=mapping)
 
     @property
