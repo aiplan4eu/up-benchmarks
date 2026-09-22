@@ -33,12 +33,6 @@ from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
-# The values every shipped instance agrees on. The first two are parameters
-# with these as their defaults, the last two are still fixed here.
-IPC_N_SLEDS = 2
-IPC_SLED_CAPACITY = 4
-
-SLED_INITIAL_SUPPLIES = 1
 # The first waypoint of every chain is a depot holding this much; every other
 # waypoint starts empty. NOTE 1000 is meant as "effectively unlimited" and is
 # enough for anything near the size of the original IPC instances, but it is not
@@ -67,7 +61,6 @@ class ExpeditionGenerator(Generator):
     def get_domain_parameter_space():
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        # only the IPC variant exists for now, more can be added here later
         mapping["variant"] = Categorical(
             "variant",
             ["ipc"],
@@ -103,34 +96,11 @@ class ExpeditionGenerator(Generator):
         mapping: dict[str, Any] = {}
         if self.variant != "ipc":
             raise ValueError(f"invalid variant {self.variant}")
-        # The IPC set uses chains of 6 to 15 waypoints; the default reproduces
-        # the shortest one. A chain needs at least two waypoints for the sleds
-        # to have somewhere to go.
         mapping["n_waypoints"] = Integer("n_waypoints", (2, MAX_INT), default=6)
-        # The set comes in two halves: ten instances where both sleds share one
-        # chain, and ten where each sled gets a chain of its own. Nothing in the
-        # domain stops at two. Chains never interact - is_next only ever links
-        # waypoints of the same chain - so an instance with more of them is
-        # simply several expeditions side by side, and the plan for it is the
-        # per chain plans concatenated. Measured with tamerlite on chains of
-        # three: one sled per chain, 1 to 6 chains, gives plans of exactly
-        # 3, 6, 9, 12, 15, 18 actions in 0.02s to 0.83s, so the count scales the
-        # instance rather than changing its nature. A chain with no sled on it
-        # is legal but inert: nothing starts there and no goal mentions it, so
-        # it only costs the planner grounding.
         mapping["n_chains"] = Integer("n_chains", (1, MAX_INT), default=1)
-        mapping["n_sleds"] = Integer("n_sleds", (1, MAX_INT), default=IPC_N_SLEDS)
-        # How much a sled can carry. Against the chain length this is the whole
-        # difficulty of the domain: a sled burns one supply per move, so to get
-        # further than its own load it has to cache supplies along the way.
-        # Below 3 it cannot cache at all - a trip from the depot to the next
-        # waypoint and back costs 2, so it needs a third supply to leave one
-        # behind - and chains past the second waypoint stop being solvable.
-        # That is a solvability question, so it is not rejected here; see
-        # check_instance_parameters.
-        mapping["sled_capacity"] = Integer(
-            "sled_capacity", (1, MAX_INT), default=IPC_SLED_CAPACITY
-        )
+        mapping["n_sleds"] = Integer("n_sleds", (1, MAX_INT), default=2)
+        # sled capacity 3 is necessary to allow bringing supplies up the chain
+        mapping["sled_capacity"] = Integer("sled_capacity", (4, MAX_INT), default=3)
         return ConfigurationSpace(name=mapping)
 
     @property
@@ -144,8 +114,6 @@ class ExpeditionGenerator(Generator):
     def _mk_domain(self):
         if self.version == 1:
             reader = PDDLReader()
-            # The shipped instances define no :metric, so no quality metric is
-            # attached to the skeleton either.
             return reader.parse_problem(
                 str(RESOURCES_PATH / f"expedition_v{self.version}.pddl")
             )
@@ -204,7 +172,6 @@ class ExpeditionGenerator(Generator):
 
     def get_goal(self, params) -> List[FNode]:
         self._check_params(params)
-        # every sled has to reach the far end of the chain it started on
         last = params["n_waypoints"] - 1
         return [
             self._at(
@@ -222,7 +189,6 @@ class ExpeditionGenerator(Generator):
         for chain in range(n_chains):
             for i in range(n_waypoints):
                 waypoint = self._waypoint(chain, i)
-                # only the start of a chain is a depot, the rest starts empty
                 res[self._waypoint_supplies(waypoint)] = DEPOT_SUPPLIES if i == 0 else 0
                 if i + 1 < n_waypoints:
                     res[self._is_next(waypoint, self._waypoint(chain, i + 1))] = TRUE()
@@ -230,9 +196,7 @@ class ExpeditionGenerator(Generator):
             sled = self._sled(i)
             res[self._at(sled, self._waypoint(self._chain_of(i, n_chains), 0))] = TRUE()
             res[self._sled_capacity(sled)] = params["sled_capacity"]
-            res[self._sled_supplies(sled)] = SLED_INITIAL_SUPPLIES
-        # `at` and `is_next` both default to false, so the pairs that are not
-        # listed here are false, exactly as in the shipped instances.
+            res[self._sled_supplies(sled)] = 1
         return res
 
     def check_instance_parameters(self, params: Configuration):
@@ -243,16 +207,5 @@ class ExpeditionGenerator(Generator):
         # grows quickly with the length of the chain. With a depot of
         # DEPOT_SUPPLIES a long enough chain stops being solvable, but working
         # out exactly where that happens is itself a hard problem, so nothing
-        # is rejected here. The shipped instances (chains of 6 to 15, capacity
-        # 4) all sit inside the solvable range.
-        #
-        # Since sled_capacity became a parameter there is a second, much
-        # simpler way to ask for something unsolvable: a capacity below 3
-        # cannot cache anything, so the sled never gets past the second
-        # waypoint. Confirmed with tamerlite on a chain of four waypoints -
-        # capacities 1 and 2 come back unsolvable, 3 and up plan in 5 actions.
-        # That one would be easy to reject, but it is left in for the same
-        # reason - it is a question about solvability, not about well formed
-        # parameters, and a check here that rejects whole regions of the space
-        # can leave Generator.sample() with no draw it will accept.
+        # is rejected here.
         return True
