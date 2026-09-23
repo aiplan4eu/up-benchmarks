@@ -33,13 +33,6 @@ from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
-# The first waypoint of every chain is a depot holding this much; every other
-# waypoint starts empty. NOTE 1000 is meant as "effectively unlimited" and is
-# enough for anything near the size of the original IPC instances, but it is not
-# infinite: a long enough chain, or a small enough sled capacity, needs more
-# than this to be crossable at all. Make it a parameter if that ever bites.
-DEPOT_SUPPLIES = 1000
-
 
 def chain_prefix(chain: int) -> str:
     """The waypoint name prefix of a chain: wa, wb, ... wz, waa, wab, ...
@@ -97,6 +90,9 @@ class ExpeditionGenerator(Generator):
         if self.variant != "ipc":
             raise ValueError(f"invalid variant {self.variant}")
         mapping["n_waypoints"] = Integer("n_waypoints", (2, MAX_INT), default=6)
+        mapping["depot_supplies"] = Integer(
+            "depot_supplies", (1, MAX_INT), default=1000
+        )
         mapping["n_chains"] = Integer("n_chains", (1, MAX_INT), default=1)
         mapping["n_sleds"] = Integer("n_sleds", (1, MAX_INT), default=2)
         # sled capacity 3 is necessary to allow bringing supplies up the chain
@@ -189,7 +185,9 @@ class ExpeditionGenerator(Generator):
         for chain in range(n_chains):
             for i in range(n_waypoints):
                 waypoint = self._waypoint(chain, i)
-                res[self._waypoint_supplies(waypoint)] = DEPOT_SUPPLIES if i == 0 else 0
+                res[self._waypoint_supplies(waypoint)] = (
+                    params["depot_supplies"] if i == 0 else 0
+                )
                 if i + 1 < n_waypoints:
                     res[self._is_next(waypoint, self._waypoint(chain, i + 1))] = TRUE()
         for i in range(params["n_sleds"]):
@@ -204,8 +202,8 @@ class ExpeditionGenerator(Generator):
         # chain is a supply ferrying problem: a sled carries at most
         # sled_capacity and burns one supply per move, so it has to shuttle
         # supplies forward and cache them along the way, and the cost of that
-        # grows quickly with the length of the chain. With a depot of
-        # DEPOT_SUPPLIES a long enough chain stops being solvable, but working
+        # grows quickly with the length of the chain. A long enough chain stops
+        # being solvable with limited supplies, but working
         # out exactly where that happens is itself a hard problem, so nothing
         # is rejected here.
         return True

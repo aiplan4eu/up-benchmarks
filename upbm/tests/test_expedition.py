@@ -55,7 +55,7 @@ class TestExpedition(BaseDomainTest):
             (config, _params(n_waypoints=2, n_chains=1)),
             (config, _params(n_waypoints=3, n_chains=1)),
             (config, _params(n_waypoints=3, n_chains=2)),
-            (config, _params(n_waypoints=6, n_chains=1, n_sleds=1)),
+            (config, _params(n_waypoints=6, n_chains=1, n_sleds=1, depot_supplies=123)),
         ]
 
     @property
@@ -90,6 +90,11 @@ class TestExpedition(BaseDomainTest):
     @property
     def validation_cases(self):
         domain_config, i_3 = self._get_configs()[3]
+        not_enough_supps = _params(
+            n_waypoints=6, n_chains=1, n_sleds=1, depot_supplies=3
+        )
+
+        # this becomes invalid if not enough supplies are there
         valid_i_3 = """
         (retrieve_supplies s0 wa0)\n
         (retrieve_supplies s0 wa0)\n
@@ -133,6 +138,12 @@ class TestExpedition(BaseDomainTest):
                 domain_config,
                 i_3,
                 empty_plan,
+                ValidationResultStatus.INVALID,
+            ),
+            (
+                domain_config,
+                not_enough_supps,
+                valid_i_3,  # not valid in the problem with fewer supplies
                 ValidationResultStatus.INVALID,
             ),
             (
