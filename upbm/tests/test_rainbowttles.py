@@ -60,6 +60,17 @@ class TestRainbowttles(BaseDomainTest):
         values.update(overrides)
         return domain_config, Configuration(gen.instance_parameter_space, values=values)
 
+    def _ipc_configs(self, index: int) -> Tuple[Configuration, Configuration]:
+        """The "ipc" variant rebuilding one shipped instance."""
+        domain_space = RainbowttlesGenerator.get_domain_parameter_space()
+        domain_config = Configuration(
+            domain_space, values={"version": 1, "variant": "ipc"}
+        )
+        gen = RainbowttlesGenerator(domain_config)
+        return domain_config, Configuration(
+            gen.instance_parameter_space, values={"index": index}
+        )
+
     @property
     def validation_cases(
         self,
@@ -112,6 +123,8 @@ class TestRainbowttles(BaseDomainTest):
             (domain_config, instance_config, [("bottle", 4), ("colour", 3)]),
             # 5 x 2 + 3 = 13 bottles
             (bigger_domain, bigger, [("bottle", 13), ("colour", 6)]),
+            (*self._ipc_configs(11), [("bottle", 5), ("colour", 4)]),
+            (*self._ipc_configs(50), [("bottle", 24), ("colour", 11)]),
         ]
 
     @property

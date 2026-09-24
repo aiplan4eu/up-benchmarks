@@ -30,6 +30,8 @@ from unified_planning.shortcuts import TRUE, UserType
 from upbm.generator import Generator
 from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 
+from .resources.ipc_rainbowttles_data import IPC_INSTANCES
+
 
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
@@ -228,7 +230,7 @@ class RainbowttlesGenerator(Generator):
         mapping["version"] = Constant("version", 1)
         mapping["variant"] = Categorical(
             "variant",
-            ["random"],
+            ["random", "ipc"],
             default="random",
         )
         return ConfigurationSpace(name=mapping)
@@ -262,6 +264,12 @@ class RainbowttlesGenerator(Generator):
     @property
     def instance_parameter_space(self) -> ConfigurationSpace:
         mapping: dict[str, Any] = {}
+        if self.variant == "ipc":
+            indices = sorted(IPC_INSTANCES)
+            mapping["index"] = Integer(
+                "index", (indices[0], indices[-1]), default=indices[0]
+            )
+            return ConfigurationSpace(name=mapping)
         if self.variant != "random":
             raise ValueError(f"invalid variant {self.variant}")
         # How many segments a bottle holds, minimum 2 or the problem is always solved.
@@ -321,12 +329,35 @@ class RainbowttlesGenerator(Generator):
         Derived rather than asked for: the colours need a whole number of
         bottles to end up in, and the spares are what is left over. Asking for
         a bottle count instead would let someone request fewer bottles than
-        the colours can possibly fit in.
+        the colours can possibly fit in. The "ipc" variant simply counts the
+        bottles of the instance it is rebuilding.
         """
+        if self.variant == "ipc":
+            return len(IPC_INSTANCES[params["index"]]["stacks"])
         return (
             params["n_colours"] * params["bottles_per_colour"]
             + params["n_spare_bottles"]
         )
+
+    def n_colours(self, params: Configuration) -> int:
+        """How many playable colours the puzzle has, empty marker excluded."""
+        if self.variant == "ipc":
+            return IPC_INSTANCES[params["index"]]["n_colours"]
+        return params["n_colours"]
+
+    def _puzzle(self, params: Configuration) -> Tuple[List[Stack], int]:
+        """The bottles of the instance, and how many segments each one holds.
+
+        This is the only place the two variants really differ: "random" walks
+        backwards from a solved puzzle to invent one, "ipc" reads a shipped
+        puzzle out of the table.
+        """
+        if self.variant == "ipc":
+            entry = IPC_INSTANCES[params["index"]]
+            stacks = [list(stack) for stack in entry["stacks"]]
+            return stacks, entry["capacity"]
+        stacks, _ = self._scramble(params)
+        return stacks, params["capacity"]
 
     def _scramble(self, params: Configuration) -> Tuple[List[Stack], List[Pour]]:
         return scramble(
@@ -346,7 +377,14 @@ class RainbowttlesGenerator(Generator):
         bottle then reaches the goal. This is what replaces a diff against the
         IPC dataset for this port - there is nothing to diff against, so the
         instance carries its own proof that it can be solved.
+
+        Only the "random" variant has one.
         """
+        if self.variant == "ipc":
+            raise ValueError(
+                "the ipc variant has no witness plan: its puzzles are "
+                "transcribed from the shipped instances, not scrambled"
+            )
         self._check_params(params)
         _, undo = self._scramble(params)
         solved = solved_state(
@@ -379,7 +417,7 @@ class RainbowttlesGenerator(Generator):
         if not self.check_instance_parameters(params):
             raise ValueError(f"Requested instance is unsolvable")
         objs = [self._bottle(i) for i in range(self.n_bottles(params))]
-        objs += [self._colour(i) for i in range(params["n_colours"])]
+        objs += [self._colour(i) for i in range(self.n_colours(params))]
         objs.append(self._colour(None))
         return objs
 
@@ -388,6 +426,20 @@ class RainbowttlesGenerator(Generator):
     ):
         if instance_parameters_space is None:
             instance_parameters_space = self.instance_parameter_space
+        if self.variant == "ipc":
+            first, last = hyperparam_range(instance_parameters_space["index"])
+            reachable = [
+                entry
+                for index, entry in IPC_INSTANCES.items()
+                if first <= index <= last
+            ]
+            bottles_upper = max(len(entry["stacks"]) for entry in reachable)
+            colours_upper = max(entry["n_colours"] for entry in reachable)
+            return (
+                [self._bottle(i) for i in range(bottles_upper)]
+                + [self._colour(i) for i in range(colours_upper)]
+                + [self._colour(None)]
+            )
         _, colours_upper = hyperparam_range(instance_parameters_space["n_colours"])
         _, per_colour_upper = hyperparam_range(
             instance_parameters_space["bottles_per_colour"]
@@ -406,11 +458,11 @@ class RainbowttlesGenerator(Generator):
 
     def get_initial_state(self, params) -> dict[FNode, FNode]:
         self._check_params(params)
-        stacks, _ = self._scramble(params)
-        capacity = params["capacity"]
+        stacks, capacity = self._puzzle(params)
+        n_colours = self.n_colours(params)
         res: dict[FNode, FNode] = {}
 
-        for colour in range(params["n_colours"]):
+        for colour in range(n_colours):
             res[self._real_colour(self._colour(colour))] = TRUE()
         res[self._empty_colour(self._colour(None))] = TRUE()
 
@@ -418,7 +470,7 @@ class RainbowttlesGenerator(Generator):
             bottle = self._bottle(index)
             res[self._bottle_capacity(bottle)] = capacity
             counts = dict(stack)
-            for colour in range(params["n_colours"]):
+            for colour in range(n_colours):
                 res[self._colour_segments(bottle, self._colour(colour))] = counts.get(
                     colour, 0
                 )
@@ -441,4 +493,5 @@ class RainbowttlesGenerator(Generator):
     def check_instance_parameters(self, params: Configuration):
         # The problem is built by starting from a goal state and applying reverse steps,
         # therefore all generated instances are solvable.
+        # The "ipc" variant rebuilds the competition instances.
         return True
