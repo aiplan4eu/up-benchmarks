@@ -31,6 +31,8 @@ from unified_planning.shortcuts import TRUE, Equals, UserType
 from upbm.generator import Generator
 from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 
+from .resources.ipc_forestfire_data import IPC_INSTANCES
+
 
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
@@ -39,6 +41,11 @@ RESOURCES_PATH = SCRIPT_PATH / "resources"
 # 20 shipped instances, and it is what makes the domain interesting: leaving a
 # bushes cell needs has-water <= max-water, which is 1 everywhere, so a bot
 # crossing it carries at most one unit of water at a time.
+#
+# It stays a constant rather than a parameter: it is 1 in all 20 shipped
+# instances, so nothing in the set varies along this axis, and the generator's
+# parameters are meant to cover what does. Raising it is a layout question -
+# see FORESTFIRE-GENERIC-DISCUSSION.md - not a loosening of this one.
 BUSHES_ROW = 2
 MAX_WATER_ON_BUSHES = 1
 
@@ -50,47 +57,16 @@ START_ROW = 1
 INITIAL_WATER = 0
 INITIAL_COST = 0
 
-# How many fire values an "ipc" instance can state. The largest burning region
-# in the shipped set is two rows of nine cells (prob18, prob19, prob20).
-NUM_FIRE_SLOTS = 18
-
-# The four sets of burning columns the shipped set uses, as `fire_spread`
-# indexes them. They are nested: the far corner, then both corners, then the
-# middle as well, then the whole row.
-FIRE_SPREADS = ("far corner", "both corners", "corners and middle", "whole row")
-
-# prob12 adds a second tree directly below the first one, and prob15 replaces
-# a whole row with trees. Both are one-off deviations rather than a dimension
-# of the set, so they are stated as data here instead of costing ten more
-# parameters that exactly one instance each would use.
-QUIRK_NONE, QUIRK_PROB12, QUIRK_PROB15 = 0, 1, 2
-# prob12: an extra tree one row below the gate, the same size as the gate
-# tree, and a third axe that is declared and given a durability but is never
-# put anywhere.
-#
-# That last part is a slip in the shipped file - it writes "(at axe2 grass2_1)"
-# twice instead of placing axe3 - and it is reproduced on purpose, because an
-# axe with no location can never be picked up, which makes prob12 a two-axe
-# problem wearing three axes. The "random" variant places every axe it makes.
-SECOND_TREE_ROW = 3
-PROB12_UNPLACED_AXES = (3,)
-# prob15: trees across row 5, sized as the shipped file has them, and three
-# axes of different durabilities rather than the usual matching set.
-TREE_ROW_ROW = 5
-TREE_ROW_AMOUNTS = (2, 3, 3, 3, 3)
-PROB15_DURABILITIES = (3, 4, 2)
-# Both quirks are bundles of one-off deviations belonging to a single shipped
-# instance each, so they are stated here as data. Making them parameters would
-# cost a per-axe durability slot and a per-axe column slot that exactly one
-# instance apiece would ever set.
-QUIRK_AXES = 3
+# Which columns of a burning row are alight. Nested: the far corner, then both
+# corners, then the middle as well, then the whole row.
+FIRE_SPREADS = ("far_corner", "both_corners", "corners_and_middle", "whole_row")
 
 
 def mid_column(width: int) -> int:
     """The one column of the bushes row that is grass instead.
 
     This is the "gate": the only way through the bushes row without the
-    one-unit water limit, and the cell the tree sits on.
+    water limit, and the cell the tree sits on.
     """
     return (width + 1) // 2
 
@@ -104,15 +80,15 @@ def cell_name(x: int, y: int, width: int) -> str:
     return f"{'bushes' if is_bushes(x, y, width) else 'grass'}{x}_{y}"
 
 
-def fire_columns(width: int, spread: int) -> List[int]:
+def fire_columns(width: int, spread: str) -> List[int]:
     """Which columns of a burning row are on fire."""
-    if spread == 0:
+    if spread == "far_corner":
         columns = {width}
-    elif spread == 1:
+    elif spread == "both_corners":
         columns = {1, width}
-    elif spread == 2:
+    elif spread == "corners_and_middle":
         columns = {1, mid_column(width), width}
-    elif spread == 3:
+    elif spread == "whole_row":
         columns = set(range(1, width + 1))
     else:
         raise ValueError(f"Unknown fire spread {spread}")
@@ -120,13 +96,9 @@ def fire_columns(width: int, spread: int) -> List[int]:
 
 
 def fire_region(
-    width: int, height: int, rows: int, spread: int
+    width: int, height: int, rows: int, spread: str
 ) -> List[Tuple[int, int]]:
-    """The cells that can burn, in the order the fire slots are read.
-
-    Top row first, then left to right within a row - the order the shipped
-    files list them in.
-    """
+    """The cells that can burn: the bottom `rows` rows, top row first."""
     return [
         (x, y)
         for y in range(height - rows + 1, height + 1)
@@ -139,10 +111,10 @@ class ForestFireGenerator(Generator):
     def get_domain_parameter_space():
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        # Two real variants. "random" draws its own fires and is the default,
-        # because it is the one that makes new benchmarks; "ipc" exists to
-        # reproduce the 20 shipped instances and needs a parameter per fire to
-        # do it.
+        # Two variants that differ in kind, not in degree. "random" generates
+        # new benchmarks and is the default; "ipc" reproduces the 20 shipped
+        # instances from a transcribed table and takes one parameter, the
+        # index of the instance to rebuild.
         mapping["variant"] = Categorical(
             "variant",
             ["random", "ipc"],
@@ -187,8 +159,16 @@ class ForestFireGenerator(Generator):
         if self.variant not in ("random", "ipc"):
             raise ValueError(f"invalid variant {self.variant}")
 
-        # --- shared by both variants ---
-        #
+        if self.variant == "ipc":
+            # One parameter: which shipped instance to rebuild. The keys are
+            # the numbers in the file names and run 1..20 with no gaps, so
+            # every value in the range is a valid instance.
+            indices = sorted(IPC_INSTANCES)
+            mapping["index"] = Integer(
+                "index", (indices[0], indices[-1]), default=indices[0]
+            )
+            return ConfigurationSpace(name=mapping)
+
         # Two columns is the narrowest grid that still has a bushes cell in the
         # gate row, so the bot can always get past a tree it cannot chop.
         mapping["width"] = Integer("width", (2, MAX_INT), default=5)
@@ -196,39 +176,36 @@ class ForestFireGenerator(Generator):
         mapping["height"] = Integer("height", (3, MAX_INT), default=6)
         mapping["water_capacity"] = Integer("water_capacity", (1, MAX_INT), default=6)
         mapping["durability"] = Integer("durability", (0, MAX_INT), default=3)
+        # How much chopping the axes differ by. 0 gives every axe the same
+        # durability, which is what the shipped set does everywhere but
+        # prob15; above that each axe is drawn from durability +/- spread.
+        mapping["durability_spread"] = Integer(
+            "durability_spread", (0, MAX_INT), default=0
+        )
         # The tree on the gate cell. Whether it is choppable is the sharpest
         # difficulty dial in the domain: the shipped set uses 3 against a
         # durability of 3, so one chop opens the gate for good, or 6 against
         # the same 3, which cannot be chopped at all and forces every drop of
         # water through the bushes one unit at a time.
         mapping["tree_amount"] = Integer("tree_amount", (0, MAX_INT), default=6)
-        # How many rows at the bottom of the grid are on fire. Always 1 or 2.
-        mapping["fire_rows"] = Integer("fire_rows", (1, 2), default=2)
+        # How many rows at the bottom of the grid burn. The shipped set only
+        # ever uses 1 or 2, but nothing in the domain caps it: the real
+        # constraint is that the fire stays below the bushes row, which
+        # check_instance_parameters enforces.
+        mapping["fire_rows"] = Integer("fire_rows", (1, MAX_INT), default=2)
+        # Which columns of a burning row are alight. The shipped set uses all
+        # four of these; the generic variant defaults to the widest.
+        mapping["fire_spread"] = Categorical(
+            "fire_spread", list(FIRE_SPREADS), default="whole_row"
+        )
         # Bots share the work and axes the chopping; the shipped set uses one
         # to three of each. Bot i and axe i start on column i of the top row,
         # so neither can outnumber the columns.
         mapping["n_bots"] = Integer("n_bots", (1, MAX_INT), default=1)
         mapping["n_axes"] = Integer("n_axes", (1, MAX_INT), default=2)
-
-        if self.variant == "ipc":
-            # Which columns of a burning row are alight, see FIRE_SPREADS.
-            mapping["fire_spread"] = Integer("fire_spread", (0, 3), default=0)
-            # The two one-off layout deviations of the shipped set.
-            mapping["layout_quirk"] = Integer("layout_quirk", (0, 2), default=0)
-            # One slot per burning cell, read in the order of fire_region.
-            # prob01-prob13 repeat a single value; prob14-prob20 are irregular
-            # draws with no recorded seed, which is why the slots exist at all.
-            # Slots past the end of the region are ignored.
-            for slot in range(NUM_FIRE_SLOTS):
-                mapping[f"fire_{slot:02d}"] = Integer(
-                    f"fire_{slot:02d}", (0, MAX_INT), default=5 if slot == 0 else 0
-                )
-        else:
-            # Every cell of every burning row is alight, as it is in the
-            # irregular half of the shipped set, with an amount drawn from
-            # 1..max_fire.
-            mapping["max_fire"] = Integer("max_fire", (1, MAX_INT), default=3)
-            mapping["seed"] = Integer("seed", (0, MAX_INT), default=42)
+        # Each burning cell gets an amount drawn from 1..max_fire.
+        mapping["max_fire"] = Integer("max_fire", (1, MAX_INT), default=3)
+        mapping["seed"] = Integer("seed", (0, MAX_INT), default=42)
         return ConfigurationSpace(name=mapping)
 
     @property
@@ -275,70 +252,95 @@ class ForestFireGenerator(Generator):
     def _axe(self, index: int = 1) -> Object:
         return self._get_object(f"axe{index}", self._Axe)
 
-    def _unplaced_axes(self, params: Configuration) -> Tuple[int, ...]:
-        """Axes that exist and have a durability but sit nowhere on the map.
+    # ── What each variant says an instance contains ───────────────────────────
+    #
+    # The "ipc" variant reads these off the transcribed table; the "random" one
+    # takes them from its parameters. Everything else - the bushes row, the
+    # gate, the two corner ponds, where the bots and axes stand, the grid
+    # connectivity - is rebuilt the same way for both, because it is identical
+    # in all 20 shipped instances (forestfire_extract.py checks that).
 
-        Only prob12 has any, and only because the shipped file forgot to place
-        one. Such an axe can never be picked up.
+    def _entry(self, params: Configuration) -> Dict[str, Any]:
+        return IPC_INSTANCES[params["index"]]
+
+    def _width(self, params: Configuration) -> int:
+        return (
+            self._entry(params)["width"] if self.variant == "ipc" else params["width"]
+        )
+
+    def _height(self, params: Configuration) -> int:
+        return (
+            self._entry(params)["height"] if self.variant == "ipc" else params["height"]
+        )
+
+    def _n_bots(self, params: Configuration) -> int:
+        return (
+            self._entry(params)["n_bots"] if self.variant == "ipc" else params["n_bots"]
+        )
+
+    def _capacity(self, params: Configuration) -> int:
+        if self.variant == "ipc":
+            return self._entry(params)["water_capacity"]
+        return params["water_capacity"]
+
+    def _axes(self, params: Configuration) -> List[Tuple[int, bool]]:
+        """(durability, whether it is placed on the map) for each axe.
+
+        prob12 declares an axe it never places - a slip in the shipped file,
+        and an axe with no location can never be picked up, so prob12 is a
+        two-axe problem wearing three axes. The "random" variant places every
+        axe it makes.
         """
-        quirk = params["layout_quirk"] if self.variant == "ipc" else QUIRK_NONE
-        return PROB12_UNPLACED_AXES if quirk == QUIRK_PROB12 else ()
+        if self.variant == "ipc":
+            return [(d, placed) for d, placed in self._entry(params)["axes"]]
+        base, spread = params["durability"], params["durability_spread"]
+        if spread == 0:
+            return [(base, True)] * params["n_axes"]
+        # Offset so the durabilities do not follow the same stream as the
+        # fires; with spread 0 no draw happens at all, so the default
+        # configuration is unaffected.
+        rng = random.Random(params["seed"] + 1)
+        return [
+            (max(0, rng.randint(base - spread, base + spread)), True)
+            for _ in range(params["n_axes"])
+        ]
 
-    def _durabilities(self, params: Configuration) -> List[int]:
-        """How much chopping each axe has left in it.
+    def fires(self, params: Configuration) -> Dict[Tuple[int, int], int]:
+        """How much fire sits on each burning cell."""
+        if self.variant == "ipc":
+            return dict(self._entry(params)["fires"])
+        region = fire_region(
+            params["width"],
+            params["height"],
+            params["fire_rows"],
+            params["fire_spread"],
+        )
+        rng = random.Random(params["seed"])
+        values = [rng.randint(1, params["max_fire"]) for _ in region]
+        return {cell: v for cell, v in zip(region, values) if v > 0}
 
-        They match everywhere except prob15, which ships three different ones.
-        """
-        quirk = params["layout_quirk"] if self.variant == "ipc" else QUIRK_NONE
-        if quirk == QUIRK_PROB15:
-            return list(PROB15_DURABILITIES)
-        return [params["durability"]] * params["n_axes"]
+    def trees(self, params: Configuration) -> Dict[Tuple[int, int], int]:
+        """How much tree sits on each cell that has one."""
+        if self.variant == "ipc":
+            return dict(self._entry(params)["trees"])
+        amount = params["tree_amount"]
+        if amount <= 0:
+            return {}
+        return {(mid_column(params["width"]), BUSHES_ROW): amount}
 
     def _check_params(self, params: Configuration) -> None:
         params.check_valid_configuration()
         if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
 
-    def _region(self, params: Configuration) -> List[Tuple[int, int]]:
-        spread = params["fire_spread"] if self.variant == "ipc" else 3
-        return fire_region(
-            params["width"], params["height"], params["fire_rows"], spread
-        )
-
-    def fires(self, params: Configuration) -> Dict[Tuple[int, int], int]:
-        """How much fire sits on each burning cell.
-
-        The "ipc" variant reads the values off the fire slots; the "random"
-        one draws them, one per cell of the burning rows.
-        """
-        region = self._region(params)
-        if self.variant == "ipc":
-            values = [params[f"fire_{slot:02d}"] for slot in range(len(region))]
-        else:
-            rng = random.Random(params["seed"])
-            values = [rng.randint(1, params["max_fire"]) for _ in region]
-        return {cell: v for cell, v in zip(region, values) if v > 0}
-
-    def trees(self, params: Configuration) -> Dict[Tuple[int, int], int]:
-        """How much tree sits on each cell that has one."""
-        width = params["width"]
-        res = {(mid_column(width), BUSHES_ROW): params["tree_amount"]}
-        quirk = params["layout_quirk"] if self.variant == "ipc" else QUIRK_NONE
-        if quirk == QUIRK_PROB12:
-            res[(mid_column(width), SECOND_TREE_ROW)] = params["tree_amount"]
-        elif quirk == QUIRK_PROB15:
-            for x, amount in enumerate(TREE_ROW_AMOUNTS, start=1):
-                res[(x, TREE_ROW_ROW)] = amount
-        return {cell: v for cell, v in res.items() if v > 0}
-
     def get_objects(self, params) -> List[Object]:
         self._check_params(params)
         if not self.check_instance_parameters(params):
             raise ValueError(f"Requested instance is unsolvable")
-        width, height = params["width"], params["height"]
+        width, height = self._width(params), self._height(params)
         return (
-            [self._bot(i) for i in range(1, params["n_bots"] + 1)]
-            + [self._axe(i) for i in range(1, params["n_axes"] + 1)]
+            [self._bot(i) for i in range(1, self._n_bots(params) + 1)]
+            + [self._axe(i) for i in range(1, len(self._axes(params)) + 1)]
             + [
                 self._cell(x, y, width)
                 for y in range(1, height + 1)
@@ -351,10 +353,17 @@ class ForestFireGenerator(Generator):
     ):
         if instance_parameters_space is None:
             instance_parameters_space = self.instance_parameter_space
-        _, width = hyperparam_range(instance_parameters_space["width"])
-        _, height = hyperparam_range(instance_parameters_space["height"])
-        _, n_bots = hyperparam_range(instance_parameters_space["n_bots"])
-        _, n_axes = hyperparam_range(instance_parameters_space["n_axes"])
+        if self.variant == "ipc":
+            # The table is the whole space, so take the largest of each.
+            width = max(e["width"] for e in IPC_INSTANCES.values())
+            height = max(e["height"] for e in IPC_INSTANCES.values())
+            n_bots = max(e["n_bots"] for e in IPC_INSTANCES.values())
+            n_axes = max(len(e["axes"]) for e in IPC_INSTANCES.values())
+        else:
+            _, width = hyperparam_range(instance_parameters_space["width"])
+            _, height = hyperparam_range(instance_parameters_space["height"])
+            _, n_bots = hyperparam_range(instance_parameters_space["n_bots"])
+            _, n_axes = hyperparam_range(instance_parameters_space["n_axes"])
         objs = [self._bot(i) for i in range(1, n_bots + 1)]
         objs += [self._axe(i) for i in range(1, n_axes + 1)]
         for y in range(1, height + 1):
@@ -372,7 +381,7 @@ class ForestFireGenerator(Generator):
 
     def get_goal(self, params) -> List[FNode]:
         self._check_params(params)
-        width = params["width"]
+        width = self._width(params)
         # The shipped goals name exactly the cells that are alight, and say
         # nothing about where the bot ends up.
         return [
@@ -382,7 +391,7 @@ class ForestFireGenerator(Generator):
 
     def get_initial_state(self, params) -> dict[FNode, FNode]:
         self._check_params(params)
-        width, height = params["width"], params["height"]
+        width, height = self._width(params), self._height(params)
         fires, trees = self.fires(params), self.trees(params)
         res: dict[FNode, FNode] = {}
 
@@ -404,16 +413,15 @@ class ForestFireGenerator(Generator):
         res[self._pond(self._cell(1, START_ROW, width))] = TRUE()
         res[self._pond(self._cell(width, START_ROW, width))] = TRUE()
 
-        for i in range(1, params["n_bots"] + 1):
+        for i in range(1, self._n_bots(params) + 1):
             bot = self._bot(i)
             res[self._at(bot, self._cell(i, START_ROW, width))] = TRUE()
-            res[self._water_capacity(bot)] = params["water_capacity"]
+            res[self._water_capacity(bot)] = self._capacity(params)
             res[self._has_water(bot)] = INITIAL_WATER
         # No bot starts holding an axe; picking one up is an action.
-        unplaced = self._unplaced_axes(params)
-        for i, durability in enumerate(self._durabilities(params), start=1):
+        for i, (durability, placed) in enumerate(self._axes(params), start=1):
             axe = self._axe(i)
-            if i not in unplaced:
+            if placed:
                 # axe i waits on column i of the top row
                 res[self._at(axe, self._cell(i, START_ROW, width))] = TRUE()
             res[self._durability(axe)] = durability
@@ -421,6 +429,10 @@ class ForestFireGenerator(Generator):
         return res
 
     def check_instance_parameters(self, params: Configuration):
+        if self.variant == "ipc":
+            # The index range is dense over the table, so this only guards a
+            # table that has been edited into having gaps.
+            return params["index"] in IPC_INSTANCES
         # The burning rows have to sit below the bushes row. Otherwise the
         # fire would land on the gate itself, which is a different puzzle from
         # the one all 20 shipped instances pose.
@@ -430,33 +442,15 @@ class ForestFireGenerator(Generator):
         # a column for each of them.
         if max(params["n_bots"], params["n_axes"]) > params["width"]:
             return False
-        if self.variant == "ipc":
-            # There has to be a slot for every burning cell.
-            if len(self._region(params)) > NUM_FIRE_SLOTS:
-                return False
-            quirk = params["layout_quirk"]
-            if quirk != QUIRK_NONE:
-                # Both quirks carry per-axe data for exactly three axes.
-                if params["n_axes"] != QUIRK_AXES:
-                    return False
-            if quirk == QUIRK_PROB12 and params["height"] <= SECOND_TREE_ROW:
-                return False
-            if quirk == QUIRK_PROB15:
-                # The hardcoded row is prob15's, so it only fits prob15's grid.
-                if params["width"] != len(TREE_ROW_AMOUNTS):
-                    return False
-                if params["height"] <= TREE_ROW_ROW:
-                    return False
-                # It spans the whole width, so a bot has to be able to chop all
-                # the way through its cheapest cell to reach anything below it.
-                # Chops can be spread over several axes, so what matters is the
-                # total left in them.
-                if min(TREE_ROW_AMOUNTS) > sum(self._durabilities(params)):
-                    return False
         # Nothing else can go wrong, and that is a property of the layout
         # rather than luck. Ponds refill without limit; drop-water is always
         # available, so a bushes cell can always be left carrying one unit;
         # so at least one unit of water reaches any cell below the gate per
         # trip, and the fires are finite. The gate tree never blocks anything
         # either, because the bot can walk round it through the bushes.
+        #
+        # This argument needs max-water >= 1 on the bushes, which is why
+        # MAX_WATER_ON_BUSHES is a constant. Any future parameter that moves
+        # the ponds, the barrier or the gate breaks it too, and would need a
+        # real reachability check instead.
         return True
