@@ -23,69 +23,42 @@ from unified_planning.engines.plan_validator import (
 from unified_planning.engines.results import FailedValidationReason
 
 from upbm.domains.forestfire import ForestFireGenerator
-from upbm.domains.forestfire.forestfire import (
-    BUSHES_ROW,
-    MAX_WATER_ON_BUSHES,
-    PROB15_DURABILITIES,
-    TREE_ROW_AMOUNTS,
-    TREE_ROW_ROW,
-    cell_name,
-    fire_columns,
-    fire_region,
-    is_bushes,
-    mid_column,
-)
-from upbm.io import parse_plan_string
 from upbm.tests.base_domain_test import BaseDomainTest
 
 
-# prob01, the smallest shipped instance: a 3x3 grid with one fire in the far
-# corner, and a gate tree the single axe can just about chop through.
-PROB01 = dict(
-    width=3,
-    height=3,
-    water_capacity=3,
-    durability=3,
-    tree_amount=3,
-    fire_rows=1,
-    n_bots=1,
-    n_axes=1,
-    fire_spread=0,
-    layout_quirk=0,
-    fire_00=5,
-)
-
-# prob17, one of the irregular ones: two whole rows of a 7-wide grid alight
-# with fourteen different amounts.
-PROB17_FIRES = [1, 6, 3, 1, 2, 3, 3, 2, 1, 1, 3, 5, 6, 1]
-PROB17 = dict(
-    width=7,
-    height=5,
-    water_capacity=12,
-    durability=3,
-    tree_amount=3,
-    fire_rows=2,
-    n_bots=1,
-    n_axes=2,
-    fire_spread=3,
-    layout_quirk=0,
-    **{f"fire_{i:02d}": v for i, v in enumerate(PROB17_FIRES)},
-)
-
-# A puzzle far smaller than anything shipped: one fire, one unit of water.
-TINY = dict(PROB01, water_capacity=1, fire_00=1)
+# The "ipc" variant takes one parameter: which shipped instance to rebuild.
+# prob01 is the smallest, a 3x3 grid with one fire in the far corner.
+PROB01 = dict(index=1)
+# prob12 is the one with the slip: three axes declared, only two placed.
+PROB12 = dict(index=12)
 
 RANDOM_DEFAULTS = dict(
     width=5,
     height=6,
     water_capacity=6,
     durability=3,
+    durability_spread=0,
     tree_amount=6,
     fire_rows=2,
+    fire_spread="whole_row",
     n_bots=1,
     n_axes=2,
     max_fire=3,
     seed=42,
+)
+
+# A puzzle far smaller than anything shipped: a 3x3 grid, one burning corner,
+# and a gate tree the single axe can chop through.
+TINY = dict(
+    RANDOM_DEFAULTS,
+    width=3,
+    height=3,
+    water_capacity=3,
+    tree_amount=3,
+    n_axes=1,
+    fire_rows=1,
+    fire_spread="far_corner",
+    max_fire=1,
 )
 
 
@@ -140,19 +113,27 @@ class TestForestFire(BaseDomainTest):
     @property
     def plannable(self) -> List[Tuple[Configuration, Configuration]]:
         # Far smaller than any shipped instance: one fire, one trip.
-        return [self._get_configs("ipc", **TINY)]
+        return [self._get_configs("random", **TINY)]
 
     @property
     def object_data(self):
         domain_config, instance_config = self._get_configs("ipc", **PROB01)
-        # a 3x3 grid: row 2 is bushes except its middle column, so 7 grass
-        # cells and 2 bushes ones, plus one bot and one axe
+        # prob01 is a 3x3 grid: row 2 is bushes except its middle column, so 7
+        # grass cells and 2 bushes ones, plus one bot and one axe.
+        prob12_domain, prob12 = self._get_configs("ipc", **PROB12)
         return [
             (
                 domain_config,
                 instance_config,
                 [("bot", 1), ("axe", 1), ("grass", 7), ("bushes", 2)],
-            )
+            ),
+            # prob12 is the far end of the table and the one with the slip: a
+            # 5x6 grid, three axes declared even though one is never placed.
+            (
+                prob12_domain,
+                prob12,
+                [("bot", 1), ("axe", 3), ("grass", 26), ("bushes", 4)],
+            ),
         ]
 
     @property
