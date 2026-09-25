@@ -1,6 +1,4 @@
 ;;; Source: IPC 2026 dataset, rainbowttles-opt/domain.pddl (copied verbatim).
-;;; The rainbowttles-sat folder ships the same domain, differing only by one
-;;; extra ";;;" comment line.
 ;;;
 ;;; Constant-free compilation of the Rainbowttles domain.
 ;;;

@@ -90,8 +90,14 @@ class Pour(NamedTuple):
 # A bottle is a stack of (colour, run length) pairs, bottom first. The domain
 # holds one `colour-segments` count per (bottle, colour) and `pour` zeroes it,
 # so a colour can occupy AT MOST ONE run per bottle - a state that repeats a
-# colour in one bottle cannot be written down in this domain at all. Every
-# state this module builds keeps to that.
+# colour in one bottle is technically possible to write in the domain
+# but the problem would not work anymore.
+#
+# E.g.:
+# a bottle can't have the following sequence of layers: red-blue-red or else pouring out
+# the top red layer would completely zero out the amount of red in the bottle,
+# while it is still supposed to have a red layer under the blue one
+#
 Stack = List[Tuple[int, int]]
 
 
