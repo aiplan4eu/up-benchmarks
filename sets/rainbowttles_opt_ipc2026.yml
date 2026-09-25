@@ -1,0 +1,93 @@
+# The 20 rainbowttles instances of the IPC 2026 optimal track
+# (ipc2026-dataset/rainbowttles-opt).
+#
+# The `ipc` variant rebuilds the shipped puzzles instead of drawing its own, so
+# the only thing an instance chooses is which one: `index` is the number in the
+# file name. The bottles themselves live in
+# upbm/domains/rainbowttles/resources/ipc_rainbowttles_data.py, because a
+# scrambled puzzle is a state, not a handful of numbers.
+domain: rainbowttles
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: p11
+    # 3 colours, 5 bottles
+    params:
+      index: 11
+  - name: p12
+    # 3 colours, 5 bottles
+    params:
+      index: 12
+  - name: p13
+    # 3 colours, 5 bottles
+    params:
+      index: 13
+  - name: p14
+    # 3 colours, 5 bottles
+    params:
+      index: 14
+  - name: p15
+    # 3 colours, 5 bottles
+    params:
+      index: 15
+  - name: p16
+    # 4 colours, 6 bottles
+    params:
+      index: 16
+  - name: p17
+    # 4 colours, 6 bottles
+    params:
+      index: 17
+  - name: p18
+    # 4 colours, 6 bottles
+    params:
+      index: 18
+  - name: p19
+    # 4 colours, 6 bottles
+    params:
+      index: 19
+  - name: p20
+    # 4 colours, 6 bottles
+    params:
+      index: 20
+  - name: p21
+    # 5 colours, 8 bottles
+    params:
+      index: 21
+  - name: p22
+    # 5 colours, 8 bottles
+    params:
+      index: 22
+  - name: p23
+    # 5 colours, 8 bottles
+    params:
+      index: 23
+  - name: p24
+    # 5 colours, 8 bottles
+    params:
+      index: 24
+  - name: p25
+    # 5 colours, 8 bottles
+    params:
+      index: 25
+  - name: p26
+    # 6 colours, 9 bottles
+    params:
+      index: 26
+  - name: p27
+    # 6 colours, 9 bottles
+    params:
+      index: 27
+  - name: p28
+    # 6 colours, 9 bottles
+    params:
+      index: 28
+  - name: p29
+    # 6 colours, 9 bottles
+    params:
+      index: 29
+  - name: p30
+    # 6 colours, 9 bottles
+    params:
+      index: 30
