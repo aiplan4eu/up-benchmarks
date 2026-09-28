@@ -23,7 +23,10 @@ Each entry holds:
                  out are empty, which the domain writes as a value of 0.
 - ``solution``   the move sequence the shipped file records in its header.
                  Kept as provenance only - it is a list of directions, not
-                 a plan in the domain's actions, so nothing reads it yet.
+                 a plan in the domain's actions, so no code reads it. The
+                 one for pfile8 is written out action by action in
+                 `upbm/tests/test_twenty_forty_eight.py`, where replaying it
+                 is what checks this whole entry against the shipped file.
 """
 
 from typing import Any, Dict
