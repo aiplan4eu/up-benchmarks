@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ConfigSpace import (
     ConfigurationSpace,
@@ -27,7 +27,9 @@ from unified_planning.model import Problem, Object, FNode
 from unified_planning.shortcuts import TRUE, Equals
 
 from upbm.generator import Generator
-from upbm.utils import MAX_INT, is_subspace
+from upbm.utils import is_subspace
+
+from .resources.ipc_2048_data import IPC_INSTANCES
 
 
 SCRIPT_PATH = Path(__file__).absolute().parent
@@ -48,11 +50,6 @@ DONE_STATUS = "done"
 # The four directions, named as the domain names them.
 DIRECTIONS = ("L", "R", "U", "D")
 
-# The largest tile a parameter may ask for, as a power of two: 2^13 = 8192.
-# The shipped boards only go up to 2048, but 8192 is the largest goal in the
-# set, so this leaves room without inventing values the set never shows.
-MAX_TILE_EXPONENT = 13
-
 # The goal always collects everything into this position, in all 20 instances.
 GOAL_POSITION = "p11"
 
@@ -60,22 +57,6 @@ GOAL_POSITION = "p11"
 def position(row: int, col: int) -> str:
     """The domain's name for the cell at 1-based (row, col): p11 .. p44."""
     return f"p{row}{col}"
-
-
-def tile_parameter(row: int, col: int) -> str:
-    """The instance parameter holding the tile at 1-based (row, col)."""
-    return f"tile_{row}{col}"
-
-
-def tile_value(exponent: int) -> int:
-    """The tile value an exponent parameter stands for.
-
-    Tiles are given as exponents rather than as values so that a board is a
-    legal 2048 board by construction: every value in the game is a power of
-    two, and no tile is ever 1, so exponent 0 can mean "empty" with nothing
-    to confuse it with.
-    """
-    return 0 if exponent == 0 else 2**exponent
 
 
 def board_lines(direction: str) -> List[Tuple[str, List[str]]]:
@@ -144,37 +125,20 @@ class TwentyFortyEightGenerator(Generator):
         mapping: dict[str, Any] = {}
         if self.variant != "ipc":
             raise ValueError(f"invalid variant {self.variant}")
-        # The value the goal asks for at p11, written as the tile itself (128,
-        # 256, ...) rather than as an exponent, because that is how the goal
-        # of every shipped instance reads. It has to equal the sum of the
-        # board, see check_instance_parameters.
+        # One parameter: which shipped instance to rebuild. A 2048 instance is
+        # a board rather than a handful of numbers, and the script that made
+        # the shipped ones was never published, so the boards are transcribed
+        # into a table instead of being described by parameters.
         #
-        # NOTE that makes this space impractical to draw from at random: a
-        # goal_tile picked independently of the 16 tiles practically never
-        # matches their sum, so `sample()` over the full space spins in its
-        # rejection loop. Build boards deliberately - as sets/ does - or
-        # sample a space that pins goal_tile and lets the tiles add up to it.
-        mapping["goal_tile"] = Integer("goal_tile", (0, MAX_INT), default=128)
-        # One parameter per cell, holding that tile as a power of two:
-        # 0 is an empty cell and k stands for 2^k. The defaults spell out
-        # pfile8, the smallest instance of the set.
-        defaults = {
-            "tile_11": 2,
-            "tile_13": 5,
-            "tile_14": 1,
-            "tile_21": 2,
-            "tile_23": 1,
-            "tile_32": 5,
-            "tile_41": 5,
-            "tile_42": 2,
-            "tile_44": 4,
-        }
-        for row in range(1, BOARD_SIZE + 1):
-            for col in range(1, BOARD_SIZE + 1):
-                name = tile_parameter(row, col)
-                mapping[name] = Integer(
-                    name, (0, MAX_TILE_EXPONENT), default=defaults.get(name, 0)
-                )
+        # The keys are the numbers in the file names, which are also the length
+        # of each instance's recorded solution. Unlike rainbowttles' and
+        # forestfire's, they are NOT contiguous: they run 8..26 and then jump
+        # to 29, so 27 and 28 fall inside the range without being instances.
+        # check_instance_parameters rejects them.
+        indices = sorted(IPC_INSTANCES)
+        mapping["index"] = Integer(
+            "index", (indices[0], indices[-1]), default=indices[0]
+        )
         return ConfigurationSpace(name=mapping)
 
     @property
@@ -208,10 +172,19 @@ class TwentyFortyEightGenerator(Generator):
         if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
 
+    def _entry(self, params: Configuration) -> Dict[str, Any]:
+        """The transcribed instance this index asks for."""
+        return IPC_INSTANCES[params["index"]]
+
     def _board(self, params: Configuration) -> List[Tuple[str, int]]:
-        """The board as (position, tile value) pairs, row by row."""
+        """The board as (position, tile value) pairs, row by row.
+
+        The table stores only the non-empty cells, so anything it leaves out is
+        an empty cell, which the domain writes as a value of 0.
+        """
+        tiles = self._entry(params)["tiles"]
         return [
-            (position(r, c), tile_value(params[tile_parameter(r, c)]))
+            (position(r, c), tiles.get(position(r, c), 0))
             for r in range(1, BOARD_SIZE + 1)
             for c in range(1, BOARD_SIZE + 1)
         ]
@@ -235,10 +208,11 @@ class TwentyFortyEightGenerator(Generator):
     def get_goal(self, params) -> List[FNode]:
         self._check_params(params)
         # Every shipped goal is the whole board emptied into one tile at p11.
+        goal_tile = self._entry(params)["goal_tile"]
         return [
             Equals(
                 self._value(self._get_object(pos)),
-                params["goal_tile"] if pos == GOAL_POSITION else 0,
+                goal_tile if pos == GOAL_POSITION else 0,
             )
             for pos, _ in self._board(params)
         ]
@@ -292,19 +266,15 @@ class TwentyFortyEightGenerator(Generator):
         return res
 
     def check_instance_parameters(self, params: Configuration):
-        # Shifting only moves tiles around and a merge turns two tiles of
-        # value v into one of value 2v, so the sum of the board never changes.
-        # The goal empties the board into a single tile, so that tile has to
-        # be worth exactly what the board is worth. All 20 shipped instances
-        # satisfy this.
-        total = sum(value for _, value in self._board(params))
-        if total != params["goal_tile"]:
-            return False
-        # A single tile is always a power of two: every tile starts as one and
-        # merging doubles it. So a board whose total is not a power of two can
-        # never be collected into one tile, whatever the moves.
+        # The shipped file numbers skip 27 and 28, so those two values sit
+        # inside the parameter's range without naming an instance. Everything
+        # else about an instance is transcribed, and
+        # `twenty_forty_eight_extract.py` refuses to write the table unless
+        # every board sums to its goal tile and that sum is a power of two -
+        # the two conditions that used to be checked here, when the board came
+        # in as 16 separate parameters that could disagree with the goal.
         #
-        # NOTE this is necessary but not sufficient - the merges also have to
-        # be reachable from where the tiles actually sit, which is the hard
-        # part of the puzzle and is left to the planner.
-        return total > 0 and total & (total - 1) == 0
+        # NOTE those conditions were necessary but never sufficient: the merges
+        # also have to be reachable from where the tiles actually sit, which is
+        # the puzzle itself and is left to the planner.
+        return params["index"] in IPC_INSTANCES
