@@ -330,14 +330,6 @@ class RainbowttlesGenerator(Generator):
             raise ValueError(f"Invalid instance parameters: {params}")
 
     def n_bottles(self, params: Configuration) -> int:
-        """How many bottles the puzzle has.
-
-        Derived rather than asked for: the colours need a whole number of
-        bottles to end up in, and the spares are what is left over. Asking for
-        a bottle count instead would let someone request fewer bottles than
-        the colours can possibly fit in. The "ipc" variant simply counts the
-        bottles of the instance it is rebuilding.
-        """
         if self.variant == "ipc":
             return len(IPC_INSTANCES[params["index"]]["stacks"])
         return (
@@ -421,7 +413,7 @@ class RainbowttlesGenerator(Generator):
     def get_objects(self, params) -> List[Object]:
         self._check_params(params)
         if not self.check_instance_parameters(params):
-            raise ValueError(f"Requested instance is unsolvable")
+            raise ValueError("Requested instance is unsolvable")
         objs = [self._bottle(i) for i in range(self.n_bottles(params))]
         objs += [self._colour(i) for i in range(self.n_colours(params))]
         objs.append(self._colour(None))
