@@ -35,22 +35,17 @@ from .resources.ipc_2048_data import IPC_INSTANCES
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
-# The board is hard-wired 4x4: the domain declares p11..p44 as :constants, so
-# its size is fixed by the domain file and is not a parameter.
+# The board is hard-wired 4x4 in the domain
 BOARD_SIZE = 4
 
-# The statuses that name the rows (used when shifting left or right) and the
-# columns (used when shifting up or down), in iteration order.
 ROW_STATUSES = ("top", "midtop", "midbot", "bot")
 COL_STATUSES = ("left", "midleft", "midright", "right")
 
-# The status that marks "every row/column of this sweep has been processed".
 DONE_STATUS = "done"
 
-# The four directions, named as the domain names them.
 DIRECTIONS = ("L", "R", "U", "D")
 
-# The goal always collects everything into this position, in all 20 instances.
+# The goal always collects everything into this position.
 GOAL_POSITION = "p11"
 
 
@@ -91,7 +86,6 @@ class TwentyFortyEightGenerator(Generator):
     def get_domain_parameter_space():
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        # only the IPC variant exists for now, more can be added here later
         mapping["variant"] = Categorical(
             "variant",
             ["ipc"],
@@ -125,15 +119,10 @@ class TwentyFortyEightGenerator(Generator):
         mapping: dict[str, Any] = {}
         if self.variant != "ipc":
             raise ValueError(f"invalid variant {self.variant}")
-        # One parameter: which shipped instance to rebuild. A 2048 instance is
-        # a board rather than a handful of numbers, and the script that made
-        # the shipped ones was never published, so the boards are transcribed
-        # into a table instead of being described by parameters.
-        #
         # The keys are the numbers in the file names, which are also the length
-        # of each instance's recorded solution. Unlike rainbowttles' and
-        # forestfire's, they are NOT contiguous: they run 8..26 and then jump
-        # to 29, so 27 and 28 fall inside the range without being instances.
+        # of each instance's recorded solution. These are NOT contiguous:
+        # they run 8..26 and then jump to 29, so 27 and 28 fall inside
+        # the range without being instances.
         # check_instance_parameters rejects them.
         indices = sorted(IPC_INSTANCES)
         mapping["index"] = Integer(
@@ -152,7 +141,6 @@ class TwentyFortyEightGenerator(Generator):
     def _mk_domain(self):
         if self.version == 1:
             reader = PDDLReader()
-            # No metric: none of the 20 shipped instances defines one.
             return reader.parse_problem(
                 str(RESOURCES_PATH / f"twenty_forty_eight_v{self.version}.pddl")
             )
@@ -223,8 +211,7 @@ class TwentyFortyEightGenerator(Generator):
         indices = [f"i{i}" for i in range(1, BOARD_SIZE + 1)]
 
         # Which board position each (direction, row/column, index) refers to,
-        # and the order the rows or columns are swept in. This scaffolding is
-        # identical in all 20 shipped instances.
+        # and the order the rows or columns are swept in.
         for direction in DIRECTIONS:
             lines = board_lines(direction)
             for status, line in lines:
@@ -268,13 +255,5 @@ class TwentyFortyEightGenerator(Generator):
     def check_instance_parameters(self, params: Configuration):
         # The shipped file numbers skip 27 and 28, so those two values sit
         # inside the parameter's range without naming an instance. Everything
-        # else about an instance is transcribed, and
-        # `twenty_forty_eight_extract.py` refuses to write the table unless
-        # every board sums to its goal tile and that sum is a power of two -
-        # the two conditions that used to be checked here, when the board came
-        # in as 16 separate parameters that could disagree with the goal.
-        #
-        # NOTE those conditions were necessary but never sufficient: the merges
-        # also have to be reachable from where the tiles actually sit, which is
-        # the puzzle itself and is left to the planner.
+        # else about an instance is transcribed.
         return params["index"] in IPC_INSTANCES
