@@ -275,7 +275,7 @@ The following domains are implemented and registered today:
 | **ForestFire** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Firefighting bot on a grid; a bushes row lets a loaded bot through only one unit of water at a time, unless it spends its axe on the tree blocking the gate |
 | **OnlyCraft** (IPC 2026) | UP/PDDL | Numbers | Minecraft-like crafting, breaking trees into pogo sticks |
 | **Temporal Plant Watering** (ICAPS 2026) | UP/PDDL | Numbers, Required Concurrency, Plan Quality Metric | Agents water plants on a grid with one pump: one agent carries it to a plant while another opens it at the tap, and water flows only while it is open |
-| **Line-Exchange-SNP** (IPC 2026) | UP/PDDL | Numbers | Robots confined to neighbouring segments meet at the boundary to even out their loads. The `ipc` variant states each starting load, `random` draws them from a mean and an imbalance |
+| **Line-Exchange-SNP** (IPC 2026) | UP/PDDL | Numbers | Robots confined to neighbouring segments meet at the boundary to even out their loads. The `bounded_5` variant states each starting load, `unbounded_random` draws them from a mean and an imbalance |
 
 ### Planned
 

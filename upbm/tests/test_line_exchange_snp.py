@@ -26,7 +26,7 @@ from upbm.tests.base_domain_test import BaseDomainTest
 from upbm.utils import get_reduced_instance_space, hyperparam_range
 
 
-def _domain_config(variant="ipc"):
+def _domain_config(variant="bounded_5"):
     space = LineExchangeSnpGenerator.get_domain_parameter_space()
     return Configuration(space, {"version": 1, "variant": variant})
 
@@ -94,7 +94,7 @@ class TestLineExchangeSnp(BaseDomainTest):
         With these parameters the scramble hands out [3, 1], so one unit still
         has to cross, and the segments are short enough that the walk is too.
         """
-        config = _domain_config("random")
+        config = _domain_config("unbounded_random")
         gen = LineExchangeSnpGenerator(config)
         return (
             config,
@@ -277,16 +277,16 @@ class TestLineExchangeSnp(BaseDomainTest):
             v_res = validator.validate(problem, parse_plan_string(problem, ""))
             self.assertEqual(v_res.status, ValidationResultStatus.VALID, f"{v_res}")
 
-    # ---- the "random" variant ----
+    # ---- the "unbounded_random" variant ----
 
     def test_the_variants_ask_for_different_parameters(self):
-        """The load slots belong to "ipc" and the draw knobs to "random"."""
-        ipc = LineExchangeSnpGenerator(_domain_config()).instance_parameter_space
+        """The load slots belong to "bounded_5", the draw knobs to the other."""
+        bounded = LineExchangeSnpGenerator(_domain_config()).instance_parameter_space
         rnd = LineExchangeSnpGenerator(
-            _domain_config("random")
+            _domain_config("unbounded_random")
         ).instance_parameter_space
         self.assertEqual(
-            sorted(ipc.keys()),
+            sorted(bounded.keys()),
             ["n_robots", "q_0", "q_1", "q_2", "q_3", "q_4", "segment_length"],
         )
         self.assertEqual(
@@ -301,7 +301,7 @@ class TestLineExchangeSnp(BaseDomainTest):
         the one solvability condition of the domain holds by construction, so
         check_instance_parameters can never reject a drawn instance.
         """
-        gen = LineExchangeSnpGenerator(_domain_config("random"))
+        gen = LineExchangeSnpGenerator(_domain_config("unbounded_random"))
         for n_robots in (2, 3, 5, 9):
             for mean_load in (0, 1, 7, 20):
                 for imbalance in (0, 25, 90, 250):
@@ -321,7 +321,7 @@ class TestLineExchangeSnp(BaseDomainTest):
                         self.assertTrue(gen.check_instance_parameters(params))
 
     def test_the_same_seed_draws_the_same_loads(self):
-        gen = LineExchangeSnpGenerator(_domain_config("random"))
+        gen = LineExchangeSnpGenerator(_domain_config("unbounded_random"))
 
         def loads(seed):
             return _loads_of(
@@ -339,7 +339,7 @@ class TestLineExchangeSnp(BaseDomainTest):
         of any single draw - the shipped set has an imbalance=90 instance
         holding [10, 9, 11] - but it does drive it on average.
         """
-        gen = LineExchangeSnpGenerator(_domain_config("random"))
+        gen = LineExchangeSnpGenerator(_domain_config("unbounded_random"))
 
         def average_spread(imbalance):
             spreads = []
@@ -356,7 +356,7 @@ class TestLineExchangeSnp(BaseDomainTest):
 
     def test_no_imbalance_starts_at_the_goal(self):
         """imbalance 0 gives every robot the mean, which is already the goal."""
-        gen = LineExchangeSnpGenerator(_domain_config("random"))
+        gen = LineExchangeSnpGenerator(_domain_config("unbounded_random"))
         problem = gen.get_instance(
             _random_instance(gen, n_robots=4, mean_load=7, imbalance=0)
         )
@@ -365,18 +365,19 @@ class TestLineExchangeSnp(BaseDomainTest):
             v_res = validator.validate(problem, parse_plan_string(problem, ""))
             self.assertEqual(v_res.status, ValidationResultStatus.VALID, f"{v_res}")
 
-    def test_random_lifts_the_robot_cap(self):
+    def test_unbounded_random_lifts_the_robot_cap(self):
         """Without a slot per robot there is no reason to stop at MAX_ROBOTS."""
-        gen = LineExchangeSnpGenerator(_domain_config("random"))
+        gen = LineExchangeSnpGenerator(_domain_config("unbounded_random"))
         n_robots = MAX_ROBOTS + 7
         problem = gen.get_instance(_random_instance(gen, n_robots=n_robots))
         self.assertEqual(
             sum(1 for _ in problem.objects(problem.user_type("robot"))), n_robots
         )
-        # the ipc variant cannot describe that many
-        ipc = LineExchangeSnpGenerator(_domain_config())
+        # the bounded variant cannot describe that many
+        bounded = LineExchangeSnpGenerator(_domain_config())
         self.assertEqual(
-            hyperparam_range(ipc.instance_parameter_space["n_robots"])[1], MAX_ROBOTS
+            hyperparam_range(bounded.instance_parameter_space["n_robots"])[1],
+            MAX_ROBOTS,
         )
 
     def test_the_scramble_is_a_witness_plan(self):
