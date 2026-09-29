@@ -219,6 +219,7 @@ The bundled generator classes are:
 | coins | `from upbm.domains.coins import CoinsGenerator` |
 | ztalloc-sum | `from upbm.domains.ztalloc_sum import ZtallocSumGenerator` |
 | expedition | `from upbm.domains.expedition import ExpeditionGenerator` |
+| 2048 | `from upbm.domains.twenty_forty_eight import TwentyFortyEightGenerator` |
 
 ### Registering domains via `.upbm` plugins
 
@@ -251,6 +252,7 @@ The following domains are implemented and registered today:
 | **Coins** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Hardness: finding a feasible plan is easy, finding an optimal one is hard |
 | **Ztalloc-Sum** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Reversed Collatz: registers start at 1 and must add up to a target |
 | **Expedition** (IPC 2026) | UP/PDDL | Numbers | Sleds burn one supply per move and must ferry supplies forward to cross a chain of waypoints |
+| **2048** (IPC 2026) | UP/PDDL | Numbers | The sliding tile puzzle; a phase state machine sequences shift, combine and shift again for each move |
 
 ### Planned
 
