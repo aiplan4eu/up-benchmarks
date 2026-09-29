@@ -21,6 +21,10 @@ from unified_planning.engines.results import ValidationResultStatus
 
 from upbm.domains.line_exchange_snp import LineExchangeSnpGenerator
 from upbm.domains.line_exchange_snp.line_exchange_snp import MAX_ROBOTS
+from upbm.domains.line_exchange_snp.resources.ipc_line_exchange_snp_data import (
+    IPC_INSTANCES,
+    MAX_IPC_ROBOTS,
+)
 from upbm.io import parse_plan_string
 from upbm.tests.base_domain_test import BaseDomainTest
 from upbm.utils import get_reduced_instance_space, hyperparam_range
@@ -29,6 +33,10 @@ from upbm.utils import get_reduced_instance_space, hyperparam_range
 def _domain_config(variant="bounded_5"):
     space = LineExchangeSnpGenerator.get_domain_parameter_space()
     return Configuration(space, {"version": 1, "variant": variant})
+
+
+def _ipc_instance(gen, index):
+    return Configuration(gen.instance_parameter_space, {"index": index})
 
 
 def _instance(gen, **params):
@@ -88,6 +96,12 @@ class TestLineExchangeSnp(BaseDomainTest):
             (config, _instance(gen)),
         ]
 
+    def _ipc_config(self):
+        """Shipped instance 0, which is 3_10_50_10: three robots, D=10."""
+        config = _domain_config("ipc")
+        gen = LineExchangeSnpGenerator(config)
+        return (config, _ipc_instance(gen, 0))
+
     def _random_config(self):
         """A drawn instance small enough to plan on.
 
@@ -116,13 +130,17 @@ class TestLineExchangeSnp(BaseDomainTest):
             (*crossing, [("robot", 2)]),
             (*shipped, [("robot", 3)]),
             (*self._random_config(), [("robot", 2)]),
+            # the same three robot line, reached through the index instead
+            (*self._ipc_config(), [("robot", 3)]),
         ]
 
     @property
     def problem_actions(self):
         # lft, rgt, conn, disc, exch-lre, exch-rle
         return [
-            (*config, 6) for config in self._get_configs() + [self._random_config()]
+            (*config, 6)
+            for config in self._get_configs()
+            + [self._random_config(), self._ipc_config()]
         ]
 
     def test_robots_start_in_the_middle_of_their_segment(self):
@@ -232,6 +250,18 @@ class TestLineExchangeSnp(BaseDomainTest):
         )
         self.assertEqual(len(list(gen.object_universe())), MAX_ROBOTS)
 
+        # Under "ipc" it is the reachable rows that bound it, not a parameter:
+        # index 0 is a three robot instance, while the whole table needs five.
+        ipc = LineExchangeSnpGenerator(_domain_config("ipc"))
+        just_first = get_reduced_instance_space(
+            ipc.instance_parameter_space, {"index": 0}
+        )
+        self.assertEqual(
+            sorted(o.name for o in ipc.object_universe(just_first)),
+            ["r0", "r1", "r2"],
+        )
+        self.assertEqual(len(list(ipc.object_universe())), MAX_IPC_ROBOTS)
+
     # NOTE the validation cases of the base class use the temporal plan
     # validator, while line-exchange is an instantaneous domain, so the
     # sequential plans are validated here instead.
@@ -277,14 +307,85 @@ class TestLineExchangeSnp(BaseDomainTest):
             v_res = validator.validate(problem, parse_plan_string(problem, ""))
             self.assertEqual(v_res.status, ValidationResultStatus.VALID, f"{v_res}")
 
+    # ---- the "ipc" variant ----
+
+    def test_ipc_rows_are_consistent_with_their_own_file_names(self):
+        """The table is reconstructed data, so pin it against its provenance.
+
+        Each shipped file is named <n_robots>_<mean_q>_<imbalance%>_<D>, which
+        is information the table does not need in order to build an instance.
+        That makes it a free cross-check: if a row's loads or segment length
+        were mistyped, the name would stop agreeing with them.
+        """
+        self.assertEqual(sorted(IPC_INSTANCES), list(range(20)))
+        for index, row in sorted(IPC_INSTANCES.items()):
+            name = row["name"]
+            n_robots, mean_q, imbalance, d = (int(p) for p in name.split("_"))
+            self.assertEqual(n_robots, row["n_robots"], name)
+            self.assertEqual(d, row["segment_length"], name)
+            self.assertEqual(mean_q, row["mean_q"], name)
+            self.assertEqual(imbalance, row["imbalance"], name)
+            self.assertEqual(len(row["loads"]), n_robots, name)
+            # the file name's mean is the loads' mean, in all twenty
+            self.assertEqual(sum(row["loads"]), n_robots * mean_q, name)
+            # ... which is also what makes the levelled goal reachable
+            self.assertEqual(sum(row["loads"]) % n_robots, 0, name)
+
+        # The bounded variant has to stay able to express what the table
+        # ships, or the two would stop being interchangeable.
+        self.assertLessEqual(MAX_IPC_ROBOTS, MAX_ROBOTS)
+
+    def test_the_two_ipc_sets_build_the_same_problems(self):
+        """`sets/` carries these twenty instances twice; they must agree.
+
+        line_exchange_snp_ipc2026.yml drives "bounded_5" with the loads spelled
+        out and line_exchange_snp_ipc2026_by_index.yml drives "ipc" with an
+        index. Only the auto-generated problem name differs, because that name
+        encodes the parameters, so the comparison is on the model itself.
+        """
+        ipc_gen = LineExchangeSnpGenerator(_domain_config("ipc"))
+        bounded_gen = LineExchangeSnpGenerator(_domain_config())
+        for index, row in sorted(IPC_INSTANCES.items()):
+            from_index = ipc_gen.get_instance(_ipc_instance(ipc_gen, index))
+            slots = {f"q_{i}": load for i, load in enumerate(row["loads"])}
+            from_slots = bounded_gen.get_instance(
+                _instance(
+                    bounded_gen,
+                    n_robots=row["n_robots"],
+                    segment_length=row["segment_length"],
+                    **slots,
+                )
+            )
+            self.assertEqual(
+                from_index.explicit_initial_values,
+                from_slots.explicit_initial_values,
+                row["name"],
+            )
+            self.assertEqual(
+                set(map(str, from_index.goals)),
+                set(map(str, from_slots.goals)),
+                row["name"],
+            )
+            self.assertEqual(
+                [o.name for o in from_index.all_objects],
+                [o.name for o in from_slots.all_objects],
+                row["name"],
+            )
+
     # ---- the "unbounded_random" variant ----
 
     def test_the_variants_ask_for_different_parameters(self):
-        """The load slots belong to "bounded_5", the draw knobs to the other."""
+        """One parameter set per variant, and they share nothing but the line.
+
+        The load slots belong to "bounded_5", the draw knobs to
+        "unbounded_random", and "ipc" asks for an index and nothing else -
+        not even n_robots or segment_length, which are row data there.
+        """
         bounded = LineExchangeSnpGenerator(_domain_config()).instance_parameter_space
         rnd = LineExchangeSnpGenerator(
             _domain_config("unbounded_random")
         ).instance_parameter_space
+        ipc = LineExchangeSnpGenerator(_domain_config("ipc")).instance_parameter_space
         self.assertEqual(
             sorted(bounded.keys()),
             ["n_robots", "q_0", "q_1", "q_2", "q_3", "q_4", "segment_length"],
@@ -293,6 +394,7 @@ class TestLineExchangeSnp(BaseDomainTest):
             sorted(rnd.keys()),
             ["imbalance", "mean_load", "n_robots", "seed", "segment_length"],
         )
+        self.assertEqual(sorted(ipc.keys()), ["index"])
 
     def test_drawn_loads_always_average_the_mean(self):
         """The scramble conserves the total, so the split is always even.
