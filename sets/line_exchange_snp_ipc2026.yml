@@ -10,10 +10,14 @@
 # imbalance=90 instances below hold [10, 9, 11] and [35, 6, 4]), so the only
 # faithful way to reproduce the set is to state each load with q_0 .. q_4.
 # Slots at or above n_robots are unused and left out.
+#
+# That is what the "bounded_5" variant is for: it takes one load slot per
+# robot, which is also why it stops at five robots. The other variant,
+# "unbounded_random", draws the loads instead and so cannot reproduce this set.
 domain: line-exchange-snp
 params:
   version: 1
-  variant: ipc
+  variant: bounded_5
 instances:
   # mean_q=10, imbalance=50%  (sum=30 = 3 x 10)
   - name: "3_10_50_10"
