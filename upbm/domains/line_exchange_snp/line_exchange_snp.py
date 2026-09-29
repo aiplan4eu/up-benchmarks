@@ -35,17 +35,20 @@ from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
-# How many robots the "ipc" variant can describe. The IPC set uses 3 to 5, and
-# there it needs one load parameter per robot (see instance_parameter_space),
-# so the number of those slots is what sets this ceiling. The "random" variant
-# draws the loads instead of listing them, so it has no such limit.
+# How many robots the "bounded_5" variant can describe. That variant states one
+# load parameter per robot (see instance_parameter_space), and ConfigSpace has
+# no variable-length parameter, so the number of those slots is what sets this
+# ceiling - and the "_5" in the variant's own name spells the same number, so
+# the two have to be changed together. The "unbounded_random" variant draws the
+# loads instead of listing them, so it has no such limit.
 MAX_ROBOTS = 5
 
-# How much the "random" variant shuffles the loads before handing them out:
-# one transfer per robot. That number is calibrated against the shipped set,
-# whose spread between the largest and smallest load, as a fraction of the
-# mean, averages 0.46 / 0.65 / 1.45 at imbalance 25 / 50 / 90. One transfer
-# per robot gives 0.44 / 0.91 / 1.41; two or more overshoot throughout.
+# How much the "unbounded_random" variant shuffles the loads before handing
+# them out: one transfer per robot. That number is calibrated against the
+# shipped set, whose spread between the largest and smallest load, as a
+# fraction of the mean, averages 0.46 / 0.65 / 1.45 at imbalance 25 / 50 / 90.
+# One transfer per robot gives 0.44 / 0.91 / 1.41; two or more overshoot
+# throughout.
 TRANSFERS_PER_ROBOT = 1
 
 
@@ -54,14 +57,17 @@ class LineExchangeSnpGenerator(Generator):
     def get_domain_parameter_space():
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        # "ipc" reproduces the 20 shipped instances and needs one load
-        # parameter per robot to do it; "random" draws the loads from a mean
-        # and an imbalance instead, which is what the shipped file names say
-        # the original parameters actually were.
+        # "bounded_5" takes the load of each robot as its own parameter, which
+        # is how the 20 shipped instances are reproduced: their loads were
+        # drawn at random with no seed recorded, so stating them is the only
+        # faithful way. That costs a slot per robot, hence the bound in the
+        # name. "unbounded_random" draws the loads from a mean and an imbalance
+        # instead - which is what the shipped file names say the original
+        # parameters actually were - so it needs no slots and no bound.
         mapping["variant"] = Categorical(
             "variant",
-            ["ipc", "random"],
-            default="ipc",
+            ["bounded_5", "unbounded_random"],
+            default="bounded_5",
         )
         return ConfigurationSpace(name=mapping)
 
@@ -91,24 +97,24 @@ class LineExchangeSnpGenerator(Generator):
     @property
     def instance_parameter_space(self) -> ConfigurationSpace:
         mapping: dict[str, Any] = {}
-        if self.variant not in ("ipc", "random"):
+        if self.variant not in ("bounded_5", "unbounded_random"):
             raise ValueError(f"invalid variant {self.variant}")
 
         # --- shared by both variants ---
         #
         # The IPC set uses 3, 4 or 5 robots; two is the smallest line that can
-        # exchange anything at all. Only "ipc" is capped, because only it needs
-        # a load slot per robot.
+        # exchange anything at all. Only "bounded_5" is capped, because only it
+        # needs a load slot per robot.
         mapping["n_robots"] = Integer(
             "n_robots",
-            (2, MAX_ROBOTS if self.variant == "ipc" else MAX_INT),
+            (2, MAX_ROBOTS if self.variant == "bounded_5" else MAX_INT),
             default=3,
         )
         # The (D) function: each robot owns the segment [D*i, D*(i+1)]. The IPC
         # set uses 10, 50 and 100.
         mapping["segment_length"] = Integer("segment_length", (1, MAX_INT), default=50)
 
-        if self.variant == "ipc":
+        if self.variant == "bounded_5":
             # One load per robot. The shipped instances draw these at random
             # and record no seed, so the only way to reproduce them exactly is
             # to state each load; the mean and imbalance in the file names
@@ -170,10 +176,10 @@ class LineExchangeSnpGenerator(Generator):
     def _loads(self, params) -> List[int]:
         """The load of each robot, in order.
 
-        The "ipc" variant reads them off the q slots, ignoring the unused
-        ones; the "random" variant draws them.
+        The "bounded_5" variant reads them off the q slots, ignoring the
+        unused ones; the "unbounded_random" variant draws them.
         """
-        if self.variant == "ipc":
+        if self.variant == "bounded_5":
             return [params[f"q_{slot}"] for slot in range(params["n_robots"])]
         return self._scrambled_loads(params)
 
@@ -224,8 +230,8 @@ class LineExchangeSnpGenerator(Generator):
         if instance_parameters_space is None:
             instance_parameters_space = self.instance_parameter_space
         # The universe is as big as the upper bound on n_robots, so for the
-        # "random" variant, whose bound is MAX_INT, pass a space narrowed with
-        # get_reduced_instance_space rather than the default one.
+        # "unbounded_random" variant, whose bound is MAX_INT, pass a space
+        # narrowed with get_reduced_instance_space rather than the default one.
         _, robots_upper = hyperparam_range(instance_parameters_space["n_robots"])
         return [self._robot(i) for i in range(robots_upper)]
 
@@ -262,9 +268,9 @@ class LineExchangeSnpGenerator(Generator):
         # An exchange moves one unit from a robot to its neighbour, so the
         # total load never changes. The goal asks for every robot to hold the
         # same amount, which is only reachable when that total splits evenly.
-        # The "random" variant scrambles a balanced start, so it always does;
-        # only the "ipc" variant, where the caller states the loads, can get
-        # this wrong.
-        if self.variant == "random":
+        # The "unbounded_random" variant scrambles a balanced start, so it
+        # always does; only "bounded_5", where the caller states the loads,
+        # can get this wrong.
+        if self.variant == "unbounded_random":
             return True
         return sum(self._loads(params)) % params["n_robots"] == 0
