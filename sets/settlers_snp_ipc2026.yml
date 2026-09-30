@@ -1,0 +1,78 @@
+# The 20 settlers-snp instances of the IPC 2026 dataset.
+#
+# This set uses the `ipc` variant, which exists to reproduce these 20 files and
+# takes a single parameter: `index`, the number in the shipped file name. The
+# instances are transcribed into
+# `upbm/domains/settlers_snp/resources/ipc_settlers_snp_data.py` rather than
+# described by parameters: each one is a random map (which places are woodland,
+# mountain, metalliferous or by the coast, and which are connected by land or
+# sea) plus a goal, and the files record no seed or generator call to rebuild
+# them from.
+#
+# The instances grow steadily: pfile1 has 5 places and 5 vehicles, pfile20 has
+# 15 places and 10 vehicles.
+domain: settlers-snp
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: pfile1
+    params:
+      index: 1
+  - name: pfile2
+    params:
+      index: 2
+  - name: pfile3
+    params:
+      index: 3
+  - name: pfile4
+    params:
+      index: 4
+  - name: pfile5
+    params:
+      index: 5
+  - name: pfile6
+    params:
+      index: 6
+  - name: pfile7
+    params:
+      index: 7
+  - name: pfile8
+    params:
+      index: 8
+  - name: pfile9
+    params:
+      index: 9
+  - name: pfile10
+    params:
+      index: 10
+  - name: pfile11
+    params:
+      index: 11
+  - name: pfile12
+    params:
+      index: 12
+  - name: pfile13
+    params:
+      index: 13
+  - name: pfile14
+    params:
+      index: 14
+  - name: pfile15
+    params:
+      index: 15
+  - name: pfile16
+    params:
+      index: 16
+  - name: pfile17
+    params:
+      index: 17
+  - name: pfile18
+    params:
+      index: 18
+  - name: pfile19
+    params:
+      index: 19
+  - name: pfile20
+    params:
+      index: 20
