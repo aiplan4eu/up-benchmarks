@@ -37,25 +37,7 @@ from .resources.ipc_forestfire_data import IPC_INSTANCES
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
-# The row of bushes that separates the ponds from the fire. It is row 2 in all
-# 20 shipped instances, and it is what makes the domain interesting: leaving a
-# bushes cell needs has-water <= max-water, which is 1 everywhere, so a bot
-# crossing it carries at most one unit of water at a time.
-#
-# It stays a constant rather than a parameter: it is 1 in all 20 shipped
-# instances, so nothing in the set varies along this axis, and the generator's
-# parameters are meant to cover what does. Raising it is a layout question -
-# see FORESTFIRE-GENERIC-DISCUSSION.md - not a loosening of this one.
 BUSHES_ROW = 2
-MAX_WATER_ON_BUSHES = 1
-
-# Bots and axes line up along the top row: bot i and axe i both start on
-# column i of row 1, which is where the shipped set puts them.
-START_ROW = 1
-
-# Everything starts dry and unpaid for.
-INITIAL_WATER = 0
-INITIAL_COST = 0
 
 # Which columns of a burning row are alight. Nested: the far corner, then both
 # corners, then the middle as well, then the whole row.
@@ -111,10 +93,6 @@ class ForestFireGenerator(Generator):
     def get_domain_parameter_space():
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        # Two variants that differ in kind, not in degree. "random" generates
-        # new benchmarks and is the default; "ipc" reproduces the 20 shipped
-        # instances from a transcribed table and takes one parameter, the
-        # index of the instance to rebuild.
         mapping["variant"] = Categorical(
             "variant",
             ["random", "ipc"],
@@ -160,9 +138,6 @@ class ForestFireGenerator(Generator):
             raise ValueError(f"invalid variant {self.variant}")
 
         if self.variant == "ipc":
-            # One parameter: which shipped instance to rebuild. The keys are
-            # the numbers in the file names and run 1..20 with no gaps, so
-            # every value in the range is a valid instance.
             indices = sorted(IPC_INSTANCES)
             mapping["index"] = Integer(
                 "index", (indices[0], indices[-1]), default=indices[0]
@@ -176,34 +151,22 @@ class ForestFireGenerator(Generator):
         mapping["height"] = Integer("height", (3, MAX_INT), default=6)
         mapping["water_capacity"] = Integer("water_capacity", (1, MAX_INT), default=6)
         mapping["durability"] = Integer("durability", (0, MAX_INT), default=3)
-        # How much chopping the axes differ by. 0 gives every axe the same
-        # durability, which is what the shipped set does everywhere but
-        # prob15; above that each axe is drawn from durability +/- spread.
         mapping["durability_spread"] = Integer(
             "durability_spread", (0, MAX_INT), default=0
         )
-        # The tree on the gate cell. Whether it is choppable is the sharpest
-        # difficulty dial in the domain: the shipped set uses 3 against a
-        # durability of 3, so one chop opens the gate for good, or 6 against
-        # the same 3, which cannot be chopped at all and forces every drop of
-        # water through the bushes one unit at a time.
+        # On the gate cell there is a tree that blocks the way. This parameter
+        # specifies the amount of chops needed to fell the tree and free up
+        # the passage
         mapping["tree_amount"] = Integer("tree_amount", (0, MAX_INT), default=6)
-        # How many rows at the bottom of the grid burn. The shipped set only
-        # ever uses 1 or 2, but nothing in the domain caps it: the real
-        # constraint is that the fire stays below the bushes row, which
-        # check_instance_parameters enforces.
+        # How many rows at the bottom of the grid burn
         mapping["fire_rows"] = Integer("fire_rows", (1, MAX_INT), default=2)
-        # Which columns of a burning row are alight. The shipped set uses all
-        # four of these; the generic variant defaults to the widest.
+        # Which columns of a burning row are alight
         mapping["fire_spread"] = Categorical(
             "fire_spread", list(FIRE_SPREADS), default="whole_row"
         )
-        # Bots share the work and axes the chopping; the shipped set uses one
-        # to three of each. Bot i and axe i start on column i of the top row,
-        # so neither can outnumber the columns.
         mapping["n_bots"] = Integer("n_bots", (1, MAX_INT), default=1)
         mapping["n_axes"] = Integer("n_axes", (1, MAX_INT), default=2)
-        # Each burning cell gets an amount drawn from 1..max_fire.
+        # Each burning cell gets an amount drawn from 1..max_fire
         mapping["max_fire"] = Integer("max_fire", (1, MAX_INT), default=3)
         mapping["seed"] = Integer("seed", (0, MAX_INT), default=42)
         return ConfigurationSpace(name=mapping)
@@ -222,11 +185,6 @@ class ForestFireGenerator(Generator):
             domain = reader.parse_problem(
                 str(RESOURCES_PATH / f"forestfire_v{self.version}.pddl")
             )
-            # Every action costs 1 and all 20 shipped instances minimise
-            # (cost), so the metric belongs to the domain. Problem.clone()
-            # carries it into every instance. The fluent is called "cost" and
-            # not "total-cost", so the reader does not fold it into
-            # MinimizeActionCosts and it stays in the initial values.
             domain.add_quality_metric(
                 MinimizeExpressionOnFinalState(domain.fluent("cost")())
             )
@@ -251,14 +209,6 @@ class ForestFireGenerator(Generator):
 
     def _axe(self, index: int = 1) -> Object:
         return self._get_object(f"axe{index}", self._Axe)
-
-    # ── What each variant says an instance contains ───────────────────────────
-    #
-    # The "ipc" variant reads these off the transcribed table; the "random" one
-    # takes them from its parameters. Everything else - the bushes row, the
-    # gate, the two corner ponds, where the bots and axes stand, the grid
-    # connectivity - is rebuilt the same way for both, because it is identical
-    # in all 20 shipped instances (forestfire_extract.py checks that).
 
     def _entry(self, params: Configuration) -> Dict[str, Any]:
         return IPC_INSTANCES[params["index"]]
@@ -354,7 +304,6 @@ class ForestFireGenerator(Generator):
         if instance_parameters_space is None:
             instance_parameters_space = self.instance_parameter_space
         if self.variant == "ipc":
-            # The table is the whole space, so take the largest of each.
             width = max(e["width"] for e in IPC_INSTANCES.values())
             height = max(e["height"] for e in IPC_INSTANCES.values())
             n_bots = max(e["n_bots"] for e in IPC_INSTANCES.values())
@@ -369,10 +318,6 @@ class ForestFireGenerator(Generator):
         for y in range(1, height + 1):
             for x in range(1, width + 1):
                 if y == BUSHES_ROW:
-                    # Which column of the bushes row is the grass gate depends
-                    # on the width, so over a range of widths a cell here can
-                    # be either. Both names are included; any one instance
-                    # uses exactly one of them.
                     objs.append(self._get_object(f"grass{x}_{y}", self._Grass))
                     objs.append(self._get_object(f"bushes{x}_{y}", self._Bushes))
                 else:
@@ -382,8 +327,6 @@ class ForestFireGenerator(Generator):
     def get_goal(self, params) -> List[FNode]:
         self._check_params(params)
         width = self._width(params)
-        # The shipped goals name exactly the cells that are alight, and say
-        # nothing about where the bot ends up.
         return [
             Equals(self._fire(self._cell(x, y, width)), 0)
             for (x, y) in sorted(self.fires(params), key=lambda c: (c[1], c[0]))
@@ -398,8 +341,6 @@ class ForestFireGenerator(Generator):
         for y in range(1, height + 1):
             for x in range(1, width + 1):
                 cell = self._cell(x, y, width)
-                # The grid is fully connected to its four neighbours, both
-                # ways round, in all 20 shipped instances.
                 for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
                     nx, ny = x + dx, y + dy
                     if 1 <= nx <= width and 1 <= ny <= height:
@@ -407,31 +348,31 @@ class ForestFireGenerator(Generator):
                 res[self._tree(cell)] = trees.get((x, y), 0)
                 res[self._fire(cell)] = fires.get((x, y), 0)
                 if is_bushes(x, y, width):
-                    res[self._max_water(cell)] = MAX_WATER_ON_BUSHES
+                    # a bot can only leave the bushes carrying 1 unit of water
+                    res[self._max_water(cell)] = 1
 
-        # A pond in each of the two top corners.
-        res[self._pond(self._cell(1, START_ROW, width))] = TRUE()
-        res[self._pond(self._cell(width, START_ROW, width))] = TRUE()
+        # A pond in each of the two top corners
+        res[self._pond(self._cell(1, 1, width))] = TRUE()
+        res[self._pond(self._cell(width, 1, width))] = TRUE()
 
+        # Bots and axes line up along the top row
         for i in range(1, self._n_bots(params) + 1):
             bot = self._bot(i)
-            res[self._at(bot, self._cell(i, START_ROW, width))] = TRUE()
+            res[self._at(bot, self._cell(i, 1, width))] = TRUE()
             res[self._water_capacity(bot)] = self._capacity(params)
-            res[self._has_water(bot)] = INITIAL_WATER
-        # No bot starts holding an axe; picking one up is an action.
+            res[self._has_water(bot)] = 0
         for i, (durability, placed) in enumerate(self._axes(params), start=1):
             axe = self._axe(i)
             if placed:
-                # axe i waits on column i of the top row
-                res[self._at(axe, self._cell(i, START_ROW, width))] = TRUE()
+                res[self._at(axe, self._cell(i, 1, width))] = TRUE()
             res[self._durability(axe)] = durability
-        res[self._cost()] = INITIAL_COST
+        # The metric's running total, which every action increases by 1.
+        # NOTE is this necessary over just minimizing the plan length?
+        res[self._cost()] = 0
         return res
 
     def check_instance_parameters(self, params: Configuration):
         if self.variant == "ipc":
-            # The index range is dense over the table, so this only guards a
-            # table that has been edited into having gaps.
             return params["index"] in IPC_INSTANCES
         # The burning rows have to sit below the bushes row. Otherwise the
         # fire would land on the gate itself, which is a different puzzle from
@@ -449,8 +390,7 @@ class ForestFireGenerator(Generator):
         # trip, and the fires are finite. The gate tree never blocks anything
         # either, because the bot can walk round it through the bushes.
         #
-        # This argument needs max-water >= 1 on the bushes, which is why
-        # MAX_WATER_ON_BUSHES is a constant. Any future parameter that moves
-        # the ponds, the barrier or the gate breaks it too, and would need a
-        # real reachability check instead.
+        # This argument needs max-water >= 1 on the bushes. Any future parameter
+        # that moves the ponds, the barrier or the gate breaks it too, and
+        # would need a real reachability check instead.
         return True
