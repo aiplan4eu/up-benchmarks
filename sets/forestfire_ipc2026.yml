@@ -1,0 +1,93 @@
+# The 20 forestfire instances of the IPC 2026 dataset.
+#
+# This set uses the `ipc` variant, which exists to reproduce these 20 files and
+# takes a single parameter: `index`, the number in the shipped file name. The
+# instances are transcribed into
+# `upbm/domains/forestfire/resources/ipc_forestfire_data.py` rather than
+# described by parameters, because a scrambled grid of fires and trees is a
+# state, not a handful of numbers.
+#
+# For new instances use the `random` variant instead. It is the default, and it
+# follows the same layout rules with far more freedom: grid size, how many rows
+# burn and how wide, how much water a bot may carry across the bushes, how much
+# the axes differ, and a seed.
+#
+# The layout rules the `ipc` variant rebuilds, verified across all 20 by
+# `forestfire_extract.py`: a width x height grid, fully connected to its four
+# neighbours both ways; row 2 is bushes apart from the middle column, which is
+# grass and carries a tree; max-water is 1 on every bushes cell; ponds sit in
+# both top corners; and bot i and axe i stand on column i of the top row.
+#
+# `tree_amount` against `durability` is the difficulty dial. At 3 against 3 the
+# gate tree can be chopped once and the middle column is open for good; at 6
+# against 3 it cannot be chopped at all, so every drop of water has to cross a
+# bushes cell, and leaving one needs has-water <= 1 - a single unit per trip.
+#
+# prob12 declares three axes but places only two: the shipped file writes
+# "(at axe2 grass2_1)" twice and never places axe3. That is a slip in the
+# dataset, and it is reproduced because the table simply records it.
+domain: forestfire
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: prob01
+    params:
+      index: 1
+  - name: prob02
+    params:
+      index: 2
+  - name: prob03
+    params:
+      index: 3
+  - name: prob04
+    params:
+      index: 4
+  - name: prob05
+    params:
+      index: 5
+  - name: prob06
+    params:
+      index: 6
+  - name: prob07
+    params:
+      index: 7
+  - name: prob08
+    params:
+      index: 8
+  - name: prob09
+    params:
+      index: 9
+  - name: prob10
+    params:
+      index: 10
+  - name: prob11
+    params:
+      index: 11
+  - name: prob12
+    params:
+      index: 12
+  - name: prob13
+    params:
+      index: 13
+  - name: prob14
+    params:
+      index: 14
+  - name: prob15
+    params:
+      index: 15
+  - name: prob16
+    params:
+      index: 16
+  - name: prob17
+    params:
+      index: 17
+  - name: prob18
+    params:
+      index: 18
+  - name: prob19
+    params:
+      index: 19
+  - name: prob20
+    params:
+      index: 20
