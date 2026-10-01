@@ -66,7 +66,6 @@ class TestLineExchangeSnp(BaseDomainTest):
 
     @property
     def plannable(self):
-        # the two robot ones only; the IPC instances are much bigger
         return self._get_configs()[:2]
 
     @property
@@ -80,25 +79,17 @@ class TestLineExchangeSnp(BaseDomainTest):
 
     @property
     def problem_actions(self):
-        # lft, rgt, conn, disc, exch-lre, exch-rle
         return [(*config, 6) for config in self._get_configs()]
 
     @property
     def validation_cases(self):
         bounded, drawn, _ = self._get_configs()
-        # Robot i owns the segment [D*i, D*(i+1)] and starts in its middle, so
-        # two neighbours can only meet on the boundary between them. With D=10
-        # each walks 5 steps there, they connect, pass one unit across, split
-        # up and walk home again.
         exchange = ["(conn r0 r1)", "(exch-lre r0 r1)", "(disc r0 r1)"]
         meet = ["(rgt r0)"] * 5 + ["(lft r1)"] * 5
         home = ["(lft r0)"] * 5 + ["(rgt r1)"] * 5
-        # The same trip with D=2 is one step each way. It only works if the
-        # scramble really drew [3, 1], so it also pins the draw.
         short_trip = ["(rgt r0)", "(lft r1)"] + exchange + ["(lft r0)", "(rgt r1)"]
         return [
             (*bounded, "\n".join(meet + exchange + home), ValidationResultStatus.VALID),
-            # exchanging without connecting first is not allowed
             (
                 *bounded,
                 "\n".join(meet + ["(exch-lre r0 r1)"] + home),
