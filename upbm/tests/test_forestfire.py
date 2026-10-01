@@ -16,20 +16,10 @@ from typing import Any, Dict, List, Tuple
 
 from ConfigSpace import Configuration
 
-from unified_planning.engines.plan_validator import (
-    SequentialPlanValidator,
-    ValidationResultStatus,
-)
-from unified_planning.engines.results import FailedValidationReason
-
 from upbm.domains.forestfire import ForestFireGenerator
 from upbm.tests.base_domain_test import BaseDomainTest
 
-
-# The "ipc" variant takes one parameter: which shipped instance to rebuild.
-# prob01 is the smallest, a 3x3 grid with one fire in the far corner.
 PROB01 = dict(index=1)
-# prob12 is the one with the slip: three axes declared, only two placed.
 PROB12 = dict(index=12)
 
 RANDOM_DEFAULTS = dict(
@@ -47,8 +37,6 @@ RANDOM_DEFAULTS = dict(
     seed=42,
 )
 
-# A puzzle far smaller than anything shipped: a 3x3 grid, one burning corner,
-# and a gate tree the single axe can chop through.
 TINY = dict(
     RANDOM_DEFAULTS,
     width=3,
@@ -112,14 +100,11 @@ class TestForestFire(BaseDomainTest):
 
     @property
     def plannable(self) -> List[Tuple[Configuration, Configuration]]:
-        # Far smaller than any shipped instance: one fire, one trip.
         return [self._get_configs("random", **TINY)]
 
     @property
     def object_data(self):
         domain_config, instance_config = self._get_configs("ipc", **PROB01)
-        # prob01 is a 3x3 grid: row 2 is bushes except its middle column, so 7
-        # grass cells and 2 bushes ones, plus one bot and one axe.
         prob12_domain, prob12 = self._get_configs("ipc", **PROB12)
         return [
             (
@@ -127,8 +112,6 @@ class TestForestFire(BaseDomainTest):
                 instance_config,
                 [("bot", 1), ("axe", 1), ("grass", 7), ("bushes", 2)],
             ),
-            # prob12 is the far end of the table and the one with the slip: a
-            # 5x6 grid, three axes declared even though one is never placed.
             (
                 prob12_domain,
                 prob12,
@@ -139,6 +122,4 @@ class TestForestFire(BaseDomainTest):
     @property
     def problem_actions(self) -> List[Tuple[Configuration, Configuration, int]]:
         domain_config, instance_config = self._get_configs("ipc", **PROB01)
-        # move-grass, move-bushes, drop-water, chop-tree, fill-water, pick-ax,
-        # put-out-fire
         return [(domain_config, instance_config, 7)]
