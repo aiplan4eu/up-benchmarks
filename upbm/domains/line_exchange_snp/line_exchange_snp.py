@@ -37,27 +37,8 @@ from .resources.ipc_line_exchange_snp_data import IPC_INSTANCES
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
-# How many robots the "bounded_5" variant can describe. That variant states one
-# load parameter per robot (see instance_parameter_space), and ConfigSpace has
-# no variable-length parameter, so the number of those slots is what sets this
-# ceiling - and the "_5" in the variant's own name spells the same number, so
-# the two have to be changed together. Neither of the other two variants has
-# this limit: "unbounded_random" draws the loads and "ipc" tabulates them.
-#
-# It happens to equal MAX_IPC_ROBOTS, the largest shipped line, but only by
-# coincidence: this is a count of declared parameters, that one is a property of
-# the dataset. test_the_bounded_variant_covers_the_shipped_sizes pins the
-# coincidence so that lowering this number cannot quietly make "bounded_5"
-# unable to express what "ipc" ships.
+# Only used for the bounded_5 variant
 MAX_ROBOTS = 5
-
-# How much the "unbounded_random" variant shuffles the loads before handing
-# them out: one transfer per robot. That number is calibrated against the
-# shipped set, whose spread between the largest and smallest load, as a
-# fraction of the mean, averages 0.46 / 0.65 / 1.45 at imbalance 25 / 50 / 90.
-# One transfer per robot gives 0.44 / 0.91 / 1.41; two or more overshoot
-# throughout.
-TRANSFERS_PER_ROBOT = 1
 
 
 class LineExchangeSnpGenerator(Generator):
@@ -65,27 +46,13 @@ class LineExchangeSnpGenerator(Generator):
     def get_domain_parameter_space():
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        # The three variants differ in where the size and the loads come from.
-        #
-        #   "ipc"               both are table data: one parameter, the index of
-        #                       a shipped instance. This is the only variant
-        #                       that reproduces the IPC set, and the only thing
-        #                       it can do.
-        #   "bounded_5"         the caller states the loads, one parameter per
-        #                       robot, so the line is capped at MAX_ROBOTS. Use
-        #                       it to ask for a load vector of your own, which
-        #                       is the one thing "ipc" cannot do.
-        #   "unbounded_random"  the loads are drawn from a mean and an imbalance
-        #                       - which is what the shipped file names say the
-        #                       original parameters actually were - so it needs
-        #                       no slot per robot and the line is unbounded.
-        #
-        # There is no fourth combination: explicit loads always cost a slot per
-        # robot, because ConfigSpace has no variable-length parameter, so an
-        # unbounded line can only ever have its loads drawn or tabulated.
         mapping["variant"] = Categorical(
             "variant",
-            ["ipc", "bounded_5", "unbounded_random"],
+            [
+                "ipc",  # index to the problem data stored in a separate file
+                "bounded_5",  # limit to 5 robots, can specify the load value for each
+                "unbounded_random",  # unlimited number of robots, initial load drawn with parameters
+            ],
             default="bounded_5",
         )
         return ConfigurationSpace(name=mapping)
@@ -103,7 +70,6 @@ class LineExchangeSnpGenerator(Generator):
         self._domain = self._mk_domain()
         assert isinstance(self._domain, Problem)
         self._Robot = self._domain.user_type("robot")
-        # the PDDL calls the segment length (D); the reader lowercases it
         self._d = self._domain.fluent("d")
         self._i = self._domain.fluent("i")
         self._x = self._domain.fluent("x")
@@ -117,9 +83,6 @@ class LineExchangeSnpGenerator(Generator):
     def instance_parameter_space(self) -> ConfigurationSpace:
         mapping: dict[str, Any] = {}
         if self.variant == "ipc":
-            # Everything else about a shipped instance - how many robots, how
-            # long their segments are, what they start holding - is table data,
-            # so the index is the whole parameter space.
             indices = sorted(IPC_INSTANCES)
             mapping["index"] = Integer(
                 "index", (indices[0], indices[-1]), default=indices[0]
@@ -127,43 +90,20 @@ class LineExchangeSnpGenerator(Generator):
             return ConfigurationSpace(name=mapping)
         if self.variant not in ("bounded_5", "unbounded_random"):
             raise ValueError(f"invalid variant {self.variant}")
-
-        # --- shared by the two parameterised variants ---
-        #
-        # The IPC set uses 3, 4 or 5 robots; two is the smallest line that can
-        # exchange anything at all. Only "bounded_5" is capped, because only it
-        # needs a load slot per robot.
         mapping["n_robots"] = Integer(
             "n_robots",
             (2, MAX_ROBOTS if self.variant == "bounded_5" else MAX_INT),
             default=3,
         )
-        # The (D) function: each robot owns the segment [D*i, D*(i+1)]. The IPC
-        # set uses 10, 50 and 100.
         mapping["segment_length"] = Integer("segment_length", (1, MAX_INT), default=50)
 
         if self.variant == "bounded_5":
-            # One load per robot. The shipped instances draw these at random
-            # and record no seed, so the only way to reproduce them exactly is
-            # to state each load; the mean and imbalance in the file names
-            # cannot be inverted. Slots from n_robots upwards are ignored.
-            # The defaults reproduce the instance named 3_5_50_50.
             for slot, default in enumerate([3, 6, 6, 0, 0]):
                 mapping[f"q_{slot}"] = Integer(
                     f"q_{slot}", (0, MAX_INT), default=default
                 )
         else:
-            # The two knobs the shipped file names record, as knobs rather
-            # than as their outcome. Every shipped instance holds
-            # sum(q) = n_robots * mean_q, so asking for the mean instead of
-            # the totals makes the even split the generator's job rather than
-            # the caller's.
             mapping["mean_load"] = Integer("mean_load", (0, MAX_INT), default=10)
-            # How far from that mean the loads are pushed, as a percentage of
-            # it: a single transfer moves up to mean_load * imbalance / 100
-            # units. The IPC set uses 25, 50 and 90. Zero hands every robot
-            # the mean, which is already the goal; above 100 just means a
-            # robot may hand over everything it has.
             mapping["imbalance"] = Integer("imbalance", (0, MAX_INT), default=50)
             mapping["seed"] = Integer("seed", (0, MAX_INT), default=42)
         return ConfigurationSpace(name=mapping)
@@ -179,8 +119,6 @@ class LineExchangeSnpGenerator(Generator):
     def _mk_domain(self):
         if self.version == 1:
             reader = PDDLReader()
-            # The shipped instances define no :metric, so no quality metric is
-            # attached to the skeleton either.
             return reader.parse_problem(
                 str(RESOURCES_PATH / f"line_exchange_snp_v{self.version}.pddl")
             )
@@ -247,11 +185,9 @@ class LineExchangeSnpGenerator(Generator):
         """
         n_robots = params["n_robots"]
         loads = [params["mean_load"]] * n_robots
-        # the most one transfer may move
         step = params["mean_load"] * params["imbalance"] // 100
         rng = random.Random(params["seed"])
-        for _ in range(n_robots * TRANSFERS_PER_ROBOT):
-            # pick a neighbouring pair, then which way round the unit goes
+        for _ in range(n_robots):
             left = rng.randrange(n_robots - 1)
             donor, receiver = (left, left + 1) if rng.randrange(2) else (left + 1, left)
             amount = rng.randint(0, min(loads[donor], step))
@@ -280,9 +216,6 @@ class LineExchangeSnpGenerator(Generator):
         if instance_parameters_space is None:
             instance_parameters_space = self.instance_parameter_space
         if self.variant == "ipc":
-            # The reachable rows decide the universe, so a narrowed `index`
-            # range gives a smaller one. All twenty rows together need
-            # MAX_IPC_ROBOTS robots.
             first, last = hyperparam_range(instance_parameters_space["index"])
             robots_upper = max(
                 entry["n_robots"]
@@ -290,22 +223,16 @@ class LineExchangeSnpGenerator(Generator):
                 if first <= index <= last
             )
             return [self._robot(i) for i in range(robots_upper)]
-        # The universe is as big as the upper bound on n_robots, so for the
-        # "unbounded_random" variant, whose bound is MAX_INT, pass a space
-        # narrowed with get_reduced_instance_space rather than the default one.
         _, robots_upper = hyperparam_range(instance_parameters_space["n_robots"])
         return [self._robot(i) for i in range(robots_upper)]
 
     def get_goal(self, params) -> List[FNode]:
         self._check_params(params)
         n_robots = self.n_robots(params)
-        # every robot back where it started ...
         res = [
             Equals(self._x(self._robot(i)), Real(self._home(params, i)))
             for i in range(n_robots)
         ]
-        # ... and the loads levelled out, stated as a chain of equalities
-        # between neighbours exactly as the shipped instances do
         for i in range(n_robots - 1):
             res.append(Equals(self._q(self._robot(i)), self._q(self._robot(i + 1))))
         return res
@@ -321,8 +248,6 @@ class LineExchangeSnpGenerator(Generator):
             res[self._q(robot)] = load
             if i + 1 < n_robots:
                 res[self._next(robot, self._robot(i + 1))] = TRUE()
-        # `ps` and `pd` both default to false and the shipped instances leave
-        # them out too, so every robot starts free and unpaired.
         return res
 
     def check_instance_parameters(self, params: Configuration):
