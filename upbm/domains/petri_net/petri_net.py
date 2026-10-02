@@ -28,7 +28,9 @@ from unified_planning.model.metrics import MinimizeExpressionOnFinalState
 from unified_planning.shortcuts import TRUE, Equals, LE, Plus
 
 from upbm.generator import Generator
-from upbm.utils import MAX_INT, is_subspace, hyperparam_range
+from upbm.utils import is_subspace, hyperparam_range
+
+from .resources.ipc_petri_net_data import IPC_INSTANCES
 
 
 SCRIPT_PATH = Path(__file__).absolute().parent
@@ -47,8 +49,9 @@ class GoalStyle(NamedTuple):
     """One of the goal shapes a net is shipped with.
 
     Every shipped goal asks for a number of tokens in the goal place plus one
-    condition on a handful of other places, described here. ``amount`` is the
-    instance parameter; ``places`` are the places it talks about.
+    condition on a handful of other places, described here. The number the
+    condition asks for is the ``goal_amount`` of each IPC_INSTANCES entry;
+    ``places`` are the places it talks about.
     """
 
     # "each": every place of `places` holds exactly `amount`
@@ -202,12 +205,11 @@ def _funnel_net() -> Net:
     )
 
 
-# The three nets of the IPC set, indexed by the `net` instance parameter. The
-# 20 shipped instances are these three nets under five goal shapes: prob06 and
-# prob08 share net 0, prob07 is net 1, prob09 and prob10 share net 2.
+# The three nets of the IPC set, named by the `net` field of each
+# IPC_INSTANCES entry. The 20 shipped instances are these three nets under five
+# goal shapes: prob06 and prob08 share net 0, prob07 is net 1, prob09 and
+# prob10 share net 2.
 NETS = [_recycling_net(), _twin_line_net(), _funnel_net()]
-
-MAX_GOAL_STYLES = max(len(net.goal_styles) for net in NETS)
 
 
 class PetriNetGenerator(Generator):
@@ -258,18 +260,12 @@ class PetriNetGenerator(Generator):
         mapping: dict[str, Any] = {}
         if self.variant != "ipc":
             raise ValueError(f"invalid variant {self.variant}")
-        # Which of the three shipped nets to build. The net is fixed data: its
-        # hyper-edges have a fixed arity, so the branches cannot be counted.
-        mapping["net"] = Integer("net", (0, len(NETS) - 1), default=0)
-        # Which of that net's goal shapes to ask for. Net 1 only has one, so
-        # (net 1, goal_style 1) is rejected by check_instance_parameters.
-        mapping["goal_style"] = Integer(
-            "goal_style", (0, MAX_GOAL_STYLES - 1), default=0
+        # Which shipped instance to build, by the position of its file in name
+        # order (prob06-1 is 1, prob10-4 is 20); see IPC_INSTANCES.
+        indices = sorted(IPC_INSTANCES)
+        mapping["index"] = Integer(
+            "index", (indices[0], indices[-1]), default=indices[0]
         )
-        # The "(= K (value g))" half of the goal, present in every instance.
-        mapping["goal_tokens"] = Integer("goal_tokens", (0, MAX_INT), default=3)
-        # The number the goal shape asks for; see GoalStyle.
-        mapping["goal_amount"] = Integer("goal_amount", (0, MAX_INT), default=2)
         return ConfigurationSpace(name=mapping)
 
     @property
@@ -310,11 +306,15 @@ class PetriNetGenerator(Generator):
     def _place(self, name: str) -> Object:
         return self._get_object(name, self._Place)
 
+    def _entry(self, params: Configuration) -> dict[str, Any]:
+        """The transcribed instance this index asks for."""
+        return IPC_INSTANCES[params["index"]]
+
     def _net(self, params: Configuration) -> Net:
-        return NETS[params["net"]]
+        return NETS[self._entry(params)["net"]]
 
     def _goal_style(self, params: Configuration) -> GoalStyle:
-        return self._net(params).goal_styles[params["goal_style"]]
+        return self._net(params).goal_styles[self._entry(params)["goal_style"]]
 
     def get_objects(self, params) -> List[Object]:
         self._check_params(params)
@@ -327,20 +327,24 @@ class PetriNetGenerator(Generator):
     ):
         if instance_parameters_space is None:
             instance_parameters_space = self.instance_parameter_space
-        net_lower, net_upper = hyperparam_range(instance_parameters_space["net"])
+        first, last = hyperparam_range(instance_parameters_space["index"])
+        nets = sorted(
+            {IPC_INSTANCES[i]["net"] for i in IPC_INSTANCES if first <= i <= last}
+        )
         # a place name can be shared by two nets, so keep the first occurrence
         names: List[str] = []
-        for i in range(net_lower, net_upper + 1):
+        for i in nets:
             names += [p for p in NETS[i].places if p not in names]
         return [self._place(p) for p in names]
 
     def get_goal(self, params) -> List[FNode]:
         self._check_params(params)
+        entry = self._entry(params)
         style = self._goal_style(params)
-        amount = params["goal_amount"]
+        amount = entry["goal_amount"]
         places = [self._value(self._place(p)) for p in style.places]
         # every shipped goal starts by asking for tokens in the goal place
-        goals = [Equals(params["goal_tokens"], self._value(self._place(GOAL_PLACE)))]
+        goals = [Equals(entry["goal_tokens"], self._value(self._place(GOAL_PLACE)))]
         if style.kind == "each":
             goals += [
                 Equals(amount, p) if style.amount_first else Equals(p, amount)
@@ -374,11 +378,5 @@ class PetriNetGenerator(Generator):
         return res
 
     def check_instance_parameters(self, params: Configuration):
-        # A net only offers the goal shapes it was shipped with: net 1 has one
-        # and the other two have two.
-        #
-        # NOTE nothing else is checked. A source place can be fired as often
-        # as needed, so any number of tokens can be pushed into the net and
-        # any goal amount is reachable; what varies is only how long the plan
-        # has to be. The 20 shipped goals are known-good.
-        return params["goal_style"] < len(NETS[params["net"]].goal_styles)
+        # every index is one of the 20 shipped instances, which are known-good
+        return True
