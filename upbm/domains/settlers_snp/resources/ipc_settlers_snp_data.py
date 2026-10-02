@@ -46,8 +46,6 @@ Each entry holds:
 
 from typing import Any, Dict
 
-# Annotated, or mypy infers the heterogeneous rows as dict[str, object]
-# and every read of a count becomes an error.
 IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
     1: {
         "n_vehicles": 5,
