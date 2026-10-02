@@ -21,8 +21,6 @@ from upbm.domains.settlers_snp import SettlersSnpGenerator
 from upbm.tests.base_domain_test import BaseDomainTest
 
 
-# A hand-written plan for pfile1, whose goal is two houses and a coal stack at
-# location0, and a rail from location1 to location2.
 PFILE1_PLAN = """
 ; location0 is woodland and a mountain, so it makes its own timber, wood and
 ; stone. Timber: 1 for the coal stack, 2 for the sawmill, 2 to saw into wood.
@@ -131,8 +129,7 @@ class TestSettlersSnp(BaseDomainTest):
 
     @property
     def plannable(self) -> List[Tuple[Configuration, Configuration]]:
-        # Every instance this generator can build is one of the twenty IPC
-        # ones, and those are hard by design, unreasonable to test here.
+        # IPC instances are too hard to test here
         return []
 
     @property
