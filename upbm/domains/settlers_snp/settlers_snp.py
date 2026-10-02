@@ -63,9 +63,6 @@ class SettlersSnpGenerator(Generator):
         assert isinstance(self._domain, Problem)
         self._Place = self._domain.user_type("place")
         self._Vehicle = self._domain.user_type("vehicle")
-        # The six resources (ore, iron, stone, wood, timber, coal) are
-        # constants of the domain file, so they already exist in the skeleton
-        # and are not objects an instance adds.
         self._resources = list(self._domain.objects(self._domain.user_type("resource")))
         self._available = self._domain.fluent("available")
         self._space_in = self._domain.fluent("space-in")
@@ -85,12 +82,6 @@ class SettlersSnpGenerator(Generator):
         mapping: dict[str, Any] = {}
         if self.variant != "ipc":
             raise ValueError(f"invalid variant {self.variant}")
-        # The shipped instances carry no record of how they were made - no
-        # seed, no parameters - and each one is a random map (terrain and
-        # connections) plus a hand-picked goal. So they are transcribed into a
-        # table rather than described by parameters, and the index is the whole
-        # parameter space: the number in the shipped file name, 1..20 with no
-        # gaps.
         indices = sorted(IPC_INSTANCES)
         mapping["index"] = Integer(
             "index", (indices[0], indices[-1]), default=indices[0]
@@ -111,13 +102,6 @@ class SettlersSnpGenerator(Generator):
             domain = reader.parse_problem(
                 str(RESOURCES_PATH / f"settlers_snp_v{self.version}.pddl")
             )
-            # Every shipped instance asks for the same metric, so it belongs to
-            # the domain; Problem.clone() copies it into every instance. The
-            # weights of 1 are kept as the shipped files write them, so this is
-            # the same expression UP's reader builds from a shipped file.
-            # NOTE PDDLWriter leaves out a factor of 1 when it writes, so the
-            # written metric is just the sum - the same happens to a shipped
-            # file written back out.
             domain.add_quality_metric(
                 MinimizeExpressionOnFinalState(
                     Plus(
@@ -168,8 +152,6 @@ class SettlersSnpGenerator(Generator):
     ):
         if instance_parameters_space is None:
             instance_parameters_space = self.instance_parameter_space
-        # The reachable rows decide the universe, so a narrowed `index` range
-        # gives a smaller one.
         first, last = hyperparam_range(instance_parameters_space["index"])
         reachable = [
             entry for index, entry in IPC_INSTANCES.items() if first <= index <= last
@@ -188,8 +170,6 @@ class SettlersSnpGenerator(Generator):
                 place, level = args
                 res.append(GE(self._housing(self._place(place)), level))
             else:
-                # a building at a place, or a rail between two places: the
-                # table stores the predicate name as the domain spells it
                 predicate = self._domain.fluent(name)
                 res.append(predicate(*[self._place(p) for p in args]))
         return res
@@ -197,8 +177,6 @@ class SettlersSnpGenerator(Generator):
     def get_initial_state(self, params) -> dict[FNode, FNode]:
         self._check_params(params)
         row = self._row(params)
-        # Nothing has happened yet: every counter and every stock is 0, and
-        # nothing is built anywhere.
         res: dict[FNode, FNode] = {
             self._labour(): 0,
             self._resource_use(): 0,
@@ -211,17 +189,14 @@ class SettlersSnpGenerator(Generator):
             res[self._housing(place)] = 0
             for resource in self._resources:
                 res[self._available(resource, place)] = 0
-        # A vehicle starts out `potential`: it exists only as something a
-        # build action can turn into a cart, a train or a ship, which is also
-        # where it gets its position and its space.
+        # Every vehicle already exists as an object as new objects cannot be created
+        # it is marked as not built yet
         for i in range(row["n_vehicles"]):
             vehicle = self._vehicle(i)
             res[self._potential(vehicle)] = TRUE()
             res[self._space_in(vehicle)] = 0
             for resource in self._resources:
                 res[self._available(resource, vehicle)] = 0
-        # The table stores each connection once; the shipped files always
-        # state both directions, so both are emitted.
         for relation, edges in ((self._land, row["land"]), (self._sea, row["sea"])):
             for a, b in edges:
                 res[relation(self._place(a), self._place(b))] = TRUE()
@@ -229,5 +204,4 @@ class SettlersSnpGenerator(Generator):
         return res
 
     def check_instance_parameters(self, params: Configuration):
-        # Every index is a shipped IPC instance, rebuilt as it was shipped.
         return True
