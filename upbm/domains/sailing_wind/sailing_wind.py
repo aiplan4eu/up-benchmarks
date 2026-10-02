@@ -36,7 +36,7 @@ SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
 # The boat polar table: how fast the boat can go at each angle to the wind.
-# Every instance of the IPC set, in both variants, uses exactly these values.
+# All variants use exactly these values.
 # vmax_0 is 0 because a sail boat cannot sail straight into the wind.
 POLAR_TABLE = {
     0: Fraction("0"),
@@ -54,20 +54,10 @@ POLAR_TABLE = {
     180: Fraction("0.8"),
 }
 
-# How much of its previous speed the boat keeps when it changes heading, as a
-# percentage: a move sets v to `vmax_angle * (1 - r) + r * v`, and the `inertia`
-# instance parameter is `100 * r`. It is the sharpest difficulty dial in the
-# domain, because a boat that keeps 90% of its speed is much slower to slow
-# down and stopping next to the person is the hard part.
-#
-# The IPC set ships two tracks that differ in nothing else: every optimal
-# instance uses 0.5 and every satisficing one 0.9. Those two numbers are the
-# per-layout defaults, so the shipped sets come out of the defaults.
 MAX_INERTIA = 100
 VARIANT_DEFAULT_INERTIA = {
     "line": 50,
     "circle": 90,
-    # a middle of the road boat for freshly drawn instances
     "random": 50,
 }
 
@@ -75,11 +65,6 @@ VARIANT_DEFAULT_INERTIA = {
 # this close to the origin is already in reach of the boat where it starts.
 RESCUE_HALF_SIZE = 15
 
-# The boat always starts at the origin, stopped, pointing at 0 degrees.
-BOAT_START_X = Fraction(0)
-BOAT_START_Y = Fraction(0)
-BOAT_START_V = Fraction(0)
-BOAT_START_ANGLE = 0
 
 # --- "line" placement ------------------------------------------------------
 # The 20 instances of the optimal track put the single person on a straight
@@ -165,13 +150,6 @@ class SailingWindGenerator(Generator):
         mapping: dict[str, Any] = {}
         if self.variant not in VARIANT_DEFAULT_INERTIA:
             raise ValueError(f"invalid variant {self.variant}")
-
-        # --- shared by every variant ---
-        #
-        # The `r` fluent, as a whole percentage. It is an integer rather than a
-        # fraction because a ConfigSpace Float still raises TypeError in
-        # get_all_instances_configurations. The default is the value the
-        # shipped track using this layout has, so the defaults reproduce it.
         mapping["inertia"] = Integer(
             "inertia",
             (0, MAX_INERTIA),
@@ -179,27 +157,18 @@ class SailingWindGenerator(Generator):
         )
 
         if self.variant == "line":
+            # TODO change
             # step 0 to 19 reproduces the 20 instances of the optimal track
             mapping["step"] = Integer("step", (0, MAX_INT), default=0)
         elif self.variant == "circle":
             # People are placed by walking the points of the circle clockwise
             # from north: skip `skip` points, put a person there, then leave
-            # `gap` empty points before each next person. Every instance of
-            # the shipped set is one or two people placed this way, and the
-            # defaults are its first instance, one person due north.
+            # `gap` empty points before each next person.
             mapping["n_people"] = Integer("n_people", (1, MAX_INT), default=1)
             mapping["skip"] = Integer("skip", (0, len(CIRCLE_POSITIONS) - 1), default=0)
-            # at most 6: leaving 7 empty points would go all the way round and
-            # put the next person on the same point as the one before
             mapping["gap"] = Integer("gap", (0, len(CIRCLE_POSITIONS) - 2), default=0)
         else:
-            # People are drawn rather than placed, so where they go puts no
-            # limit on how many there can be.
             mapping["n_people"] = Integer("n_people", (1, MAX_INT), default=2)
-            # Everyone is drawn inside a circle of this radius around the boat.
-            # The lower bound is what guarantees at least one legal spot: a
-            # person must land outside the rescue box, and (max_distance, 0) is
-            # outside it as soon as max_distance is past RESCUE_HALF_SIZE.
             mapping["max_distance"] = Integer(
                 "max_distance", (RESCUE_HALF_SIZE + 1, MAX_INT), default=100
             )
@@ -217,10 +186,6 @@ class SailingWindGenerator(Generator):
     def _mk_domain(self):
         if self.version == 1:
             reader = PDDLReader()
-            # Both variants read the same file: the opt and sat domains of the
-            # IPC dataset are byte-identical. The instances carry no metric
-            # (the :metric line is commented out in every shipped file), so no
-            # quality metric is attached here either.
             return reader.parse_problem(
                 str(RESOURCES_PATH / f"sailing_wind_v{self.version}.pddl")
             )
@@ -332,11 +297,10 @@ class SailingWindGenerator(Generator):
         if instance_parameters_space is None:
             instance_parameters_space = self.instance_parameter_space
         if self.variant == "line":
+            # TODO
             # the ramp always carries a single person, wherever it stops
             n_persons = 1
         elif self.variant in ("circle", "random"):
-            # As many people as the space allows. That bound is MAX_INT on the
-            # default space, so pass one narrowed with get_reduced_instance_space.
             _, n_persons = hyperparam_range(instance_parameters_space["n_people"])
         else:
             raise ValueError(f"invalid variant {self.variant}")
@@ -346,7 +310,6 @@ class SailingWindGenerator(Generator):
 
     def get_goal(self, params) -> List[FNode]:
         self._check_params(params)
-        # the only thing ever asked for is that every person is picked up
         return [
             self._saved(self._get_object(f"p{i}", self._Person))
             for i in range(len(self._person_positions(params)))
@@ -358,17 +321,15 @@ class SailingWindGenerator(Generator):
         res: dict[FNode, FNode] = {}
         for angle, vmax in POLAR_TABLE.items():
             res[self._domain.fluent(f"vmax_{angle}")(boat)] = self._number(vmax)
-        res[self._x(boat)] = self._number(BOAT_START_X)
-        res[self._y(boat)] = self._number(BOAT_START_Y)
+        res[self._x(boat)] = self._number(Fraction(0))
+        res[self._y(boat)] = self._number(Fraction(0))
         res[self._r(boat)] = self._number(self._inertia(params))
-        res[self._v(boat)] = self._number(BOAT_START_V)
-        res[self._sailing_angle(boat)] = BOAT_START_ANGLE
+        res[self._v(boat)] = self._number(Fraction(0))
+        res[self._sailing_angle(boat)] = 0
         for i, (x, y) in enumerate(self._person_positions(params)):
             person = self._get_object(f"p{i}", self._Person)
             res[self._x(person)] = self._number(x)
             res[self._y(person)] = self._number(y)
-        # `saved` is left out on purpose: the domain declares it with a default
-        # of false, and the shipped instances do not list it either.
         return res
 
     def check_instance_parameters(self, params: Configuration):
