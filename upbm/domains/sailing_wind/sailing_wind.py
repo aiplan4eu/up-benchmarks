@@ -67,10 +67,11 @@ RESCUE_HALF_SIZE = 15
 
 
 # --- "line" placement ------------------------------------------------------
-# The 20 instances of the optimal track put the single person on a straight
-# diagonal ramp: problem_N has the person at (5 + 0.4 N, 15.5 + 0.4 N), for
-# N = 0..19. Both coordinates grow by the same amount, so the person drifts
-# away from the boat along a 45 degree line.
+# The 20 instances of the optimal track put a single person on a straight
+# diagonal ramp: position k of the ramp is (5 + 0.4 k, 15.5 + 0.4 k), and
+# problem_N has its person at position N, for N = 0..19. Both coordinates grow
+# by the same amount, so the ramp leads away from the boat along a 45 degree
+# line.
 LINE_FIRST_X = Fraction("5")
 LINE_FIRST_Y = Fraction("15.5")
 LINE_STEP = Fraction("0.4")
@@ -157,9 +158,11 @@ class SailingWindGenerator(Generator):
         )
 
         if self.variant == "line":
-            # TODO change
-            # step 0 to 19 reproduces the 20 instances of the optimal track
-            mapping["step"] = Integer("step", (0, MAX_INT), default=0)
+            # People are placed by walking the ramp outwards: skip `skip`
+            # positions, put a person there, then leave `gap` empty positions
+            mapping["n_people"] = Integer("n_people", (1, MAX_INT), default=1)
+            mapping["skip"] = Integer("skip", (0, MAX_INT), default=0)
+            mapping["gap"] = Integer("gap", (0, MAX_INT), default=0)
         elif self.variant == "circle":
             # People are placed by walking the points of the circle clockwise
             # from north: skip `skip` points, put a person there, then leave
@@ -222,8 +225,10 @@ class SailingWindGenerator(Generator):
     def _person_positions(self, params) -> List[Tuple[Fraction, Fraction]]:
         """Return the (x, y) position of every person of this instance."""
         if self.variant == "line":
-            offset = LINE_STEP * params["step"]
-            return [(LINE_FIRST_X + offset, LINE_FIRST_Y + offset)]
+            return [
+                (LINE_FIRST_X + LINE_STEP * k, LINE_FIRST_Y + LINE_STEP * k)
+                for k in self._walk(params)
+            ]
         elif self.variant == "circle":
             return self._circle_positions(params)
         elif self.variant == "random":
@@ -231,13 +236,23 @@ class SailingWindGenerator(Generator):
         raise ValueError(f"invalid variant {self.variant}")
 
     @staticmethod
+    def _walk(params) -> List[int]:
+        """The position index of every person, for the line and the circle.
+
+        The first person is `skip` positions in, and each next one `gap + 1`
+        positions after the one before.
+        """
+        return [
+            params["skip"] + i * (params["gap"] + 1) for i in range(params["n_people"])
+        ]
+
+    @staticmethod
     def _circle_positions(params) -> List[Tuple[Fraction, Fraction]]:
         """Place the people on the circle, walking it clockwise from north.
 
-        The first person waits `skip` points after north, and each next one
-        `gap + 1` points after the one before. For example `skip` 1 and `gap` 1
-        put two people at 45 and 315 degrees, which is problem_5 of the
-        satisficing track; eight people with `gap` 0 fill every point.
+        For example `skip` 1 and `gap` 1 put two people at 45 and 315 degrees,
+        which is problem_5 of the satisficing track; eight people with `gap` 0
+        fill every point.
 
         The walk keeps going round the circle, so people end up sharing a point
         once there are more of them than the walk visits: eight with `gap` 0,
@@ -245,10 +260,9 @@ class SailingWindGenerator(Generator):
         solvable, the boat simply saves everyone at that point from where it
         stops, just as when two drawn people land on the same spot in `random`.
         """
-        step = params["gap"] + 1
         res: List[Tuple[Fraction, Fraction]] = []
-        for i in range(params["n_people"]):
-            x, y = CIRCLE_POSITIONS[(params["skip"] + i * step) % len(CIRCLE_POSITIONS)]
+        for k in SailingWindGenerator._walk(params):
+            x, y = CIRCLE_POSITIONS[k % len(CIRCLE_POSITIONS)]
             res.append((Fraction(x), Fraction(y)))
         return res
 
@@ -296,14 +310,9 @@ class SailingWindGenerator(Generator):
     ):
         if instance_parameters_space is None:
             instance_parameters_space = self.instance_parameter_space
-        if self.variant == "line":
-            # TODO
-            # the ramp always carries a single person, wherever it stops
-            n_persons = 1
-        elif self.variant in ("circle", "random"):
-            _, n_persons = hyperparam_range(instance_parameters_space["n_people"])
-        else:
+        if self.variant not in VARIANT_DEFAULT_INERTIA:
             raise ValueError(f"invalid variant {self.variant}")
+        _, n_persons = hyperparam_range(instance_parameters_space["n_people"])
         return [self._get_object("b0", self._Boat)] + [
             self._get_object(f"p{i}", self._Person) for i in range(n_persons)
         ]
