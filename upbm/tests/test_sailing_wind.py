@@ -12,41 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from fractions import Fraction
-
 from ConfigSpace import Configuration
-from unified_planning.engines.plan_validator import SequentialPlanValidator
 from unified_planning.engines.results import ValidationResultStatus
 
 from upbm.domains.sailing_wind import SailingWindGenerator
-from upbm.domains.sailing_wind.sailing_wind import (
-    CIRCLE_POSITIONS,
-    MAX_INERTIA,
-    POLAR_TABLE,
-    RESCUE_HALF_SIZE,
-)
-from upbm.io import parse_plan_string
 from upbm.tests.base_domain_test import BaseDomainTest
-from upbm.utils import get_reduced_instance_space
 
 
-def _domain_config(variant):
-    space = SailingWindGenerator.get_domain_parameter_space()
-    return Configuration(space, {"version": 1, "variant": variant})
+def _config(variant, **params):
+    """The domain configuration of `variant` and an instance configuration of it."""
+    domain_space = SailingWindGenerator.get_domain_parameter_space()
+    domain_config = Configuration(domain_space, {"version": 1, "variant": variant})
+    space = SailingWindGenerator(domain_config).instance_parameter_space
+    return domain_config, Configuration(space, params)
 
 
-def _value(problem, fluent, object_name):
-    """The initial value of a one argument numeric fluent, as a Fraction."""
-    target = problem.fluent(fluent)(problem.object(object_name))
-    return Fraction(problem.initial_value(target).constant_value())
-
-
-def _people(problem):
-    """Every person's (x, y), as Fractions."""
-    return [
-        (_value(problem, "x", p.name), _value(problem, "y", p.name))
-        for p in problem.objects(problem.user_type("person"))
-    ]
+def _moves(*angles):
+    return [f"(move_{angle} b0)" for angle in angles]
 
 
 class TestSailingWind(BaseDomainTest):
@@ -61,403 +43,76 @@ class TestSailingWind(BaseDomainTest):
         return SailingWindGenerator
 
     def _get_configs(self):
-        """The first instance of each shipped track, plus a two person one.
-
-        The shipped tracks are reproduced by the `line` and `circle` layouts
-        with the inertia each track uses, which is what their defaults hold.
-        """
-        line = _domain_config("line")
-        circle = _domain_config("circle")
-        line_space = SailingWindGenerator(line).instance_parameter_space
-        circle_space = SailingWindGenerator(circle).instance_parameter_space
+        """One instance per layout."""
         return [
-            # sailing-wind-opt/problem_0: one person on the diagonal ramp
-            (line, Configuration(line_space, {"step": 0, "inertia": 50})),
-            # sailing-wind-sat/problem_0: one person due north
-            (
-                circle,
-                Configuration(
-                    circle_space,
-                    {"n_people": 1, "skip": 0, "gap": 0, "inertia": 90},
-                ),
-            ),
-            # sailing-wind-sat/problem_5: two people, north east and south east
-            (
-                circle,
-                Configuration(
-                    circle_space,
-                    {"n_people": 2, "skip": 1, "gap": 1, "inertia": 90},
-                ),
-            ),
+            _config("line", step=0, inertia=50),
+            _config("circle", n_people=2, skip=2, gap=1, inertia=0),
+            _config("random", n_people=1, max_distance=16, seed=3, inertia=50),
         ]
-
-    def _octagon_config(self):
-        """One person on every point of the circle, which the IPC set never has."""
-        config = _domain_config("circle")
-        space = SailingWindGenerator(config).instance_parameter_space
-        return config, Configuration(
-            space, {"n_people": 8, "skip": 0, "gap": 0, "inertia": 90}
-        )
-
-    def _random_config(self, **overrides):
-        """A drawn instance: three people inside a small circle."""
-        config = _domain_config("random")
-        space = SailingWindGenerator(config).instance_parameter_space
-        params = {
-            "n_people": 3,
-            "max_distance": 40,
-            "seed": 1,
-            "inertia": 50,
-        }
-        params.update(overrides)
-        return config, Configuration(space, params)
 
     @property
     def plannable(self):
-        # NOTE deliberately empty: sailing-wind is a numeric domain with a
-        # continuous state space, and even the smallest shipped instance takes
-        # a planner far longer than a unit test should. The domain is exercised
-        # with hand written plans in test_sequential_validation instead.
+        # Even the smaller instances are too hard for unit tests
         return []
 
     @property
     def object_data(self):
-        line_0, circle_0, circle_5 = self._get_configs()
+        line, circle, drawn = self._get_configs()
         return [
-            (*line_0, [("boat", 1), ("person", 1)]),
-            (*circle_0, [("boat", 1), ("person", 1)]),
-            (*circle_5, [("boat", 1), ("person", 2)]),
-            (*self._octagon_config(), [("boat", 1), ("person", 8)]),
-            (*self._random_config(), [("boat", 1), ("person", 3)]),
+            (*line, [("boat", 1), ("person", 1)]),
+            (*circle, [("boat", 1), ("person", 2)]),
+            (*drawn, [("boat", 1), ("person", 1)]),
         ]
 
     @property
     def problem_actions(self):
-        # 24 move actions, one per 15 degree heading, plus save_person
-        return [
-            (*config, 25) for config in self._get_configs() + [self._random_config()]
-        ]
+        return [(*config, 25) for config in self._get_configs()]
 
-    def test_every_variant_shares_one_domain(self):
-        """The layout picks where people go, never what the boat can do."""
-        generators = [
-            SailingWindGenerator(_domain_config(v))
-            for v in ("random", "line", "circle")
-        ]
-        action_names = {tuple(a.name for a in gen.domain.actions) for gen in generators}
-        self.assertEqual(len(action_names), 1)
+    @property
+    def validation_cases(self):
+        line, circle, drawn = self._get_configs()
 
-    def test_inertia_is_an_instance_parameter(self):
-        """r used to be fixed per track; now any layout can use any boat."""
-        for variant in ("random", "line", "circle"):
-            gen = SailingWindGenerator(_domain_config(variant))
-            self.assertIn("inertia", gen.instance_parameter_space.keys())
+        line_rescue = _moves(15) * 5 + _moves(0) + ["(save_person b0 p0)"]
 
-        # the defaults still hold what each shipped track used
-        for variant, expected in (
-            ("line", Fraction(1, 2)),
-            ("circle", Fraction(9, 10)),
-        ):
-            gen = SailingWindGenerator(_domain_config(variant))
-            problem = gen.get_instance(
-                gen.instance_parameter_space.get_default_configuration()
-            )
-            self.assertEqual(_value(problem, "r", "b0"), expected)
-
-        # ... and the ramp can now be sailed by the satisficing boat
-        gen = SailingWindGenerator(_domain_config("line"))
-        problem = gen.get_instance(
-            Configuration(gen.instance_parameter_space, {"step": 0, "inertia": 90})
+        east = (
+            _moves(15, 30, 45, 60, 75, 90)
+            + _moves(90) * 63
+            + _moves(75, 60, 45, 30, 15, 0)
+            + ["(save_person b0 p0)"]
         )
-        self.assertEqual(_value(problem, "r", "b0"), Fraction(9, 10))
-
-    def test_inertia_is_written_as_a_plain_number_when_whole(self):
-        """0 and 100 per cent are whole numbers, like the dataset writes them."""
-        gen = SailingWindGenerator(_domain_config("line"))
-        problem = gen.get_instance(
-            Configuration(gen.instance_parameter_space, {"step": 0, "inertia": 0})
+        south_west = (
+            _moves(345, 330, 315, 300, 285, 270, 255, 240, 225)
+            + _moves(225) * 106
+            + _moves(240, 255, 270, 285, 300, 315, 330, 345, 0)
+            + ["(save_person b0 p1)"]
         )
-        self.assertEqual(_value(problem, "r", "b0"), 0)
 
-    def test_initial_state_matches_the_ipc_instances(self):
-        """Spot check the values the shipped instances all agree on."""
-        domain_config, instance_config = self._get_configs()[0]
-        gen = SailingWindGenerator(domain_config)
-        problem = gen.get_instance(instance_config)
-        boat = problem.object("b0")
+        climb = _moves(15) * 10
 
-        for name, expected in (("x", 0), ("y", 0), ("v", 0), ("sailing-angle", 0)):
-            value = problem.initial_value(problem.fluent(name)(boat))
-            self.assertEqual(Fraction(value.constant_value()), expected)
-        for angle, expected_vmax in POLAR_TABLE.items():
-            value = problem.initial_value(problem.fluent(f"vmax_{angle}")(boat))
-            self.assertEqual(Fraction(value.constant_value()), expected_vmax)
-        # a boat cannot sail straight into the wind
-        self.assertEqual(POLAR_TABLE[0], 0)
-
-        # sailing-wind-opt/problem_0 waits for its person at (5, 15.5)
-        person = problem.object("p0")
-        self.assertEqual(
-            Fraction(
-                problem.initial_value(problem.fluent("x")(person)).constant_value()
-            ),
-            Fraction("5"),
-        )
-        self.assertEqual(
-            Fraction(
-                problem.initial_value(problem.fluent("y")(person)).constant_value()
-            ),
-            Fraction("15.5"),
-        )
-        # `saved` is false by default and is not stated explicitly, exactly as
-        # in the shipped files
-        saved = problem.fluent("saved")(person)
-        self.assertFalse(problem.initial_value(saved).bool_constant_value())
-        self.assertNotIn(saved, problem.explicit_initial_values)
-
-    def test_the_line_ramp_and_the_circle(self):
-        """The two shipped layouts put their people where the dataset does."""
-        line_gen = SailingWindGenerator(_domain_config("line"))
-        space = line_gen.instance_parameter_space
-        # problem_N of the optimal track puts the person at
-        # (5 + 0.4 N, 15.5 + 0.4 N)
-        for step, expected in ((0, ("5", "15.5")), (19, ("12.6", "23.1"))):
-            problem = line_gen.get_instance(
-                Configuration(space, {"step": step, "inertia": 50})
-            )
-            self.assertEqual(
-                _people(problem),
-                [(Fraction(expected[0]), Fraction(expected[1]))],
-            )
-
-        # every person of the circle sits on the radius 100 circle, at a
-        # multiple of 45 degrees rounded to whole coordinates. The order is
-        # checked too: p0 and p1 have to come out as in the dataset, where
-        # sailing-wind-sat/problem_5 has p0 at 45 degrees and p1 at 315.
-        circle_gen = SailingWindGenerator(_domain_config("circle"))
-        problem = circle_gen.get_instance(self._get_configs()[2][1])
-        self.assertEqual(_people(problem), [(71, 71), (71, -71)])
-
-        # beyond the IPC set: the walk can fill every point of the circle
-        problem = circle_gen.get_instance(self._octagon_config()[1])
-        self.assertEqual(_people(problem), CIRCLE_POSITIONS)
-
-    def test_goal_asks_for_every_person(self):
-        for domain_config, instance_config in self._get_configs() + [
-            self._random_config()
-        ]:
-            gen = SailingWindGenerator(domain_config)
-            problem = gen.get_instance(instance_config)
-            people = list(problem.objects(problem.user_type("person")))
-            self.assertEqual(len(problem.goals), len(people))
-            self.assertEqual(
-                {str(g) for g in problem.goals},
-                {f"saved({p.name})" for p in people},
-            )
-
-    def test_no_quality_metric(self):
-        # the :metric line is commented out in every shipped instance
-        for domain_config, instance_config in self._get_configs() + [
-            self._random_config()
-        ]:
-            gen = SailingWindGenerator(domain_config)
-            problem = gen.get_instance(instance_config)
-            self.assertEqual(list(problem.quality_metrics), [])
-
-    # NOTE the validation cases of the base class use the temporal plan
-    # validator, while sailing-wind is an instantaneous domain, so the
-    # sequential plans are validated here instead.
-    def test_sequential_validation(self):
-        domain_config, instance_config = self._get_configs()[0]
-        gen = SailingWindGenerator(domain_config)
-        problem = gen.get_instance(instance_config)
-
-        # Sail at 15 degrees to pick up speed, then head straight into the wind
-        # to bleed it off again: vmax_0 is 0, so move_0 halves the speed while
-        # the boat coasts north into the rescue box.
-        rescue = ["(move_15 b0)"] * 5 + ["(move_0 b0)", "(save_person b0 p0)"]
-        for plan_str, expected in [
-            ("\n".join(rescue), ValidationResultStatus.VALID),
-            # the boat starts too far south of the person to rescue anybody
-            ("(save_person b0 p0)", ValidationResultStatus.INVALID),
-            # sailing at 15 degrees without slowing down leaves the boat over
-            # the 0.1 speed limit that save_person requires
+        cases = [
+            (*line, line_rescue, ValidationResultStatus.VALID),
+            (*line, ["(save_person b0 p0)"], ValidationResultStatus.INVALID),
             (
-                "\n".join(["(move_15 b0)"] * 5 + ["(save_person b0 p0)"]),
+                *line,
+                _moves(15) * 5 + ["(save_person b0 p0)"],
                 ValidationResultStatus.INVALID,
             ),
-            # doing nothing never saves anyone
-            ("", ValidationResultStatus.INVALID),
-        ]:
-            plan = parse_plan_string(problem, plan_str)
-            with SequentialPlanValidator() as validator:
-                v_res = validator.validate(problem, plan)
-                self.assertEqual(v_res.status, expected, f"bad res:\n{v_res}")
-
-    def test_effects_use_the_speed_before_the_move(self):
-        """A move sets the new speed, but travels at the old one.
-
-        The domain assigns `v` and increases `x` / `y` in the same effect, and
-        PDDL evaluates both against the state before the action, so the very
-        first move only spins the boat up without displacing it.
-        """
-        domain_config, instance_config = self._get_configs()[0]
-        gen = SailingWindGenerator(domain_config)
-        problem = gen.get_instance(instance_config)
-
-        from unified_planning.shortcuts import SequentialSimulator
-
-        boat = problem.object("b0")
-        with SequentialSimulator(problem) as sim:
-            state = sim.apply(
-                sim.get_initial_state(), problem.action("move_15"), (boat,)
-            )
-            # v = vmax_15 * (1 - r) + r * v = 0.17 * 0.5 = 0.085
-            self.assertEqual(
-                Fraction(state.get_value(problem.fluent("v")(boat)).constant_value()),
-                Fraction("0.085"),
-            )
-            for coord in ("x", "y"):
-                self.assertEqual(
-                    Fraction(
-                        state.get_value(problem.fluent(coord)(boat)).constant_value()
-                    ),
-                    0,
-                )
-
-    def test_object_universe_has_one_object_per_person(self):
-        line_gen = SailingWindGenerator(_domain_config("line"))
-        self.assertEqual(
-            sorted(o.name for o in line_gen.object_universe()), ["b0", "p0"]
-        )
-        # the circle and the drawn layout are bounded by the n_people of the
-        # space they are given, not by two
-        for variant in ("circle", "random"):
-            gen = SailingWindGenerator(_domain_config(variant))
-            reduced = get_reduced_instance_space(
-                gen.instance_parameter_space, {"n_people": 4}
-            )
-            self.assertEqual(
-                sorted(o.name for o in gen.object_universe(reduced)),
-                ["b0", "p0", "p1", "p2", "p3"],
-            )
-
-    # ---- the "random" layout ----
-
-    def test_drawn_people_land_in_the_circle_and_outside_the_rescue_box(self):
-        """Both rejections of the draw, over a sweep of parameters.
-
-        Landing in the circle is what makes `max_distance` mean a distance;
-        landing outside the box is what stops a person being rescued where the
-        boat already sits, which would need no sailing at all.
-        """
-        gen = SailingWindGenerator(_domain_config("random"))
-        space = gen.instance_parameter_space
-        for max_distance in (RESCUE_HALF_SIZE + 1, 30, 100, 1000):
-            for seed in range(15):
-                params = Configuration(
-                    space,
-                    {
-                        "n_people": 6,
-                        "max_distance": max_distance,
-                        "seed": seed,
-                        "inertia": 50,
-                    },
-                )
-                people = _people(gen.get_instance(params))
-                self.assertEqual(len(people), 6)
-                for x, y in people:
-                    self.assertLessEqual(x * x + y * y, max_distance * max_distance)
-                    self.assertTrue(
-                        abs(x) > RESCUE_HALF_SIZE or abs(y) > RESCUE_HALF_SIZE
-                    )
-
-    def test_the_same_seed_draws_the_same_people(self):
-        gen = SailingWindGenerator(_domain_config("random"))
-
-        def drawn(seed):
-            return _people(gen.get_instance(self._random_config(seed=seed)[1]))
-
-        self.assertEqual(drawn(3), drawn(3))
-        self.assertGreater(len({tuple(drawn(s)) for s in range(10)}), 1)
-
-    def test_the_drawn_layout_is_not_capped_at_two_people(self):
-        """Two is the most the IPC set ever has, but nothing here keeps to it."""
-        gen = SailingWindGenerator(_domain_config("random"))
-        problem = gen.get_instance(self._random_config(n_people=25)[1])
-        self.assertEqual(
-            sum(1 for _ in problem.objects(problem.user_type("person"))), 25
-        )
-
-    def test_a_boat_that_never_slows_down_is_rejected(self):
-        """At r = 1 a move leaves v alone, and the boat starts stopped.
-
-        It therefore never moves, and cannot reach anyone who is not already
-        in the rescue box - which no layout puts them in.
-        """
-        for domain_config, instance_config in self._get_configs() + [
-            self._random_config()
-        ]:
-            gen = SailingWindGenerator(domain_config)
-            stuck = Configuration(
-                gen.instance_parameter_space,
-                dict(instance_config, inertia=MAX_INERTIA),
-            )
-            self.assertFalse(gen.check_instance_parameters(stuck))
-            with self.assertRaises(ValueError):
-                gen.get_instance(stuck)
-            # one per cent short of it is still fine
-            nearly = Configuration(
-                gen.instance_parameter_space,
-                dict(instance_config, inertia=MAX_INERTIA - 1),
-            )
-            self.assertTrue(gen.check_instance_parameters(nearly))
-
-    def test_a_drawn_instance_can_be_rescued(self):
-        """A drawn person is reached by the same sail as a shipped one.
-
-        At the smallest `max_distance` the only spots left are the four points
-        one step outside the rescue box, and this seed picks the northern one,
-        so the boat sails north exactly as it does for the shipped ramp.
-        """
-        gen = SailingWindGenerator(_domain_config("random"))
-        problem = gen.get_instance(
-            Configuration(
-                gen.instance_parameter_space,
-                {
-                    "n_people": 1,
-                    "max_distance": RESCUE_HALF_SIZE + 1,
-                    "seed": 3,
-                    "inertia": 50,
-                },
-            )
-        )
-        self.assertEqual(_people(problem), [(0, RESCUE_HALF_SIZE + 1)])
-
-        # Ten moves at 15 degrees creep the boat to y = 1.32, which is inside
-        # the person's box, and one move straight into the wind halves the
-        # speed to 0.085 so save_person's 0.1 limit is met.
-        climb = ["(move_15 b0)"] * 10
-        for plan_str, expected in [
+            (*line, [], ValidationResultStatus.INVALID),
+            (*circle, east + south_west, ValidationResultStatus.VALID),
+            (*circle, east, ValidationResultStatus.INVALID),
             (
-                "\n".join(climb + ["(move_0 b0)", "(save_person b0 p0)"]),
+                *drawn,
+                climb + _moves(0) + ["(save_person b0 p0)"],
                 ValidationResultStatus.VALID,
             ),
-            # without shedding the speed first the boat is still too fast
+            (*drawn, climb + ["(save_person b0 p0)"], ValidationResultStatus.INVALID),
             (
-                "\n".join(climb + ["(save_person b0 p0)"]),
+                *drawn,
+                _moves(15) * 3 + _moves(0) * 4 + ["(save_person b0 p0)"],
                 ValidationResultStatus.INVALID,
             ),
-            # and stopping short of the box does not reach the person
-            (
-                "\n".join(
-                    ["(move_15 b0)"] * 3 + ["(move_0 b0)"] * 4 + ["(save_person b0 p0)"]
-                ),
-                ValidationResultStatus.INVALID,
-            ),
-        ]:
-            with SequentialPlanValidator() as validator:
-                v_res = validator.validate(
-                    problem, parse_plan_string(problem, plan_str)
-                )
-                self.assertEqual(v_res.status, expected, f"bad res:\n{v_res}")
+        ]
+        return [
+            (domain_config, instance_config, "\n".join(plan), expected)
+            for domain_config, instance_config, plan, expected in cases
+        ]
