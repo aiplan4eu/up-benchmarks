@@ -20,8 +20,8 @@ from unified_planning.engines.results import ValidationResultStatus
 
 from upbm.domains.sailing_wind import SailingWindGenerator
 from upbm.domains.sailing_wind.sailing_wind import (
+    CIRCLE_POSITIONS,
     MAX_INERTIA,
-    NO_PERSON,
     POLAR_TABLE,
     RESCUE_HALF_SIZE,
 )
@@ -78,7 +78,7 @@ class TestSailingWind(BaseDomainTest):
                 circle,
                 Configuration(
                     circle_space,
-                    {"direction_0": 2, "direction_1": NO_PERSON, "inertia": 90},
+                    {"n_people": 1, "skip": 0, "gap": 0, "inertia": 90},
                 ),
             ),
             # sailing-wind-sat/problem_5: two people, north east and south east
@@ -86,10 +86,18 @@ class TestSailingWind(BaseDomainTest):
                 circle,
                 Configuration(
                     circle_space,
-                    {"direction_0": 1, "direction_1": 7, "inertia": 90},
+                    {"n_people": 2, "skip": 1, "gap": 1, "inertia": 90},
                 ),
             ),
         ]
+
+    def _octagon_config(self):
+        """One person on every point of the circle, which the IPC set never has."""
+        config = _domain_config("circle")
+        space = SailingWindGenerator(config).instance_parameter_space
+        return config, Configuration(
+            space, {"n_people": 8, "skip": 0, "gap": 0, "inertia": 90}
+        )
 
     def _random_config(self, **overrides):
         """A drawn instance: three people inside a small circle."""
@@ -119,6 +127,7 @@ class TestSailingWind(BaseDomainTest):
             (*line_0, [("boat", 1), ("person", 1)]),
             (*circle_0, [("boat", 1), ("person", 1)]),
             (*circle_5, [("boat", 1), ("person", 2)]),
+            (*self._octagon_config(), [("boat", 1), ("person", 8)]),
             (*self._random_config(), [("boat", 1), ("person", 3)]),
         ]
 
@@ -221,14 +230,17 @@ class TestSailingWind(BaseDomainTest):
                 [(Fraction(expected[0]), Fraction(expected[1]))],
             )
 
-        circle_gen = SailingWindGenerator(_domain_config("circle"))
-        space = circle_gen.instance_parameter_space
         # every person of the circle sits on the radius 100 circle, at a
-        # multiple of 45 degrees rounded to whole coordinates
-        problem = circle_gen.get_instance(
-            Configuration(space, {"direction_0": 1, "direction_1": 7, "inertia": 90})
-        )
-        self.assertEqual(set(_people(problem)), {(71, 71), (71, -71)})
+        # multiple of 45 degrees rounded to whole coordinates. The order is
+        # checked too: p0 and p1 have to come out as in the dataset, where
+        # sailing-wind-sat/problem_5 has p0 at 45 degrees and p1 at 315.
+        circle_gen = SailingWindGenerator(_domain_config("circle"))
+        problem = circle_gen.get_instance(self._get_configs()[2][1])
+        self.assertEqual(_people(problem), [(71, 71), (71, -71)])
+
+        # beyond the IPC set: the walk can fill every point of the circle
+        problem = circle_gen.get_instance(self._octagon_config()[1])
+        self.assertEqual(_people(problem), CIRCLE_POSITIONS)
 
     def test_goal_asks_for_every_person(self):
         for domain_config, instance_config in self._get_configs() + [
@@ -313,23 +325,22 @@ class TestSailingWind(BaseDomainTest):
                     0,
                 )
 
-    def test_object_universe_covers_both_people(self):
-        circle_gen = SailingWindGenerator(_domain_config("circle"))
-        universe = circle_gen.object_universe()
-        self.assertEqual(sorted(o.name for o in universe), ["b0", "p0", "p1"])
+    def test_object_universe_has_one_object_per_person(self):
         line_gen = SailingWindGenerator(_domain_config("line"))
         self.assertEqual(
             sorted(o.name for o in line_gen.object_universe()), ["b0", "p0"]
         )
-        # the drawn layout is bounded by the space it is given, not by two
-        gen = SailingWindGenerator(_domain_config("random"))
-        reduced = get_reduced_instance_space(
-            gen.instance_parameter_space, {"n_people": 4}
-        )
-        self.assertEqual(
-            sorted(o.name for o in gen.object_universe(reduced)),
-            ["b0", "p0", "p1", "p2", "p3"],
-        )
+        # the circle and the drawn layout are bounded by the n_people of the
+        # space they are given, not by two
+        for variant in ("circle", "random"):
+            gen = SailingWindGenerator(_domain_config(variant))
+            reduced = get_reduced_instance_space(
+                gen.instance_parameter_space, {"n_people": 4}
+            )
+            self.assertEqual(
+                sorted(o.name for o in gen.object_universe(reduced)),
+                ["b0", "p0", "p1", "p2", "p3"],
+            )
 
     # ---- the "random" layout ----
 
@@ -371,7 +382,7 @@ class TestSailingWind(BaseDomainTest):
         self.assertGreater(len({tuple(drawn(s)) for s in range(10)}), 1)
 
     def test_the_drawn_layout_is_not_capped_at_two_people(self):
-        """The two direction slots of the circle are what set that cap."""
+        """Two is the most the IPC set ever has, but nothing here keeps to it."""
         gen = SailingWindGenerator(_domain_config("random"))
         problem = gen.get_instance(self._random_config(n_people=25)[1])
         self.assertEqual(

@@ -94,23 +94,24 @@ LINE_STEP = Fraction("0.4")
 # The satisficing track puts every person on a circle of radius 100 around the
 # boat, at a multiple of 45 degrees, with the coordinates rounded to whole
 # numbers (100 * cos(45 degrees) is 70.71, which the dataset writes as 71).
-# These eight points are the only person positions that track ever uses. A
-# person is picked by its index in this list, so direction i sits at 45 * i
-# degrees.
+# These eight points are the only person positions that track ever uses.
+#
+# The points are listed clockwise starting from north, because that is the
+# order the shipped set walks them in: its single person instances go north,
+# 45, 0, 315, 270 degrees, and in every two person instance the second person
+# is further clockwise from north than the first. People are placed by walking
+# this list (see `_circle_positions`), so the order here is what makes p0 and
+# p1 come out as they do in the dataset.
 CIRCLE_POSITIONS = [
-    (100, 0),  # 0 degrees
+    (0, 100),  # 90 degrees, north
     (71, 71),  # 45
-    (0, 100),  # 90
-    (-71, 71),  # 135
-    (-100, 0),  # 180
-    (-71, -71),  # 225
-    (0, -100),  # 270
+    (100, 0),  # 0, east
     (71, -71),  # 315
+    (0, -100),  # 270, south
+    (-71, -71),  # 225
+    (-100, 0),  # 180, west
+    (-71, 71),  # 135
 ]
-# The second person is optional: the shipped set has instances with one person
-# and instances with two, and never more than two. This is the direction value
-# that means "there is no second person".
-NO_PERSON = -1
 
 
 class SailingWindGenerator(Generator):
@@ -181,20 +182,19 @@ class SailingWindGenerator(Generator):
             # step 0 to 19 reproduces the 20 instances of the optimal track
             mapping["step"] = Integer("step", (0, MAX_INT), default=0)
         elif self.variant == "circle":
-            # One parameter per person, holding the index into
-            # CIRCLE_POSITIONS of the point where that person waits. The
-            # second one may be NO_PERSON, which reproduces the single person
-            # instances.
-            mapping["direction_0"] = Integer(
-                "direction_0", (0, len(CIRCLE_POSITIONS) - 1), default=2
-            )
-            mapping["direction_1"] = Integer(
-                "direction_1", (NO_PERSON, len(CIRCLE_POSITIONS) - 1), default=NO_PERSON
-            )
+            # People are placed by walking the points of the circle clockwise
+            # from north: skip `skip` points, put a person there, then leave
+            # `gap` empty points before each next person. Every instance of
+            # the shipped set is one or two people placed this way, and the
+            # defaults are its first instance, one person due north.
+            mapping["n_people"] = Integer("n_people", (1, MAX_INT), default=1)
+            mapping["skip"] = Integer("skip", (0, len(CIRCLE_POSITIONS) - 1), default=0)
+            # at most 6: leaving 7 empty points would go all the way round and
+            # put the next person on the same point as the one before
+            mapping["gap"] = Integer("gap", (0, len(CIRCLE_POSITIONS) - 2), default=0)
         else:
-            # People are drawn rather than placed, so the count is a real
-            # parameter instead of two slots and a sentinel, and nothing caps
-            # it at two.
+            # People are drawn rather than placed, so where they go puts no
+            # limit on how many there can be.
             mapping["n_people"] = Integer("n_people", (1, MAX_INT), default=2)
             # Everyone is drawn inside a circle of this radius around the boat.
             # The lower bound is what guarantees at least one legal spot: a
@@ -260,17 +260,32 @@ class SailingWindGenerator(Generator):
             offset = LINE_STEP * params["step"]
             return [(LINE_FIRST_X + offset, LINE_FIRST_Y + offset)]
         elif self.variant == "circle":
-            res = []
-            for key in ("direction_0", "direction_1"):
-                direction = params[key]
-                if direction == NO_PERSON:
-                    continue
-                x, y = CIRCLE_POSITIONS[direction]
-                res.append((Fraction(x), Fraction(y)))
-            return res
+            return self._circle_positions(params)
         elif self.variant == "random":
             return self._drawn_positions(params)
         raise ValueError(f"invalid variant {self.variant}")
+
+    @staticmethod
+    def _circle_positions(params) -> List[Tuple[Fraction, Fraction]]:
+        """Place the people on the circle, walking it clockwise from north.
+
+        The first person waits `skip` points after north, and each next one
+        `gap + 1` points after the one before. For example `skip` 1 and `gap` 1
+        put two people at 45 and 315 degrees, which is problem_5 of the
+        satisficing track; eight people with `gap` 0 fill every point.
+
+        The walk keeps going round the circle, so people end up sharing a point
+        once there are more of them than the walk visits: eight with `gap` 0,
+        four with `gap` 1 or 5, two with `gap` 3. Such an instance is still
+        solvable, the boat simply saves everyone at that point from where it
+        stops, just as when two drawn people land on the same spot in `random`.
+        """
+        step = params["gap"] + 1
+        res: List[Tuple[Fraction, Fraction]] = []
+        for i in range(params["n_people"]):
+            x, y = CIRCLE_POSITIONS[(params["skip"] + i * step) % len(CIRCLE_POSITIONS)]
+            res.append((Fraction(x), Fraction(y)))
+        return res
 
     @staticmethod
     def _drawn_positions(params) -> List[Tuple[Fraction, Fraction]]:
@@ -319,11 +334,7 @@ class SailingWindGenerator(Generator):
         if self.variant == "line":
             # the ramp always carries a single person, wherever it stops
             n_persons = 1
-        elif self.variant == "circle":
-            # a second person only exists when direction_1 can be a real point
-            _, second_upper = hyperparam_range(instance_parameters_space["direction_1"])
-            n_persons = 2 if second_upper > NO_PERSON else 1
-        elif self.variant == "random":
+        elif self.variant in ("circle", "random"):
             # As many people as the space allows. That bound is MAX_INT on the
             # default space, so pass one narrowed with get_reduced_instance_space.
             _, n_persons = hyperparam_range(instance_parameters_space["n_people"])
