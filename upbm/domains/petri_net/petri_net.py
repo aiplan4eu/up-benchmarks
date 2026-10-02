@@ -36,10 +36,7 @@ from .resources.ipc_petri_net_data import IPC_INSTANCES
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
-# Every place starts empty and no action has been paid for yet, in all 20
-# shipped instances.
 INITIAL_TOKENS = 0
-INITIAL_COST = 0
 
 # The place the tokens have to end up in. All three nets call it "g".
 GOAL_PLACE = "g"
@@ -59,12 +56,6 @@ class GoalStyle(NamedTuple):
     # "sum_ge": they hold at least `amount` tokens in total
     kind: str
     places: Tuple[str, ...]
-    # Whether the shipped file writes the amount on the left of the operator,
-    # as in "(= 2 (value p5))" rather than "(= (value a4) 2)". Purely how the
-    # condition is spelled - the two say the same thing - but it is kept so
-    # that a generated instance matches the shipped one exactly.
-    amount_first: bool
-    # Places that must additionally be empty, always written "(= (value p) 0)".
     empty: Tuple[str, ...] = ()
 
 
@@ -117,9 +108,9 @@ def _recycling_net() -> Net:
         facts=facts,
         goal_styles=[
             # prob06: each branch hub holds the same number of tokens
-            GoalStyle("each", ("a4", "b4", "c4"), amount_first=False),
+            GoalStyle("each", ("a4", "b4", "c4")),
             # prob08: the branch tips hold at least that many between them
-            GoalStyle("sum_ge", ("a7", "b7", "c7"), amount_first=True),
+            GoalStyle("sum_ge", ("a7", "b7", "c7")),
         ],
     )
 
@@ -161,7 +152,6 @@ def _twin_line_net() -> Net:
             GoalStyle(
                 "each",
                 ("p5", "q5"),
-                amount_first=True,
                 empty=("p2", "p3", "p4", "q2", "q3", "q4"),
             ),
         ],
@@ -198,15 +188,14 @@ def _funnel_net() -> Net:
         facts=facts,
         goal_styles=[
             # prob09: that many tokens left across the three branch tips
-            GoalStyle("sum_eq", ("a3", "b3", "c3"), amount_first=True),
+            GoalStyle("sum_eq", ("a3", "b3", "c3")),
             # prob10: each branch tip holds exactly that many
-            GoalStyle("each", ("a3", "b3", "c3"), amount_first=False),
+            GoalStyle("each", ("a3", "b3", "c3")),
         ],
     )
 
 
-# The three nets of the IPC set, named by the `net` field of each
-# IPC_INSTANCES entry. The 20 shipped instances are these three nets under five
+# The IPC instances are these three nets under five
 # goal shapes: prob06 and prob08 share net 0, prob07 is net 1, prob09 and
 # prob10 share net 2.
 NETS = [_recycling_net(), _twin_line_net(), _funnel_net()]
@@ -217,7 +206,6 @@ class PetriNetGenerator(Generator):
     def get_domain_parameter_space():
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        # only the IPC variant exists for now, more can be added here later
         mapping["variant"] = Categorical(
             "variant",
             ["ipc"],
@@ -237,7 +225,6 @@ class PetriNetGenerator(Generator):
         self._Place = self._domain.user_type("place")
         self._value = self._domain.fluent("value")
         self._cost = self._domain.fluent("cost")
-        # the seven structural predicates, by the name the net data uses
         self._predicates = {
             name: self._domain.fluent(name)
             for name in (
@@ -260,8 +247,6 @@ class PetriNetGenerator(Generator):
         mapping: dict[str, Any] = {}
         if self.variant != "ipc":
             raise ValueError(f"invalid variant {self.variant}")
-        # Which shipped instance to build, by the position of its file in name
-        # order (prob06-1 is 1, prob10-4 is 20); see IPC_INSTANCES.
         indices = sorted(IPC_INSTANCES)
         mapping["index"] = Integer(
             "index", (indices[0], indices[-1]), default=indices[0]
@@ -282,9 +267,6 @@ class PetriNetGenerator(Generator):
             domain = reader.parse_problem(
                 str(RESOURCES_PATH / f"petri_net_v{self.version}.pddl")
             )
-            # Every action costs 1, and every shipped instance minimises
-            # (cost), so the metric belongs to the domain rather than to a
-            # single instance. Problem.clone() copies it into every instance.
             domain.add_quality_metric(
                 MinimizeExpressionOnFinalState(domain.fluent("cost")())
             )
@@ -331,7 +313,6 @@ class PetriNetGenerator(Generator):
         nets = sorted(
             {IPC_INSTANCES[i]["net"] for i in IPC_INSTANCES if first <= i <= last}
         )
-        # a place name can be shared by two nets, so keep the first occurrence
         names: List[str] = []
         for i in nets:
             names += [p for p in NETS[i].places if p not in names]
@@ -343,18 +324,12 @@ class PetriNetGenerator(Generator):
         style = self._goal_style(params)
         amount = entry["goal_amount"]
         places = [self._value(self._place(p)) for p in style.places]
-        # every shipped goal starts by asking for tokens in the goal place
         goals = [Equals(entry["goal_tokens"], self._value(self._place(GOAL_PLACE)))]
         if style.kind == "each":
-            goals += [
-                Equals(amount, p) if style.amount_first else Equals(p, amount)
-                for p in places
-            ]
+            goals += [Equals(p, amount) for p in places]
         elif style.kind == "sum_eq":
             total = Plus(*places)
-            goals.append(
-                Equals(amount, total) if style.amount_first else Equals(total, amount)
-            )
+            goals.append(Equals(total, amount))
         elif style.kind == "sum_ge":
             total = Plus(*places)
             goals.append(LE(amount, total))
@@ -374,9 +349,8 @@ class PetriNetGenerator(Generator):
             res[self._predicates[predicate](*[self._place(a) for a in args])] = TRUE()
         for place in net.places:
             res[self._value(self._place(place))] = INITIAL_TOKENS
-        res[self._cost()] = INITIAL_COST
+        res[self._cost()] = 0
         return res
 
     def check_instance_parameters(self, params: Configuration):
-        # every index is one of the 20 shipped instances, which are known-good
         return True
