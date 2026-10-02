@@ -58,8 +58,6 @@ class TestPetriNet(BaseDomainTest):
 
     @property
     def plannable(self):
-        # NOTE deliberately empty: ENHSP, the planner picked here, times out
-        # on even the smallest shipped instances.
         return []
 
     @property
@@ -73,18 +71,12 @@ class TestPetriNet(BaseDomainTest):
 
     @property
     def problem_actions(self):
-        # create, increment and the six fire-* actions; they are lifted, so
-        # the count does not depend on the net
         return [(*config, 8) for config in self._get_configs()]
 
     @property
     def validation_cases(self):
         prob10_4 = self._get_configs()[2]
 
-        # prob10-4 asks for 2 tokens in g and every branch tip empty. One token
-        # in g costs four: g is fed by `(two-to-one d1 d2 g)`, d1 takes one
-        # token from a branch tip and d2 takes one from each of the three tips
-        # at once.
         one_token = (
             _to_tip("a")
             + _to_tip("a")
@@ -98,9 +90,7 @@ class TestPetriNet(BaseDomainTest):
         )
         cases = [
             (*prob10_4, one_token * 2, ValidationResultStatus.VALID),
-            # one token short of the goal
             (*prob10_4, one_token, ValidationResultStatus.INVALID),
-            # a token left at a branch tip, which has to end up empty
             (*prob10_4, one_token * 2 + _to_tip("a"), ValidationResultStatus.INVALID),
         ]
         return [
