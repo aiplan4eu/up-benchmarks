@@ -4,8 +4,10 @@
 # The boat always starts stopped at the origin and keeps half its speed when it
 # turns. That is the `inertia` parameter, given as a whole percentage, so the
 # r = 0.5 of this track is written here as 50; every instance of the track uses
-# the same value. The single person to rescue sits on a diagonal ramp at
-# (5 + 0.4 step, 15.5 + 0.4 step), so `step` is the only thing that changes.
+# the same value. The single person to rescue sits on a diagonal ramp, whose
+# position k is (5 + 0.4 k, 15.5 + 0.4 k); `skip` is how many positions are
+# passed over before that person, and is the only thing that changes. `gap`
+# only matters with two or more people.
 #
 # The variant is named after that ramp rather than after the IPC track: the
 # inertia is no longer what tells the two layouts apart, so `line` and `circle`
@@ -17,81 +19,121 @@ params:
 instances:
   - name: problem_0
     params:
-      step: 0
+      n_people: 1
+      skip: 0
+      gap: 0
       inertia: 50
   - name: problem_1
     params:
-      step: 1
+      n_people: 1
+      skip: 1
+      gap: 0
       inertia: 50
   - name: problem_2
     params:
-      step: 2
+      n_people: 1
+      skip: 2
+      gap: 0
       inertia: 50
   - name: problem_3
     params:
-      step: 3
+      n_people: 1
+      skip: 3
+      gap: 0
       inertia: 50
   - name: problem_4
     params:
-      step: 4
+      n_people: 1
+      skip: 4
+      gap: 0
       inertia: 50
   - name: problem_5
     params:
-      step: 5
+      n_people: 1
+      skip: 5
+      gap: 0
       inertia: 50
   - name: problem_6
     params:
-      step: 6
+      n_people: 1
+      skip: 6
+      gap: 0
       inertia: 50
   - name: problem_7
     params:
-      step: 7
+      n_people: 1
+      skip: 7
+      gap: 0
       inertia: 50
   - name: problem_8
     params:
-      step: 8
+      n_people: 1
+      skip: 8
+      gap: 0
       inertia: 50
   - name: problem_9
     params:
-      step: 9
+      n_people: 1
+      skip: 9
+      gap: 0
       inertia: 50
   - name: problem_10
     params:
-      step: 10
+      n_people: 1
+      skip: 10
+      gap: 0
       inertia: 50
   - name: problem_11
     params:
-      step: 11
+      n_people: 1
+      skip: 11
+      gap: 0
       inertia: 50
   - name: problem_12
     params:
-      step: 12
+      n_people: 1
+      skip: 12
+      gap: 0
       inertia: 50
   - name: problem_13
     params:
-      step: 13
+      n_people: 1
+      skip: 13
+      gap: 0
       inertia: 50
   - name: problem_14
     params:
-      step: 14
+      n_people: 1
+      skip: 14
+      gap: 0
       inertia: 50
   - name: problem_15
     params:
-      step: 15
+      n_people: 1
+      skip: 15
+      gap: 0
       inertia: 50
   - name: problem_16
     params:
-      step: 16
+      n_people: 1
+      skip: 16
+      gap: 0
       inertia: 50
   - name: problem_17
     params:
-      step: 17
+      n_people: 1
+      skip: 17
+      gap: 0
       inertia: 50
   - name: problem_18
     params:
-      step: 18
+      n_people: 1
+      skip: 18
+      gap: 0
       inertia: 50
   - name: problem_19
     params:
-      step: 19
+      n_people: 1
+      skip: 19
+      gap: 0
       inertia: 50

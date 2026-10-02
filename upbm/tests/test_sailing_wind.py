@@ -45,7 +45,7 @@ class TestSailingWind(BaseDomainTest):
     def _get_configs(self):
         """One instance per layout."""
         return [
-            _config("line", step=0, inertia=50),
+            _config("line", n_people=2, skip=0, gap=99, inertia=50),
             _config("circle", n_people=2, skip=2, gap=1, inertia=0),
             _config("random", n_people=1, max_distance=16, seed=3, inertia=50),
         ]
@@ -59,7 +59,7 @@ class TestSailingWind(BaseDomainTest):
     def object_data(self):
         line, circle, drawn = self._get_configs()
         return [
-            (*line, [("boat", 1), ("person", 1)]),
+            (*line, [("boat", 1), ("person", 2)]),
             (*circle, [("boat", 1), ("person", 2)]),
             (*drawn, [("boat", 1), ("person", 1)]),
         ]
@@ -72,7 +72,16 @@ class TestSailingWind(BaseDomainTest):
     def validation_cases(self):
         line, circle, drawn = self._get_configs()
 
-        line_rescue = _moves(15) * 5 + _moves(0) + ["(save_person b0 p0)"]
+        line_first = _moves(15) * 5 + _moves(0) + ["(save_person b0 p0)"]
+
+        def north_east(slow_down):
+            return (
+                _moves(15, 30, 45)
+                + _moves(45) * 154
+                + _moves(30, 15)
+                + _moves(0) * slow_down
+                + ["(save_person b0 p1)"]
+            )
 
         east = (
             _moves(15, 30, 45, 60, 75, 90)
@@ -90,14 +99,14 @@ class TestSailingWind(BaseDomainTest):
         climb = _moves(15) * 10
 
         cases = [
-            (*line, line_rescue, ValidationResultStatus.VALID),
-            (*line, ["(save_person b0 p0)"], ValidationResultStatus.INVALID),
+            (*line, line_first + north_east(2), ValidationResultStatus.VALID),
+            (*line, line_first, ValidationResultStatus.INVALID),
             (
                 *line,
-                _moves(15) * 5 + ["(save_person b0 p0)"],
+                line_first + ["(save_person b0 p1)"],
                 ValidationResultStatus.INVALID,
             ),
-            (*line, [], ValidationResultStatus.INVALID),
+            (*line, line_first + north_east(1), ValidationResultStatus.INVALID),
             (*circle, east + south_west, ValidationResultStatus.VALID),
             (*circle, east, ValidationResultStatus.INVALID),
             (
