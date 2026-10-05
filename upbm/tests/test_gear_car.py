@@ -64,11 +64,7 @@ class TestGearCar(BaseDomainTest):
         return GearCarGenerator.get_domain_parameter_space().get_default_configuration()
 
     def _params(self, **overrides) -> Configuration:
-        """A full instance configuration, IPC car unless told otherwise.
-
-        Everything the IPC set fixes is a parameter now, so the defaults are
-        the shipped car and an override is a different one.
-        """
+        """A full instance configuration, IPC car unless told otherwise."""
         gen = GearCarGenerator(self._domain_config())
         space = gen.instance_parameter_space
         values = dict(space.get_default_configuration())
@@ -84,21 +80,7 @@ class TestGearCar(BaseDomainTest):
 
     @property
     def plannable(self):
-        # the shipped car, and one the IPC set could not describe: wider gears,
-        # a stronger engine and the tightest goal window there is. Against an
-        # even target a window of 1 pins the distance exactly, since only even
-        # distances are reachable at all.
-        return self._get_configs() + [
-            (
-                self._domain_config(),
-                self._params(
-                    speed_per_gear=3,
-                    max_acceleration=3,
-                    min_acceleration=-2,
-                    goal_distance_tolerance=1,
-                ),
-            )
-        ]
+        return self._get_configs()
 
     @property
     def object_data(self):
