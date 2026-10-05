@@ -252,7 +252,7 @@ The following domains are implemented and registered today:
 | **Coins** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Hardness: finding a feasible plan is easy, finding an optimal one is hard |
 | **Ztalloc-Sum** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Reversed Collatz: registers start at 1 and must add up to a target |
 | **Expedition** (IPC 2026) | UP/PDDL | Numbers | Sleds burn one supply per move and must ferry supplies forward to cross a chain of waypoints |
-| **OnlyCraft** (IPC 2026) | PDDL | Numbers | Minecraft-like crafting, breaking trees into pogo sticks |
+| **OnlyCraft** (IPC 2026) | UP/PDDL | Numbers | Minecraft-like crafting, breaking trees into pogo sticks |
 
 ### Planned
 

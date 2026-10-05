@@ -13,13 +13,23 @@
 # limitations under the License.
 
 from ConfigSpace import Configuration
-from unified_planning.engines.plan_validator import SequentialPlanValidator
 from unified_planning.engines.results import ValidationResultStatus
 
 from upbm.domains.onlycraft import OnlyCraftGenerator
-from upbm.domains.onlycraft.onlycraft import n_trees_for
-from upbm.io import parse_plan_string
 from upbm.tests.base_domain_test import BaseDomainTest
+
+
+def _config(**params):
+    """The default domain configuration and an instance configuration of it."""
+    domain_config = (
+        OnlyCraftGenerator.get_domain_parameter_space().get_default_configuration()
+    )
+    space = OnlyCraftGenerator(domain_config).instance_parameter_space
+    return domain_config, Configuration(space, params)
+
+
+def _plan(*actions):
+    return "\n".join(f"({a})" for a in actions)
 
 
 class TestOnlyCraft(BaseDomainTest):
@@ -34,110 +44,85 @@ class TestOnlyCraft(BaseDomainTest):
         return OnlyCraftGenerator
 
     def _get_configs(self):
-        default_config = (
-            OnlyCraftGenerator.get_domain_parameter_space().get_default_configuration()
-        )
-        gen = OnlyCraftGenerator(default_config)
-        instance_space = gen.instance_parameter_space
-        # the smallest instance the domain allows, smaller than any IPC one
-        instance_1 = Configuration(instance_space, {"n_cells": 4, "n_pogo_sticks": 1})
-        instance_2 = Configuration(instance_space, {"n_cells": 9, "n_pogo_sticks": 2})
-        return [(default_config, instance_1), (default_config, instance_2)]
+        tight = dict(extra_trees=0, n_low_trees=0, n_air_cells=0)
+        return [
+            # the tightest instances there are, with exactly as many trees as
+            # the goal needs: 1 for one pogo stick, 8 for four
+            _config(n_pogo_sticks=1, **tight),
+            _config(n_pogo_sticks=4, **tight),
+            # one of each kind of cell, laid out in order: trees on cell0 and
+            # cell1, low trees on cell2 and cell3, air on cell4-cell6
+            _config(n_pogo_sticks=1, extra_trees=1, n_low_trees=2, n_air_cells=3),
+        ]
 
     @property
     def plannable(self):
-        # only the tiny one, the IPC instances ask for up to 200 pogo sticks
+        # only the one-tree instance, the IPC ones ask for up to 200 pogo sticks
         return self._get_configs()[:1]
 
     @property
     def object_data(self):
-        instances = self._get_configs()
+        cells = [1, 8, 7]
         return [
-            (*instances[0], [("cell", 4)]),
-            (*instances[1], [("cell", 9)]),
+            (*config, [("cell", n)]) for config, n in zip(self._get_configs(), cells)
         ]
 
     @property
     def problem_actions(self):
-        instances = self._get_configs()
         # the ten crafting and breaking actions of the domain
-        return [(*instances[0], 10), (*instances[1], 10)]
+        return [(*config, 10) for config in self._get_configs()]
 
-    def test_n_trees_follows_the_goal(self):
-        # every shipped instance has ceil(3.5 * goal) trees
-        self.assertEqual([n_trees_for(k) for k in range(1, 7)], [4, 7, 11, 14, 18, 21])
-        # the biggest sat instance
-        self.assertEqual(n_trees_for(200), 700)
+    @property
+    def validation_cases(self):
+        one_tree, four_sticks, mixed = self._get_configs()
 
-    def test_initial_state_splits_cells_in_trees_and_air(self):
-        domain_config, instance_config = self._get_configs()[1]
-        gen = OnlyCraftGenerator(domain_config)
-        problem = gen.get_instance(instance_config)
-
-        def count(fluent_name):
-            return sum(
-                1
-                for f in problem.explicit_initial_values
-                if f.fluent().name == fluent_name
-            )
-
-        # 9 cells, 7 of them trees because the goal is 2 pogo sticks
-        self.assertEqual(count("tree_cell"), 7)
-        self.assertEqual(count("air_cell"), 2)
-        # the crafting table is needed by CRAFT_TREE_TAP and CRAFT_WOODEN_POGO
-        self.assertEqual(count("crafting_table_cell"), 1)
-        self.assertEqual(count("position"), 1)
-        for counter in [
-            "toxicity",
-            "count_pogo_stick",
-            "count_log_in_inventory",
-            "count_planks_in_inventory",
-            "count_stick_in_inventory",
-            "count_sack_polyisoprene_pellets_in_inventory",
-            "count_tree_tap_in_inventory",
-        ]:
-            fluent = problem.fluent(counter)
-            self.assertEqual(problem.initial_value(fluent()).constant_value(), 0)
-
-    def test_too_few_cells_is_rejected(self):
-        domain_config, _ = self._get_configs()[0]
-        gen = OnlyCraftGenerator(domain_config)
-        # 4 trees are needed for one pogo stick, so 3 cells cannot hold them
-        too_small = Configuration(
-            gen.instance_parameter_space, {"n_cells": 3, "n_pogo_sticks": 1}
+        # One tree gives 2 logs: one becomes the planks and the sticks, one the
+        # pellet, and the pogo stick is crafted at the table on cell0.
+        one_tree_plan = [
+            "break_brutal cell0",
+            "craft_plank",
+            "craft_stick",
+            "craft_synthetic_pellets",
+            "craft_wooden_pogo cell0",
+        ]
+        # Four pogo sticks from the minimum of 8 trees: six are broken for 12
+        # logs, two are tapped for 2 pellets, and the other 2 pellets come from
+        # smelting (2 logs per half pellet) and the one synthetic pellet.
+        four_sticks_plan = (
+            [f"break_brutal cell{i}" for i in range(6)]
+            + ["craft_plank"] * 7
+            + ["craft_stick"] * 5
+            + ["craft_tree_tap cell0"] * 2
+            + ["place_tree_tap cell6", "place_tree_tap cell7"]
+            + ["smelt_pellets_raw"] * 2
+            + ["craft_synthetic_pellets"]
+            + ["craft_wooden_pogo cell0"] * 4
         )
-        self.assertFalse(gen.check_instance_parameters(too_small))
-        with self.assertRaises(ValueError):
-            gen.get_instance(too_small)
-
-    # NOTE the validation cases of the base class use the temporal plan
-    # validator, while onlycraft is an instantaneous domain, so the sequential
-    # plans are validated here instead.
-    def test_sequential_validation(self):
-        domain_config, instance_config = self._get_configs()[0]
-        gen = OnlyCraftGenerator(domain_config)
-        problem = gen.get_instance(instance_config)
-
-        # two trees give 4 logs: one becomes the planks and the sticks, one
-        # becomes the pellet, and cell0 carries the crafting table
-        valid_plan = """(break_brutal cell0)
-(break_brutal cell1)
-(craft_plank)
-(craft_stick)
-(craft_synthetic_pellets)
-(craft_wooden_pogo cell0)"""
-        # without the pellet CRAFT_WOODEN_POGO is not applicable
-        invalid_plan = """(break_brutal cell0)
-(break_brutal cell1)
-(craft_plank)
-(craft_stick)
-(craft_wooden_pogo cell0)"""
-
-        for plan_str, expected in [
-            (valid_plan, ValidationResultStatus.VALID),
-            (invalid_plan, ValidationResultStatus.INVALID),
-        ]:
-            plan = parse_plan_string(problem, plan_str)
-            with SequentialPlanValidator() as validator:
-                v_res = validator.validate(problem, plan)
-                self.assertEqual(v_res.status, expected, f"bad res:\n{v_res}")
+        # The planks and the sticks from two low trees, half a log each, and
+        # the pellet from a tree.
+        low_trees_plan = [
+            "break_low cell2",
+            "break_low cell3",
+            "craft_plank",
+            "craft_stick",
+            "break_brutal cell0",
+            "craft_synthetic_pellets",
+            "craft_wooden_pogo cell0",
+        ]
+        return [
+            (*one_tree, _plan(*one_tree_plan), ValidationResultStatus.VALID),
+            # without the pellet CRAFT_WOODEN_POGO is not applicable
+            (
+                *one_tree,
+                _plan(*[a for a in one_tree_plan if a != "craft_synthetic_pellets"]),
+                ValidationResultStatus.INVALID,
+            ),
+            (*four_sticks, _plan(*four_sticks_plan), ValidationResultStatus.VALID),
+            (*mixed, _plan(*low_trees_plan), ValidationResultStatus.VALID),
+            # cell0 is an ordinary tree, which BREAK_LOW cannot touch
+            (
+                *mixed,
+                _plan("break_low cell0", *low_trees_plan[1:]),
+                ValidationResultStatus.INVALID,
+            ),
+        ]
