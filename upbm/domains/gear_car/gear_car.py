@@ -34,57 +34,64 @@ from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
-# The car always starts stopped at the origin, in first gear, with nothing
-# used up yet. These stay constants rather than becoming parameters: the goal
-# demands v = 0, a = 0 and first gear at the *end*, so a different start would
-# only add an offset to every instance.
-START_DISTANCE = 0
-START_SPEED = 0
-START_ACCELERATION = 0
 
 # No fuel table is allowed to reach zero: a free drive step would make any
 # distance reachable on any budget, and a negative one is not a cost at all.
 # The floor only bites past gear 10, far outside anything the dataset shows.
 MIN_FUEL_COST = 1
 
-# The values every one of the 20 shipped instances uses. They are the defaults
-# of instance parameters rather than constants of the generator, because
-# nothing in the domain fixes them - see `instance_parameter_space`. Keeping
-# them as the defaults is what lets `sets/gear_car_ipc2026.yml` go on naming
-# only the five parameters it always named.
-IPC_MAX_ACCELERATION = 2
-IPC_MIN_ACCELERATION = -1
-IPC_ACC_STEP = 1
-IPC_SPEED_PER_GEAR = 2
-IPC_GOAL_DISTANCE_TOLERANCE = 2
+# The values every one of the 20 shipped instances uses. They are constants
+# rather than instance parameters because none of them is a knob worth turning
+# on its own (they were parameters until 2026-10-05, and nothing was lost by
+# fixing them, see each comment).
+#
+# The car's acceleration limits. Every action conjoins these with the per-gear
+# limits, so the tighter one binds; but first gear's ceiling *is*
+# MAX_ACCELERATION and every gear's floor *is* MIN_ACCELERATION (see
+# gear_max_acceleration and get_initial_state), so on their own these never
+# bind.
+MAX_ACCELERATION = 2
+MIN_ACCELERATION = -1
+# How much one accelerate/decelerate changes the acceleration by. It has to be
+# 1: the gears between the first and the top have a ceiling of 1, so with a
+# larger step first gear would be the only one that can accelerate.
+ACC_STEP = 1
+# How wide a speed band each gear covers, so max_speed is
+# SPEED_PER_GEAR * n_gears.
+SPEED_PER_GEAR = 2
+# The goal asks for a distance in [target, target + GOAL_DISTANCE_TOLERANCE].
+# That looks cosmetic and is not: a drive step adds (2v + a) and a plan that
+# starts and ends stopped has its accelerations sum to zero, so the distance
+# reached is ALWAYS EVEN, whatever the gearbox. Against an odd target it is
+# the tolerance that makes the goal reachable at all, so it must be at least 1.
+GOAL_DISTANCE_TOLERANCE = 2
 
 
-def gear_speed_band(gear: int, speed_per_gear: int) -> tuple[int, int]:
+def gear_speed_band(gear: int) -> tuple[int, int]:
     """Return (gear_v_min, gear_v_max) of a gear. Gears are 1-indexed.
 
     The bands tile [0, max_speed] and share their endpoints, so at the speed
     where one gear ends and the next begins either of the two is "aligned".
     """
-    return (speed_per_gear * (gear - 1), speed_per_gear * gear)
+    return (SPEED_PER_GEAR * (gear - 1), SPEED_PER_GEAR * gear)
 
 
-def gear_max_acceleration(gear: int, n_gears: int, max_acceleration: int) -> int:
+def gear_max_acceleration(gear: int, n_gears: int) -> int:
     """Return the acceleration ceiling of a gear.
 
-    First gear pulls as hard as the car can, the top gear cannot accelerate at
-    all - which is what makes shifting up the only way to go fast - and every
-    gear between them gets a single step. In the IPC set the car's own
-    `max_acceleration` is 2, which is why first gear reads 2 there.
+    First gear pulls as hard as the car can (MAX_ACCELERATION), the top gear
+    cannot accelerate at all - which is what makes shifting up the only way to
+    go fast - and every gear between them gets a single step.
 
     Note the top gear's 0 does *not* force the car to shift back down to stop:
     `gear_min_acceleration` is negative in the top gear too, so it can brake
     there. What forces the downshift is the goal asking for first gear.
     """
     if gear == 1:
-        return max_acceleration
+        return MAX_ACCELERATION
     if gear == n_gears:
         return 0
-    return min(1, max_acceleration)
+    return 1
 
 
 def gear_fuel_aligned(gear: int) -> int:
@@ -189,41 +196,6 @@ class GearCarGenerator(Generator):
             "target_distance", (1, MAX_INT), default=260
         )
         mapping["fuel"] = Integer("fuel", (0, MAX_INT), default=406)
-        # How wide a speed band each gear covers, so max_speed is
-        # speed_per_gear * n_gears. This is the scale knob of the whole domain:
-        # a drive step adds at most 2 * max_speed to the distance, so it decides
-        # how far a tank of fuel can go.
-        mapping["speed_per_gear"] = Integer(
-            "speed_per_gear", (1, MAX_INT), default=IPC_SPEED_PER_GEAR
-        )
-        # The goal asks for a distance in [target, target + tolerance]. It looks
-        # cosmetic and is not: a drive step adds (2v + a) and a plan that starts
-        # and ends stopped has its accelerations sum to zero, so the distance
-        # reached is ALWAYS EVEN, whatever the gearbox.
-        #
-        # That is why the lower bound is 1 rather than 0, and it costs nothing:
-        # for an even target the window [X, X+1] holds exactly one even value,
-        # X, so it means the same as a window of 0; for an odd target a window
-        # of 0 could never be met at all. Keeping 0 out of the space therefore
-        # removes a whole class of unsolvable instance without removing a single
-        # reachable one - the parameter space doing the work instead of a check.
-        mapping["goal_distance_tolerance"] = Integer(
-            "goal_distance_tolerance", (1, MAX_INT), default=IPC_GOAL_DISTANCE_TOLERANCE
-        )
-        # The car's own acceleration limits. Every action conjoins these with the
-        # per-gear ones, so whichever is tighter binds; in the IPC set they are
-        # exactly the per-gear values, which is why the shipped instances give no
-        # sign of which one is doing the work.
-        mapping["max_acceleration"] = Integer(
-            "max_acceleration", (1, MAX_INT), default=IPC_MAX_ACCELERATION
-        )
-        mapping["min_acceleration"] = Integer(
-            "min_acceleration", (-MAX_INT, -1), default=IPC_MIN_ACCELERATION
-        )
-        # How much one accelerate/decelerate changes the acceleration by. Raising
-        # it without raising the per-gear ceilings leaves first gear as the only
-        # one that can accelerate, which check_instance_parameters catches.
-        mapping["acc_step"] = Integer("acc_step", (1, MAX_INT), default=IPC_ACC_STEP)
         # alpha is the per-step time price and beta the per-unit-fuel price in
         # (:metric minimize (cost)), where a drive step costs
         # alpha + beta * gear_fuel_*. In 19 of the 20 shipped instances
@@ -234,14 +206,6 @@ class GearCarGenerator(Generator):
         # to be stated. The defaults here are p01's.
         mapping["alpha"] = Integer("alpha", (0, MAX_INT), default=19536)
         mapping["beta"] = Integer("beta", (0, MAX_INT), default=48)
-        # NOTE on sampling this space, which now carries four conditions rather
-        # than one. `Generator.sample()` redraws until check_instance_parameters
-        # accepts, so it needs a space holding something acceptable: from the
-        # full space above that is about a third of draws, but a reduced space
-        # built from the *lower bounds* of these ranges holds nothing valid at
-        # all - 2 units of fuel cannot cover 3 of distance - and the redraw loop
-        # then never ends. Build a reduced space around the defaults rather than
-        # the bounds. 2048 documents the same hazard for a different reason.
         return ConfigurationSpace(name=mapping)
 
     @property
@@ -305,7 +269,7 @@ class GearCarGenerator(Generator):
         # first gear, and it has to have driven at all (fuel_used > 0).
         return [
             GE(self._d(), target),
-            LE(self._d(), target + params["goal_distance_tolerance"]),
+            LE(self._d(), target + GOAL_DISTANCE_TOLERANCE),
             self._current_gear(self._gear(1)),
             Equals(self._v(), 0),
             Equals(self._a(), 0),
@@ -316,18 +280,15 @@ class GearCarGenerator(Generator):
     def get_initial_state(self, params) -> dict[FNode, FNode]:
         self._check_params(params)
         n_gears = params["n_gears"]
-        max_acceleration = params["max_acceleration"]
-        min_acceleration = params["min_acceleration"]
-        speed_per_gear = params["speed_per_gear"]
         res: dict[FNode, FNode] = {
             self._current_gear(self._gear(1)): TRUE(),
-            self._d(): START_DISTANCE,
-            self._v(): START_SPEED,
-            self._a(): START_ACCELERATION,
-            self._max_acceleration(): max_acceleration,
-            self._min_acceleration(): min_acceleration,
-            self._max_speed(): speed_per_gear * n_gears,
-            self._acc_step(): params["acc_step"],
+            self._d(): 0,
+            self._v(): 0,
+            self._a(): 0,
+            self._max_acceleration(): MAX_ACCELERATION,
+            self._min_acceleration(): MIN_ACCELERATION,
+            self._max_speed(): SPEED_PER_GEAR * n_gears,
+            self._acc_step(): ACC_STEP,
             self._fuel(): params["fuel"],
             self._fuel_used(): 0,
             self._elapsed_time(): 0,
@@ -338,13 +299,11 @@ class GearCarGenerator(Generator):
         }
         for i in range(1, n_gears + 1):
             gear = self._gear(i)
-            v_min, v_max = gear_speed_band(i, speed_per_gear)
+            v_min, v_max = gear_speed_band(i)
             res[self._gear_v_min(gear)] = v_min
             res[self._gear_v_max(gear)] = v_max
-            res[self._gear_min_acceleration(gear)] = min_acceleration
-            res[self._gear_max_acceleration(gear)] = gear_max_acceleration(
-                i, n_gears, max_acceleration
-            )
+            res[self._gear_min_acceleration(gear)] = MIN_ACCELERATION
+            res[self._gear_max_acceleration(gear)] = gear_max_acceleration(i, n_gears)
             res[self._gear_fuel_aligned(gear)] = gear_fuel_aligned(i)
             res[self._gear_fuel_under(gear)] = gear_fuel_under(i)
             res[self._gear_fuel_over(gear)] = gear_fuel_over(i, n_gears)
@@ -355,45 +314,31 @@ class GearCarGenerator(Generator):
         return res
 
     def check_instance_parameters(self, params: Configuration):
-        # These are necessary conditions, not a full solvability check: whether
-        # the car can also stop exactly inside the goal window is left to the
-        # planner, in the same spirit as the expedition port.
-        acc_step = params["acc_step"]
-
-        # 1. The car has to be able to accelerate at all, or it never leaves the
-        # origin. `accelerate` needs a + acc_step within both the car's ceiling
-        # and the gear's, and first gear's ceiling *is* the car's.
-        if acc_step > params["max_acceleration"]:
-            return False
-
-        # 2. And to brake, or it can never satisfy the goal's v = 0 again. From
-        # a = 0 one `decelerate` reaches -acc_step, which both the car's floor
-        # and the gear's floor have to allow.
-        if params["min_acceleration"] > -acc_step:
-            return False
-
-        # The distance parity condition that used to live here is gone, and not
-        # because it was wrong: `goal_distance_tolerance` starts at 1 now, which
-        # makes it impossible to violate. See the parameter.
-
+        # Every configuration is accepted. What used to be checked here no
+        # longer depends on a parameter: the car can always accelerate and
+        # brake, since ACC_STEP fits within MAX_ACCELERATION and
+        # MIN_ACCELERATION, and GOAL_DISTANCE_TOLERANCE is at least 1, which is
+        # what keeps an odd target reachable (see there).
+        #
         # TEMPORARILY DISABLED: the fuel has to be able to cover the distance.
-        # The drive actions require both v <= max_speed and v + a <= max_speed,
-        # so a step adds at most 2 * max_speed, and the cheapest step is the top
-        # gear driven inside its own band:
+        # This is a necessary condition, not a full solvability check: whether
+        # the car can also stop exactly inside the goal window is left to the
+        # planner, in the same spirit as the expedition port. The drive actions
+        # require both v <= max_speed and v + a <= max_speed, so a step adds at
+        # most 2 * max_speed, and the cheapest step is the top gear driven
+        # inside its own band:
         #
         #     cheapest_step = gear_fuel_aligned(n_gears)
-        #     longest_step = 2 * params["speed_per_gear"] * n_gears
+        #     longest_step = 2 * SPEED_PER_GEAR * n_gears
         #     if (params["fuel"] // cheapest_step) * longest_step < target:
         #         return False
         #
-        # It is off because it is the one condition here that can leave a whole
-        # parameter space with nothing acceptable in it, and `Generator.sample()`
-        # redraws until something is accepted - so a space of, say, 2 units of
-        # fuel against 3 of distance makes it spin with no way out. Whether upbm
-        # should allow spaces that can do that is a question for the team; until
-        # it is settled, **an instance may simply not have the fuel to finish,
-        # and nothing here will say so.** That is a weaker promise than before,
-        # but in the same spirit as the rest: the check was already necessary
-        # rather than sufficient, since whether the car can stop inside the goal
-        # window was always left to the planner, exactly as expedition does it.
+        # It is off because it can leave a whole parameter space with nothing
+        # acceptable in it, and `Generator.sample()` redraws until something is
+        # accepted - so a space of, say, 2 units of fuel against 3 of distance
+        # makes it spin with no way out. Whether upbm should allow spaces that
+        # can do that is a question for the team; until it is settled, **an
+        # instance may simply not have the fuel to finish, and nothing here will
+        # say so.** That is a weaker promise than before, but in the same spirit:
+        # the check was only ever necessary rather than sufficient.
         return True
