@@ -71,18 +71,13 @@ def min_trees_for(n_pogo_sticks: int) -> int:
         raises the toxicity, which never goes down, and CRAFT_WOODEN_POGO needs
         the toxicity to be at most 1.
 
-    So the cheapest plan uses the synthetic pellet once and taps a tree for
-    every other pellet, and this function prices that plan with _trees_needed.
+    The planks and sticks of the pogo stick itself cost 1 log, half a tree.
 
-    How that was checked:
-      - for every goal from 1 to 5000, no other mix - any number of tapped
-        trees, with or without the synthetic pellet, the rest smelted - needs
-        fewer trees (some need as many, because whole crafts round up, but
-        never fewer);
-      - the counts repeat every 16 pogo sticks (16 more always need exactly 35
-        more trees), so that also holds for every goal above 5000;
-      - for goals 1 to 6, an exhaustive search over the domain's own actions
-        found that this many trees is enough and one fewer is not.
+    So the cheapest plan uses the synthetic pellet once (1 tree for that pogo
+    stick) and taps a tree for every other pellet (2.1875 trees per pogo
+    stick). Those are averages: planks and sticks are made 4 at a time and a
+    tree gives its 2 logs at once, so the real count rounds up, sometimes by a
+    whole tree. _trees_needed counts that plan with every rounding step.
     """
     return _trees_needed(n_pogo_sticks, max(0, n_pogo_sticks - 1), 1)
 
