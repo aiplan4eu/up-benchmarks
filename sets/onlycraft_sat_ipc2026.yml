@@ -1,157 +1,95 @@
 # The 20 onlycraft instances of the satisficing track of the IPC 2026 dataset
 # (ipc2026-dataset/onlycraft-sat).
 #
-# These rebuild the shipped instances only up to which cell is which: the
-# sizes and the goal are the same, but the generator lays the cells out in
-# order (trees first, then air) and puts the start and the crafting table on
-# cell0, where the shipped files scatter them. No action reads which cell is
-# which, so no plan can tell the difference.
-#
-# Every shipped instance has (7k + 1) // 2 trees for k pogo sticks, so
-# extra_trees is that minus the fewest trees k pogo sticks need, and there
-# are no low trees.
+# The `ipc` variant rebuilds the shipped instances exactly, so the only thing
+# an instance chooses is which one: `index` is the position of the file in
+# name order, opt track first, so P01_sat is 21 and P20_sat is 40 (the opt
+# track is 1-20). Which cells are trees, where the crafting table stands and
+# where the start is live in
+# upbm/domains/onlycraft/resources/ipc_onlycraft_data.py, because the shipped
+# files scatter them with no rule to rebuild them from.
 domain: onlycraft
 params:
   version: 1
-  variant: generic
+  variant: ipc
 instances:
   - name: P01_sat
-    # 9 cells, 4 of them trees
+    # 9 cells, 1 pogo stick
     params:
-      n_pogo_sticks: 1
-      extra_trees: 3
-      n_low_trees: 0
-      n_air_cells: 5
+      index: 21
   - name: P02_sat
-    # 9 cells, 7 of them trees
+    # 9 cells, 2 pogo sticks
     params:
-      n_pogo_sticks: 2
-      extra_trees: 3
-      n_low_trees: 0
-      n_air_cells: 2
+      index: 22
   - name: P03_sat
-    # 16 cells, 11 of them trees
+    # 16 cells, 3 pogo sticks
     params:
-      n_pogo_sticks: 3
-      extra_trees: 5
-      n_low_trees: 0
-      n_air_cells: 5
+      index: 23
   - name: P04_sat
-    # 16 cells, 14 of them trees
+    # 16 cells, 4 pogo sticks
     params:
-      n_pogo_sticks: 4
-      extra_trees: 6
-      n_low_trees: 0
-      n_air_cells: 2
+      index: 24
   - name: P05_sat
-    # 25 cells, 18 of them trees
+    # 25 cells, 5 pogo sticks
     params:
-      n_pogo_sticks: 5
-      extra_trees: 8
-      n_low_trees: 0
-      n_air_cells: 7
+      index: 25
   - name: P06_sat
-    # 25 cells, 21 of them trees
+    # 25 cells, 6 pogo sticks
     params:
-      n_pogo_sticks: 6
-      extra_trees: 8
-      n_low_trees: 0
-      n_air_cells: 4
+      index: 26
   - name: P07_sat
-    # 36 cells, 25 of them trees
+    # 36 cells, 7 pogo sticks
     params:
-      n_pogo_sticks: 7
-      extra_trees: 10
-      n_low_trees: 0
-      n_air_cells: 11
+      index: 27
   - name: P08_sat
-    # 36 cells, 28 of them trees
+    # 36 cells, 8 pogo sticks
     params:
-      n_pogo_sticks: 8
-      extra_trees: 11
-      n_low_trees: 0
-      n_air_cells: 8
+      index: 28
   - name: P09_sat
-    # 36 cells, 32 of them trees
+    # 36 cells, 9 pogo sticks
     params:
-      n_pogo_sticks: 9
-      extra_trees: 13
-      n_low_trees: 0
-      n_air_cells: 4
+      index: 29
   - name: P10_sat
-    # 49 cells, 42 of them trees
+    # 49 cells, 12 pogo sticks
     params:
-      n_pogo_sticks: 12
-      extra_trees: 16
-      n_low_trees: 0
-      n_air_cells: 7
+      index: 30
   - name: P11_sat
-    # 64 cells, 56 of them trees
+    # 64 cells, 16 pogo sticks
     params:
-      n_pogo_sticks: 16
-      extra_trees: 22
-      n_low_trees: 0
-      n_air_cells: 8
+      index: 31
   - name: P12_sat
-    # 81 cells, 74 of them trees
+    # 81 cells, 21 pogo sticks
     params:
-      n_pogo_sticks: 21
-      extra_trees: 29
-      n_low_trees: 0
-      n_air_cells: 7
+      index: 32
   - name: P13_sat
-    # 100 cells, 98 of them trees
+    # 100 cells, 28 pogo sticks
     params:
-      n_pogo_sticks: 28
-      extra_trees: 37
-      n_low_trees: 0
-      n_air_cells: 2
+      index: 33
   - name: P14_sat
-    # 144 cells, 133 of them trees
+    # 144 cells, 38 pogo sticks
     params:
-      n_pogo_sticks: 38
-      extra_trees: 50
-      n_low_trees: 0
-      n_air_cells: 11
+      index: 34
   - name: P15_sat
-    # 196 cells, 175 of them trees
+    # 196 cells, 50 pogo sticks
     params:
-      n_pogo_sticks: 50
-      extra_trees: 66
-      n_low_trees: 0
-      n_air_cells: 21
+      index: 35
   - name: P16_sat
-    # 256 cells, 231 of them trees
+    # 256 cells, 66 pogo sticks
     params:
-      n_pogo_sticks: 66
-      extra_trees: 87
-      n_low_trees: 0
-      n_air_cells: 25
+      index: 36
   - name: P17_sat
-    # 324 cells, 305 of them trees
+    # 324 cells, 87 pogo sticks
     params:
-      n_pogo_sticks: 87
-      extra_trees: 115
-      n_low_trees: 0
-      n_air_cells: 19
+      index: 37
   - name: P18_sat
-    # 441 cells, 403 of them trees
+    # 441 cells, 115 pogo sticks
     params:
-      n_pogo_sticks: 115
-      extra_trees: 152
-      n_low_trees: 0
-      n_air_cells: 38
+      index: 38
   - name: P19_sat
-    # 576 cells, 529 of them trees
+    # 576 cells, 151 pogo sticks
     params:
-      n_pogo_sticks: 151
-      extra_trees: 199
-      n_low_trees: 0
-      n_air_cells: 47
+      index: 39
   - name: P20_sat
-    # 729 cells, 700 of them trees
+    # 729 cells, 200 pogo sticks
     params:
-      n_pogo_sticks: 200
-      extra_trees: 263
-      n_low_trees: 0
-      n_air_cells: 29
+      index: 40

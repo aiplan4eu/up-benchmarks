@@ -1,157 +1,95 @@
 # The 20 onlycraft instances of the optimal track of the IPC 2026 dataset
 # (ipc2026-dataset/onlycraft-opt).
 #
-# These rebuild the shipped instances only up to which cell is which: the
-# sizes and the goal are the same, but the generator lays the cells out in
-# order (trees first, then air) and puts the start and the crafting table on
-# cell0, where the shipped files scatter them. No action reads which cell is
-# which, so no plan can tell the difference.
-#
-# Every shipped instance has (7k + 1) // 2 trees for k pogo sticks, so
-# extra_trees is that minus the fewest trees k pogo sticks need, and there
-# are no low trees.
+# The `ipc` variant rebuilds the shipped instances exactly, so the only thing
+# an instance chooses is which one: `index` is the position of the file in
+# name order, opt track first, so P01_opt is 1 and P20_opt is 20 (the sat
+# track is 21-40). Which cells are trees, where the crafting table stands and
+# where the start is live in
+# upbm/domains/onlycraft/resources/ipc_onlycraft_data.py, because the shipped
+# files scatter them with no rule to rebuild them from.
 domain: onlycraft
 params:
   version: 1
-  variant: generic
+  variant: ipc
 instances:
   - name: P01_opt
-    # 9 cells, 4 of them trees
+    # 9 cells, 1 pogo stick
     params:
-      n_pogo_sticks: 1
-      extra_trees: 3
-      n_low_trees: 0
-      n_air_cells: 5
+      index: 1
   - name: P02_opt
-    # 9 cells, 7 of them trees
+    # 9 cells, 2 pogo sticks
     params:
-      n_pogo_sticks: 2
-      extra_trees: 3
-      n_low_trees: 0
-      n_air_cells: 2
+      index: 2
   - name: P03_opt
-    # 16 cells, 11 of them trees
+    # 16 cells, 3 pogo sticks
     params:
-      n_pogo_sticks: 3
-      extra_trees: 5
-      n_low_trees: 0
-      n_air_cells: 5
+      index: 3
   - name: P04_opt
-    # 16 cells, 14 of them trees
+    # 16 cells, 4 pogo sticks
     params:
-      n_pogo_sticks: 4
-      extra_trees: 6
-      n_low_trees: 0
-      n_air_cells: 2
+      index: 4
   - name: P05_opt
-    # 25 cells, 18 of them trees
+    # 25 cells, 5 pogo sticks
     params:
-      n_pogo_sticks: 5
-      extra_trees: 8
-      n_low_trees: 0
-      n_air_cells: 7
+      index: 5
   - name: P06_opt
-    # 25 cells, 21 of them trees
+    # 25 cells, 6 pogo sticks
     params:
-      n_pogo_sticks: 6
-      extra_trees: 8
-      n_low_trees: 0
-      n_air_cells: 4
+      index: 6
   - name: P07_opt
-    # 36 cells, 25 of them trees
+    # 36 cells, 7 pogo sticks
     params:
-      n_pogo_sticks: 7
-      extra_trees: 10
-      n_low_trees: 0
-      n_air_cells: 11
+      index: 7
   - name: P08_opt
-    # 36 cells, 28 of them trees
+    # 36 cells, 8 pogo sticks
     params:
-      n_pogo_sticks: 8
-      extra_trees: 11
-      n_low_trees: 0
-      n_air_cells: 8
+      index: 8
   - name: P09_opt
-    # 36 cells, 32 of them trees
+    # 36 cells, 9 pogo sticks
     params:
-      n_pogo_sticks: 9
-      extra_trees: 13
-      n_low_trees: 0
-      n_air_cells: 4
+      index: 9
   - name: P10_opt
-    # 49 cells, 35 of them trees
+    # 49 cells, 10 pogo sticks
     params:
-      n_pogo_sticks: 10
-      extra_trees: 14
-      n_low_trees: 0
-      n_air_cells: 14
+      index: 10
   - name: P11_opt
-    # 49 cells, 39 of them trees
+    # 49 cells, 11 pogo sticks
     params:
-      n_pogo_sticks: 11
-      extra_trees: 16
-      n_low_trees: 0
-      n_air_cells: 10
+      index: 11
   - name: P12_opt
-    # 49 cells, 42 of them trees
+    # 49 cells, 12 pogo sticks
     params:
-      n_pogo_sticks: 12
-      extra_trees: 16
-      n_low_trees: 0
-      n_air_cells: 7
+      index: 12
   - name: P13_opt
-    # 49 cells, 46 of them trees
+    # 49 cells, 13 pogo sticks
     params:
-      n_pogo_sticks: 13
-      extra_trees: 18
-      n_low_trees: 0
-      n_air_cells: 3
+      index: 13
   - name: P14_opt
-    # 64 cells, 49 of them trees
+    # 64 cells, 14 pogo sticks
     params:
-      n_pogo_sticks: 14
-      extra_trees: 19
-      n_low_trees: 0
-      n_air_cells: 15
+      index: 14
   - name: P15_opt
-    # 64 cells, 53 of them trees
+    # 64 cells, 15 pogo sticks
     params:
-      n_pogo_sticks: 15
-      extra_trees: 21
-      n_low_trees: 0
-      n_air_cells: 11
+      index: 15
   - name: P16_opt
-    # 64 cells, 56 of them trees
+    # 64 cells, 16 pogo sticks
     params:
-      n_pogo_sticks: 16
-      extra_trees: 22
-      n_low_trees: 0
-      n_air_cells: 8
+      index: 16
   - name: P17_opt
-    # 64 cells, 60 of them trees
+    # 64 cells, 17 pogo sticks
     params:
-      n_pogo_sticks: 17
-      extra_trees: 24
-      n_low_trees: 0
-      n_air_cells: 4
+      index: 17
   - name: P18_opt
-    # 81 cells, 63 of them trees
+    # 81 cells, 18 pogo sticks
     params:
-      n_pogo_sticks: 18
-      extra_trees: 24
-      n_low_trees: 0
-      n_air_cells: 18
+      index: 18
   - name: P19_opt
-    # 81 cells, 67 of them trees
+    # 81 cells, 19 pogo sticks
     params:
-      n_pogo_sticks: 19
-      extra_trees: 26
-      n_low_trees: 0
-      n_air_cells: 14
+      index: 19
   - name: P20_opt
-    # 81 cells, 70 of them trees
+    # 81 cells, 20 pogo sticks
     params:
-      n_pogo_sticks: 20
-      extra_trees: 27
-      n_low_trees: 0
-      n_air_cells: 11
+      index: 20

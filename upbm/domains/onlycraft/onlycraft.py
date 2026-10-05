@@ -30,45 +30,61 @@ from unified_planning.shortcuts import TRUE, GE
 from upbm.generator import Generator
 from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 
+from .resources.ipc_onlycraft_data import IPC_INSTANCES
+
 
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
 
 def _trees_needed(n_pogo_sticks: int, tapped: int, synthetic: int) -> int:
-    """Trees used by one way of making n_pogo_sticks: `tapped` of the pellets
-    come from tree taps, `synthetic` (0 or 1) from CRAFT_SYNTHETIC_PELLETS, and
-    the rest from SMELT_PELLETS_RAW. See min_trees_for for the recipes."""
+    """Count the trees one particular plan needs to make n_pogo_sticks.
+
+    The plan makes `tapped` of the pellets with tree taps, `synthetic` (0 or 1)
+    with CRAFT_SYNTHETIC_PELLETS, and the rest by smelting. Everything is
+    counted in whole crafts: planks and sticks are made 4 at a time, and a tree
+    is broken for 2 logs at once.
+    """
+    # the pellets still missing, made by SMELT_PELLETS_RAW at 4 logs each
     smelted = max(0, n_pogo_sticks - tapped - synthetic)
+    # 4 sticks per pogo stick, plus 1 per tree tap
     sticks = 4 * n_pogo_sticks + tapped
+    # 2 planks per pogo stick, 5 per tree tap, and 2 for every 4 sticks
     planks = 2 * n_pogo_sticks + 5 * tapped + 2 * ceil(sticks / 4)
+    # 1 log for every 4 planks, 4 per smelted pellet, 1 for the synthetic one
     logs = ceil(planks / 4) + 4 * smelted + synthetic
+    # Every tree that is not tapped is broken with BREAK_BRUTAL for 2 logs. A
+    # tapped tree gives no logs at all, so it is counted on top.
     return ceil(logs / 2) + tapped
 
 
 def min_trees_for(n_pogo_sticks: int) -> int:
     """Return the fewest trees from which n_pogo_sticks pogo sticks can be made.
 
-    A pogo stick takes 2 planks, 4 sticks and 1 pellet. A log makes 4 planks,
-    2 planks make 4 sticks. A tree is either broken with BREAK_BRUTAL for 2
-    logs (BREAK gives only 1) or used up by PLACE_TREE_TAP for 1 pellet, which
-    first needs a tree tap (5 planks and 1 stick). Otherwise a pellet costs 4
-    logs by SMELT_PELLETS_RAW (2 logs for half a pellet), or 1 log by
-    CRAFT_SYNTHETIC_PELLETS - but only once per instance, since that raises the
-    toxicity, which never goes down, and CRAFT_WOODEN_POGO needs it at most 1.
+    A pogo stick needs 2 planks, 4 sticks and a pellet. There are three ways to
+    make a pellet. Priced in logs, with a tree worth the 2 logs BREAK_BRUTAL
+    gets from it (BREAK only gets 1):
+      - a tree tap: 5 planks and 1 stick (1.375 logs), plus the tree it is
+        placed on, which then gives no logs (2 more) - 3.375 logs in all;
+      - smelting: SMELT_PELLETS_RAW turns 2 logs into half a pellet - 4 logs;
+      - CRAFT_SYNTHETIC_PELLETS: 1 log, but only once per instance, because it
+        raises the toxicity, which never goes down, and CRAFT_WOODEN_POGO needs
+        the toxicity to be at most 1.
 
-    Tapping is the cheapest route, so the best plan taps the trees for all but
-    a few of the pellets. Only that end is searched: checked against a search
-    over every number of tapped trees for each goal up to 5000, and the counts
-    repeat every 16 pogo sticks (16 more of them take exactly 35 more trees),
-    so that covers every goal. An exhaustive search over the actions themselves
-    confirmed that one tree fewer is unsolvable, for goals 1 to 6.
+    So the cheapest plan uses the synthetic pellet once and taps a tree for
+    every other pellet, and this function prices that plan with _trees_needed.
+
+    How that was checked:
+      - for every goal from 1 to 5000, no other mix - any number of tapped
+        trees, with or without the synthetic pellet, the rest smelted - needs
+        fewer trees (some need as many, because whole crafts round up, but
+        never fewer);
+      - the counts repeat every 16 pogo sticks (16 more always need exactly 35
+        more trees), so that also holds for every goal above 5000;
+      - for goals 1 to 6, an exhaustive search over the domain's own actions
+        found that this many trees is enough and one fewer is not.
     """
-    return min(
-        _trees_needed(n_pogo_sticks, tapped, synthetic)
-        for synthetic in (0, 1)
-        for tapped in range(max(0, n_pogo_sticks - 8), n_pogo_sticks + 1)
-    )
+    return _trees_needed(n_pogo_sticks, max(0, n_pogo_sticks - 1), 1)
 
 
 class OnlyCraftGenerator(Generator):
@@ -76,12 +92,9 @@ class OnlyCraftGenerator(Generator):
     def get_domain_parameter_space():
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        # Only the generic variant exists for now, more can be added here
-        # later. The opt/sat split of the dataset is not a variant: the two
-        # tracks share one domain file and differ only in their instances.
         mapping["variant"] = Categorical(
             "variant",
-            ["generic"],
+            ["generic", "ipc"],
             default="generic",
         )
         return ConfigurationSpace(name=mapping)
@@ -106,7 +119,6 @@ class OnlyCraftGenerator(Generator):
         self._crafting_table_cell = self._domain.fluent("crafting_table_cell")
         self._toxicity = self._domain.fluent("toxicity")
         self._count_pogo_stick = self._domain.fluent("count_pogo_stick")
-        # the five inventory counters that all start empty
         self._inventory = [
             self._domain.fluent(f"count_{item}_in_inventory")
             for item in [
@@ -124,25 +136,23 @@ class OnlyCraftGenerator(Generator):
     @property
     def instance_parameter_space(self) -> ConfigurationSpace:
         mapping: dict[str, Any] = {}
-        if self.variant != "generic":
+        if self.variant not in ("generic", "ipc"):
             raise ValueError(f"invalid variant {self.variant}")
-        # The goal, (>= (count_pogo_stick) n_pogo_sticks).
+        if self.variant == "ipc":
+            # Which IPC instance, by position in name order with the opt
+            # track first: P01_opt is 1, P01_sat is 21. Both tracks reuse the
+            # numbers 01-20 in their file names.
+            indices = sorted(IPC_INSTANCES)
+            mapping["index"] = Integer(
+                "index", (indices[0], indices[-1]), default=indices[0]
+            )
+            return ConfigurationSpace(name=mapping)
         mapping["n_pogo_sticks"] = Integer("n_pogo_sticks", (1, MAX_INT), default=1)
-        # How many trees there are beyond the fewest the goal can be met with
-        # (min_trees_for), so every value is solvable and 0 is the tightest
-        # instance there is: a plan then has to find the right mix of tapping,
-        # smelting and the one synthetic pellet. The shipped instances are far
-        # from tight - they have (7k + 1) // 2 trees, about 1.6 times the
-        # minimum - which is where the default of 3 comes from: it is what that
-        # rule gives for one pogo stick.
+        # How many extra trees there are beyond the fewest the goal can be met with.
         mapping["extra_trees"] = Integer("extra_trees", (0, MAX_INT), default=3)
-        # Low trees, which no shipped instance has. They are what BREAK_LOW
-        # needs, half a log each, and PLACE_TREE_TAP cannot use them, so they
-        # only ever add logs: they can make an instance easier, never unsolvable.
+        # How many low trees there are, these are always extra.
         mapping["n_low_trees"] = Integer("n_low_trees", (0, MAX_INT), default=0)
-        # Cells that are neither: no action reads them, so they only add
-        # objects for a planner to ground. 5 matches P01_opt with the defaults
-        # above.
+        # How many empty cells there are, these are just objects bloat.
         mapping["n_air_cells"] = Integer("n_air_cells", (0, MAX_INT), default=5)
         return ConfigurationSpace(name=mapping)
 
@@ -181,24 +191,36 @@ class OnlyCraftGenerator(Generator):
         return min_trees_for(params["n_pogo_sticks"]) + params["extra_trees"]
 
     def _n_cells(self, params: Configuration) -> int:
+        if self.variant == "ipc":
+            return IPC_INSTANCES[params["index"]]["n_cells"]
         return self._n_trees(params) + params["n_low_trees"] + params["n_air_cells"]
 
-    def _layout(self, params: Configuration) -> Tuple[Set[int], Set[int]]:
-        """Return (low tree cells, air cells), by cell number.
+    def _n_pogo_sticks(self, params: Configuration) -> int:
+        if self.variant == "ipc":
+            return IPC_INSTANCES[params["index"]]["n_pogo_sticks"]
+        return params["n_pogo_sticks"]
+
+    def _layout(self, params: Configuration) -> Tuple[Set[int], Set[int], int, int]:
+        """Return (low tree cells, air cells, start cell, crafting table cell),
+        by cell number.
 
         Every cell that is neither a low tree nor air is a tree.
-
-        The shipped instances scatter the trees over the cells, but no action
-        reads which cell is which: (position ?c) and (connected ?a ?b) are
-        declared and never used, and (air_cell ?c) only ever appears as an
-        effect. So the cells are laid out in order - trees, then low trees,
-        then air - which loses nothing a plan could notice.
         """
+        if self.variant == "ipc":
+            entry = IPC_INSTANCES[params["index"]]
+            return set(), set(entry["air"]), entry["position"], entry["crafting_table"]
+        # The IPC instances scatter the trees over the cells, but no action
+        # reads which cell is which: (position ?c) and (connected ?a ?b) are
+        # declared and never used, and (air_cell ?c) only ever appears as an
+        # effect.
+        #
+        # The generic variant lays the cells out in order - trees, then low trees,
+        # then air and puts the start and the crafting table on cell0.
         n_trees = self._n_trees(params)
         n_low = params["n_low_trees"]
         low = set(range(n_trees, n_trees + n_low))
         air = set(range(n_trees + n_low, self._n_cells(params)))
-        return low, air
+        return low, air, 0, 0
 
     def get_objects(self, params) -> List[Object]:
         self._check_params(params)
@@ -211,8 +233,12 @@ class OnlyCraftGenerator(Generator):
     ):
         if instance_parameters_space is None:
             instance_parameters_space = self.instance_parameter_space
-        # min_trees_for never decreases as the goal grows, so the largest goal
-        # needs the most trees
+        if self.variant == "ipc":
+            first, last = hyperparam_range(instance_parameters_space["index"])
+            n_cells = max(
+                IPC_INSTANCES[i]["n_cells"] for i in IPC_INSTANCES if first <= i <= last
+            )
+            return [self._cell(i) for i in range(n_cells)]
         n_cells = sum(
             hyperparam_range(instance_parameters_space[name])[1]
             for name in ["extra_trees", "n_low_trees", "n_air_cells"]
@@ -225,12 +251,12 @@ class OnlyCraftGenerator(Generator):
 
     def get_goal(self, params) -> List[FNode]:
         self._check_params(params)
-        return [GE(self._count_pogo_stick(), params["n_pogo_sticks"])]
+        return [GE(self._count_pogo_stick(), self._n_pogo_sticks(params))]
 
     def get_initial_state(self, params) -> dict[FNode, FNode]:
         self._check_params(params)
         cells = self.get_objects(params)
-        low, air = self._layout(params)
+        low, air, start, crafting_table = self._layout(params)
 
         res: dict[FNode, FNode] = {self._toxicity(): 0, self._count_pogo_stick(): 0}
         for fluent in self._inventory:
@@ -243,15 +269,16 @@ class OnlyCraftGenerator(Generator):
             else:
                 res[self._tree_cell(cell)] = TRUE()
         # One crafting table, needed by CRAFT_TREE_TAP and CRAFT_WOODEN_POGO,
-        # and the start, both on cell0 - as for the layout, nothing reads which
-        # cell they are on. The crafting table is never removed, so a tree cell
+        # and the start. The crafting table is never removed, so a tree cell
         # can hold it just as well.
-        res[self._crafting_table_cell(cells[0])] = TRUE()
-        res[self._position(cells[0])] = TRUE()
+        res[self._crafting_table_cell(cells[crafting_table])] = TRUE()
+        res[self._position(cells[start])] = TRUE()
         return res
 
     def check_instance_parameters(self, params: Configuration):
-        # Every instance is solvable by construction: it has at least
+        if self.variant == "ipc":
+            return params["index"] in IPC_INSTANCES
+        # Every generic instance is solvable by construction: it has at least
         # min_trees_for(n_pogo_sticks) trees, and low trees and air cells can
         # only add to what a plan has.
         return True
