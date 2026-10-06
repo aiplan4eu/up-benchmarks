@@ -1,0 +1,95 @@
+# The 20 onlycraft instances of the optimal track of the IPC 2026 dataset
+# (ipc2026-dataset/onlycraft-opt).
+#
+# The `ipc` variant rebuilds the shipped instances exactly, so the only thing
+# an instance chooses is which one: `index` is the position of the file in
+# name order, opt track first, so P01_opt is 1 and P20_opt is 20 (the sat
+# track is 21-40). Which cells are trees, where the crafting table stands and
+# where the start is live in
+# upbm/domains/onlycraft/resources/ipc_onlycraft_data.py, because the shipped
+# files scatter them with no rule to rebuild them from.
+domain: onlycraft
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: P01_opt
+    # 9 cells, 1 pogo stick
+    params:
+      index: 1
+  - name: P02_opt
+    # 9 cells, 2 pogo sticks
+    params:
+      index: 2
+  - name: P03_opt
+    # 16 cells, 3 pogo sticks
+    params:
+      index: 3
+  - name: P04_opt
+    # 16 cells, 4 pogo sticks
+    params:
+      index: 4
+  - name: P05_opt
+    # 25 cells, 5 pogo sticks
+    params:
+      index: 5
+  - name: P06_opt
+    # 25 cells, 6 pogo sticks
+    params:
+      index: 6
+  - name: P07_opt
+    # 36 cells, 7 pogo sticks
+    params:
+      index: 7
+  - name: P08_opt
+    # 36 cells, 8 pogo sticks
+    params:
+      index: 8
+  - name: P09_opt
+    # 36 cells, 9 pogo sticks
+    params:
+      index: 9
+  - name: P10_opt
+    # 49 cells, 10 pogo sticks
+    params:
+      index: 10
+  - name: P11_opt
+    # 49 cells, 11 pogo sticks
+    params:
+      index: 11
+  - name: P12_opt
+    # 49 cells, 12 pogo sticks
+    params:
+      index: 12
+  - name: P13_opt
+    # 49 cells, 13 pogo sticks
+    params:
+      index: 13
+  - name: P14_opt
+    # 64 cells, 14 pogo sticks
+    params:
+      index: 14
+  - name: P15_opt
+    # 64 cells, 15 pogo sticks
+    params:
+      index: 15
+  - name: P16_opt
+    # 64 cells, 16 pogo sticks
+    params:
+      index: 16
+  - name: P17_opt
+    # 64 cells, 17 pogo sticks
+    params:
+      index: 17
+  - name: P18_opt
+    # 81 cells, 18 pogo sticks
+    params:
+      index: 18
+  - name: P19_opt
+    # 81 cells, 19 pogo sticks
+    params:
+      index: 19
+  - name: P20_opt
+    # 81 cells, 20 pogo sticks
+    params:
+      index: 20
