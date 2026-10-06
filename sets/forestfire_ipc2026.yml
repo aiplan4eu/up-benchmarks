@@ -12,10 +12,9 @@
 # burn and how wide, how much water a bot may carry across the bushes, how much
 # the axes differ, and a seed.
 #
-# The layout rules the `ipc` variant rebuilds, verified across all 20 by
-# `forestfire_extract.py`: a width x height grid, fully connected to its four
-# neighbours both ways; row 2 is bushes apart from the middle column, which is
-# grass and carries a tree; max-water is 1 on every bushes cell; ponds sit in
+# The layout rules the `ipc` variant rebuilds: a width x height grid, fully connected
+# to its four neighbours both ways; row 2 is bushes apart from the middle column,
+# which is grass and carries a tree; max-water is 1 on every bushes cell; ponds sit in
 # both top corners; and bot i and axe i stand on column i of the top row.
 #
 # `tree_amount` against `durability` is the difficulty dial. At 3 against 3 the
