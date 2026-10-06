@@ -4,7 +4,7 @@
 # name. A 2048 instance is a board rather than a handful of numbers, and the
 # script that produced the shipped boards was never published, so the boards are
 # transcribed into upbm/domains/twenty_forty_eight/resources/ipc_2048_data.py
-# and rebuilt from there. Regenerate that table with twenty_forty_eight_extract.py.
+# and rebuilt from there.
 #
 # The scaffolding an instance needs - the pos-at / next / start-status /
 # next-idx facts that drive the phase machine - is identical in all 20 shipped
