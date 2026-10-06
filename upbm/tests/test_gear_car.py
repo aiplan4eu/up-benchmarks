@@ -19,34 +19,12 @@ from upbm.domains.gear_car import GearCarGenerator
 from upbm.tests.base_domain_test import BaseDomainTest
 
 
-# The car of the IPC set, gear by gear: (v_min, v_max, min_acc, max_acc,
-# fuel_aligned, fuel_under, fuel_over) read off the shipped instances. Only
-# the four gear counts the dataset actually uses are listed, which is exactly
-# what the generator claims to cover.
-IPC_GEAR_TABLES = {
-    2: [
-        (0, 2, -1, 2, 11, 18, 17),
-        (2, 4, -1, 0, 9, 17, 14),
-    ],
-    3: [
-        (0, 2, -1, 2, 11, 18, 18),
-        (2, 4, -1, 1, 9, 17, 15),
-        (4, 6, -1, 0, 8, 17, 13),
-    ],
-    4: [
-        (0, 2, -1, 2, 11, 18, 19),
-        (2, 4, -1, 1, 9, 17, 16),
-        (4, 6, -1, 1, 8, 17, 14),
-        (6, 8, -1, 0, 7, 17, 12),
-    ],
-    5: [
-        (0, 2, -1, 2, 11, 18, 20),
-        (2, 4, -1, 1, 9, 17, 17),
-        (4, 6, -1, 1, 8, 17, 15),
-        (6, 8, -1, 1, 7, 17, 13),
-        (8, 10, -1, 0, 6, 17, 11),
-    ],
-}
+def _config(variant="generic", **params):
+    """The domain configuration of `variant` and an instance configuration of it."""
+    domain_space = GearCarGenerator.get_domain_parameter_space()
+    domain_config = Configuration(domain_space, {"version": 1, "variant": variant})
+    space = GearCarGenerator(domain_config).instance_parameter_space
+    return domain_config, Configuration(space, params)
 
 
 class TestGearCar(BaseDomainTest):
@@ -60,35 +38,27 @@ class TestGearCar(BaseDomainTest):
     def generator(self):
         return GearCarGenerator
 
-    def _domain_config(self):
-        return GearCarGenerator.get_domain_parameter_space().get_default_configuration()
-
-    def _params(self, **overrides) -> Configuration:
-        """A full instance configuration, IPC car unless told otherwise."""
-        gen = GearCarGenerator(self._domain_config())
-        space = gen.instance_parameter_space
-        values = dict(space.get_default_configuration())
-        # Deliberately NOT an IPC instance: the shipped ones ask for hundreds
-        # of units of distance and are far too slow for a unit test. This car
-        # only has to creep two units forward and stop again.
-        values.update({"target_distance": 2, "fuel": 100, "alpha": 1, "beta": 1})
-        values.update(overrides)
-        return Configuration(space, values)
-
     def _get_configs(self):
-        return [(self._domain_config(), self._params())]
+        return [
+            # Deliberately tiny, so a planner solves it at once: the car only
+            # has to creep two units forward and stop again.
+            _config(n_gears=2, target_distance=2, fuel=10, beta=1),
+            # n_gears has no upper bound
+            _config(n_gears=8, target_distance=2, fuel=10, beta=1),
+            # the two ends of the shipped set: p000 (2 gears) and p19 (5 gears)
+            _config("ipc", index=0),
+            _config("ipc", index=19),
+        ]
 
     @property
     def plannable(self):
-        return self._get_configs()
+        return self._get_configs()[:1]
 
     @property
     def object_data(self):
-        domain_config = self._domain_config()
+        gears = [2, 8, 2, 5]
         return [
-            (domain_config, self._params(), [("gear", 2)]),
-            # n_gears is no longer capped at the dataset's 5
-            (domain_config, self._params(n_gears=8), [("gear", 8)]),
+            (*config, [("gear", n)]) for config, n in zip(self._get_configs(), gears)
         ]
 
     @property
@@ -103,55 +73,13 @@ class TestGearCar(BaseDomainTest):
         (drive_aligned_gear g1)
         (accelerate g1)
         """
-        return [
-            (
-                self._domain_config(),
-                self._params(),
-                plan,
-                ValidationResultStatus.VALID,
-            )
-        ]
+        return [(*self._get_configs()[0], plan, ValidationResultStatus.VALID)]
 
     @property
     def problem_actions(self):
-        domain_config, instance_config = self._get_configs()[0]
         # accelerate, decelerate, gear_up, gear_down and the three drive
         # actions; they are lifted, so the count does not depend on the gears
-        return [(domain_config, instance_config, 7)]
-
-    def test_gear_tables_match_the_ipc_set(self):
-        """The per-gear tables are computed, so pin them to the shipped values.
-
-        gear_fuel_over depends on how many gears the car has, so every gear
-        count the dataset uses is checked, not just one.
-        """
-        gen = GearCarGenerator(self._domain_config())
-        fluents = [
-            "gear_v_min",
-            "gear_v_max",
-            "gear_min_acceleration",
-            "gear_max_acceleration",
-            "gear_fuel_aligned",
-            "gear_fuel_under",
-            "gear_fuel_over",
-        ]
-        for n_gears, expected in IPC_GEAR_TABLES.items():
-            problem = gen.get_instance(self._params(n_gears=n_gears))
-            init = problem.explicit_initial_values
-            for i, row in enumerate(expected):
-                gear = problem.object(f"g{i + 1}")
-                for name, want in zip(fluents, row):
-                    got = init[problem.fluent(name)(gear)]
-                    self.assertEqual(
-                        got.constant_value(),
-                        want,
-                        f"{name}(g{i + 1}) with {n_gears} gears",
-                    )
-            # the top speed the gears add up to, the only global fluent that is
-            # computed rather than copied from a parameter
-            self.assertEqual(
-                init[problem.fluent("max_speed")()].constant_value(), 2 * n_gears
-            )
+        return [(*config, 7) for config in self._get_configs()]
 
     # NOTE that ANML drops the metric is a property of upbm.io rather than of
     # this domain, so it is tested once in test_io.py instead of here.

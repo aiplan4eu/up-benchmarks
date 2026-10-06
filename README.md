@@ -252,7 +252,7 @@ The following domains are implemented and registered today:
 | **Coins** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Hardness: finding a feasible plan is easy, finding an optimal one is hard |
 | **Ztalloc-Sum** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Reversed Collatz: registers start at 1 and must add up to a target |
 | **Expedition** (IPC 2026) | UP/PDDL | Numbers | Sleds burn one supply per move and must ferry supplies forward to cross a chain of waypoints |
-| **Gear Car** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Hardness: the metric makes elapsed time dominate fuel, so the gears have to be worked |
+| **Gear Car** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Hardness: first gear can reach any speed, so shifting only pays for the fuel it saves; a tight fuel budget makes the car work the gears |
 
 ### Planned
 
