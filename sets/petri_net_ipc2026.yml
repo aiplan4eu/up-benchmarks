@@ -3,8 +3,7 @@
 # One parameter per instance: the index, the position of the shipped file in
 # name order (prob06-1 is 1, prob10-4 is 20). Its net, goal shape and goal
 # numbers are transcribed into
-# upbm/domains/petri_net/resources/ipc_petri_net_data.py; regenerate that table
-# with petri_net_extract.py.
+# upbm/domains/petri_net/resources/ipc_petri_net_data.py.
 #
 # The 20 files are only 3 distinct nets: the :init blocks of prob06 and prob08
 # are identical, as are those of prob09 and prob10, and prob07 is its own. The
