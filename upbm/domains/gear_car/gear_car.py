@@ -37,138 +37,43 @@ SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
 
-# The car of the "generic" variant. The "ipc" variant reads its cars from
-# resources/ipc_gear_car_data.py instead, so nothing from here down to
-# GearCarGenerator applies to it.
-#
-# Every value is the smallest whole number that gives the gearbox the shape
-# described next to it.
-
-# Accelerations change in steps of this size. It is the unit: the other
-# accelerations below are counted in steps.
-ACC_STEP = 1
-# Every gear brakes by one step, the least that lets a moving car slow down.
-GEAR_MIN_ACCELERATION = -ACC_STEP
-# First gear, the one the car sets off in, pulls one step harder than the gears
-# above it, as the lowest gear of a real gearbox does.
-FIRST_GEAR_MAX_ACCELERATION = 2 * ACC_STEP
-# Each gear covers a band of speeds as wide as first gear can add in one drive
-# step, so a car setting off at full throttle is still inside first gear's band
-# after its first step. max_speed is SPEED_PER_GEAR * n_gears.
-SPEED_PER_GEAR = FIRST_GEAR_MAX_ACCELERATION
-# The goal asks for a distance in [target, target + GOAL_DISTANCE_TOLERANCE].
-# A drive step adds (2v + a), and a plan that starts and ends stopped has its
-# accelerations sum to zero, so the distance reached is ALWAYS EVEN, whatever
-# the gearbox. 1 is the smallest window that keeps an odd target reachable;
-# against an even target it changes nothing, since the window then holds only
-# one even distance.
-GOAL_DISTANCE_TOLERANCE = 1
-
-
-def gear_speed_band(gear: int) -> tuple[int, int]:
-    """Return (gear_v_min, gear_v_max) of a generic gear. Gears are 1-indexed.
-
-    The bands tile [0, max_speed] and share their endpoints, so at the speed
-    where one gear ends and the next begins either of the two is "aligned".
-    """
-    return (SPEED_PER_GEAR * (gear - 1), SPEED_PER_GEAR * gear)
-
-
-def gear_max_acceleration(gear: int, n_gears: int) -> int:
-    """Return the acceleration ceiling of a generic gear.
-
-    First gear pulls hardest (FIRST_GEAR_MAX_ACCELERATION). Every gear between
-    the first and the top gets one step, the least that lets it accelerate at
-    all. The top gear only cruises: it can hold or shed speed but not add any,
-    so the speed the car travels at has to be built up in the gears below it.
-
-    Note the top gear's 0 does *not* force the car to shift back down to stop:
-    GEAR_MIN_ACCELERATION applies in the top gear too, so it can brake there.
-    What forces the downshift is the goal asking for first gear.
-    """
-    if gear == 1:
-        return FIRST_GEAR_MAX_ACCELERATION
-    if gear == n_gears:
-        return 0
-    return ACC_STEP
-
-
-# The fuel tables. Each drive step burns fuel according to whether the speed is
-# inside the current gear's band ("aligned"), below it or above it.
-#
-# They are the whole reason to shift. First gear's acceleration range contains
-# every other gear's, and the speed bands only choose which table a drive step
-# pays from, so a car that never leaves first gear can drive anything the other
-# gears can. What it cannot do is drive cheaply: the tables make the higher
-# gears cheaper inside their bands, and every gear dearer outside its band than
-# any gear inside one.
-
-
-def gear_fuel_aligned(gear: int, n_gears: int) -> int:
-    """Fuel a generic gear burns per step when the speed is inside its band.
-
-    The top gear burns 1, the unit of fuel, and each gear below it burns one
-    unit more: the higher the gear, the cheaper the step, which is the saving
-    shifting up buys.
-    """
-    return n_gears + 1 - gear
-
-
-def gear_fuel_outside(n_gears: int) -> int:
-    """Fuel a generic gear burns per step when the speed is outside its band.
-
-    One unit more than the dearest step inside a band (first gear's), so
-    driving in the wrong gear always costs more than driving in any right one.
-    Below the band it punishes shifting up too early, above it staying in a low
-    gear at speed. The domain keeps the two cases in separate tables; here they
-    share this one value.
-
-    First gear's "below" entry and the top gear's "above" entry are never used:
-    no drive action lets the speed go below 0, where first gear's band starts,
-    or above max_speed, where the top gear's band ends.
-    """
-    return n_gears + 1
-
-
 def generic_car(n_gears: int) -> dict[str, Any]:
-    """The car of the generic variant, in the same shape as an IPC_CARS entry."""
+    """The car of the generic variant, in the same shape as an IPC_CARS entry.
+
+    Every value is the smallest whole number that keeps the gearbox's shape:
+    first gear pulls hardest, the top gear only cruises, and the higher the
+    gear the less fuel a step inside its speed band burns. A step outside the
+    band burns more than any step inside one. First gear alone can drive any
+    plan, so saving fuel is the only reason to shift.
+    """
     gears = []
     for gear in range(1, n_gears + 1):
-        v_min, v_max = gear_speed_band(gear)
-        outside = gear_fuel_outside(n_gears)
+        if gear == 1:
+            max_acceleration = 2
+        elif gear == n_gears:
+            max_acceleration = 0
+        else:
+            max_acceleration = 1
         # in the order of GEAR_FIELDS
         gears.append(
             (
-                v_min,
-                v_max,
-                GEAR_MIN_ACCELERATION,
-                gear_max_acceleration(gear, n_gears),
-                gear_fuel_aligned(gear, n_gears),
-                outside,
-                outside,
+                # speed band, as wide as first gear's strongest push
+                2 * (gear - 1),
+                2 * gear,
+                -1,  # every gear can brake
+                max_acceleration,
+                n_gears + 1 - gear,  # fuel inside the band: 1 in the top gear
+                n_gears + 1,  # below the band
+                n_gears + 1,  # above the band
             )
         )
     return {
-        # Every action also checks car-wide acceleration limits beside the
-        # gear's own. They are the extremes of the gears' limits, so it is
-        # always the gear's own limits that apply.
-        "max_acceleration": FIRST_GEAR_MAX_ACCELERATION,
-        "min_acceleration": GEAR_MIN_ACCELERATION,
-        "acc_step": ACC_STEP,
-        "max_speed": SPEED_PER_GEAR * n_gears,
+        "max_acceleration": 2,
+        "min_acceleration": -1,
+        "acc_step": 1,
+        "max_speed": 2 * n_gears,
         "gears": gears,
     }
-
-
-def generic_alpha(fuel: int, beta: int) -> int:
-    """The per-step price alpha of (:metric minimize (cost)), generic variant.
-
-    A drive step adds alpha + beta * (the fuel it burns) to cost. alpha is one
-    beta more than all the fuel the car carries is worth, and a plan can never
-    burn more fuel than it starts with, so one drive step fewer always beats
-    any saving in fuel: the metric ranks plans by time first and fuel second.
-    """
-    return beta * (fuel + 1)
 
 
 class GearCarGenerator(Generator):
@@ -176,9 +81,6 @@ class GearCarGenerator(Generator):
     def get_domain_parameter_space():
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        # "generic" builds its car from the rules at the top of this file;
-        # "ipc" rebuilds the 20 shipped instances from
-        # resources/ipc_gear_car_data.py.
         mapping["variant"] = Categorical(
             "variant",
             ["generic", "ipc"],
@@ -212,7 +114,6 @@ class GearCarGenerator(Generator):
         self._alpha = self._domain.fluent("alpha")
         self._beta = self._domain.fluent("beta")
         self._shift_count = self._domain.fluent("shift_count")
-        # the per-gear fluents, in the order a car's gear rows store them
         self._gear_fluents = [self._domain.fluent(name) for name in GEAR_FIELDS]
 
         self._object_cache: dict[tuple[str, Any], Object] = {}
@@ -222,8 +123,6 @@ class GearCarGenerator(Generator):
     def instance_parameter_space(self) -> ConfigurationSpace:
         mapping: dict[str, Any] = {}
         if self.variant == "ipc":
-            # Which shipped instance: the number in its file name, p000 -> 0,
-            # p01 -> 1 ... p19 -> 19.
             indices = sorted(IPC_INSTANCES)
             mapping["index"] = Integer(
                 "index", (indices[0], indices[-1]), default=indices[0]
@@ -231,28 +130,15 @@ class GearCarGenerator(Generator):
             return ConfigurationSpace(name=mapping)
         if self.variant != "generic":
             raise ValueError(f"invalid variant {self.variant}")
-        # The defaults make a car that can only finish by shifting: covering
-        # 100 with 3 gears takes at least 23 units of fuel if it shifts and 48
-        # if it stays in first gear, and it carries 30. The slack over 23 lets
-        # the metric trade fuel for time: the cheapest plan in fuel takes 14
-        # drive steps, the best one under the metric 13, burning 24.
-        #
-        # How many gears the car has. Two is the fewest that makes
-        # gear_up/gear_down exist at all, and there is no upper bound because
-        # every rule of the generic car works at any count. Like expedition's
-        # n_waypoints, an unbounded count means `sample()` and
-        # `object_universe()` want a reduced space rather than the full one.
         mapping["n_gears"] = Integer("n_gears", (2, MAX_INT), default=3)
-        # The distance to cover, the (>= (d) X) half of the goal.
         mapping["target_distance"] = Integer(
             "target_distance", (1, MAX_INT), default=100
         )
-        # The fuel the car starts with.
         mapping["fuel"] = Integer("fuel", (0, MAX_INT), default=30)
         # The price of one unit of fuel in (:metric minimize (cost)). Every
         # gear shift adds 1 to cost, so beta is how many shifts a unit of fuel
         # is worth. At least 1, or the metric would not count fuel or time at
-        # all (see generic_alpha).
+        # all (alpha, the price of a step, is derived from it).
         mapping["beta"] = Integer("beta", (1, MAX_INT), default=1)
         return ConfigurationSpace(name=mapping)
 
@@ -270,10 +156,6 @@ class GearCarGenerator(Generator):
             domain = reader.parse_problem(
                 str(RESOURCES_PATH / f"gear_car_v{self.version}.pddl")
             )
-            # Every instance minimises (cost), which sums a price per step and
-            # a price per unit of fuel, so the metric belongs to the domain
-            # rather than to a single instance. Problem.clone() copies it into
-            # every instance.
             domain.add_quality_metric(
                 MinimizeExpressionOnFinalState(domain.fluent("cost")())
             )
@@ -300,21 +182,26 @@ class GearCarGenerator(Generator):
         """Everything an instance is built from, in the same shape for both
         variants: n_gears, the goal window distance_min/distance_max, fuel,
         alpha, beta, and the car (an IPC_CARS entry, or generic_car's).
-
-        This is the only place the two variants differ.
         """
         if self.variant == "ipc":
             row = IPC_INSTANCES[params["index"]]
             return {**row, "car": IPC_CARS[row["n_gears"]]}
         n_gears = params["n_gears"]
         target = params["target_distance"]
+        fuel = params["fuel"]
+        beta = params["beta"]
         return {
             "n_gears": n_gears,
+            # A plan that starts and ends stopped always covers an even
+            # distance, so a window of 1 keeps an odd target reachable.
             "distance_min": target,
-            "distance_max": target + GOAL_DISTANCE_TOLERANCE,
-            "fuel": params["fuel"],
-            "alpha": generic_alpha(params["fuel"], params["beta"]),
-            "beta": params["beta"],
+            "distance_max": target + 1,
+            "fuel": fuel,
+            # A drive step costs alpha plus beta per unit of fuel it burns.
+            # This alpha is worth more than all the fuel, so one step fewer
+            # always beats any fuel saving: plans rank by time, then fuel.
+            "alpha": beta * (fuel + 1),
+            "beta": beta,
             "car": generic_car(n_gears),
         }
 
@@ -342,8 +229,6 @@ class GearCarGenerator(Generator):
     def get_goal(self, params) -> List[FNode]:
         self._check_params(params)
         data = self._instance_data(params)
-        # The car has to stop inside the distance window, back in first gear,
-        # and it has to have driven at all (fuel_used > 0).
         return [
             GE(self._d(), data["distance_min"]),
             LE(self._d(), data["distance_max"]),
@@ -359,8 +244,6 @@ class GearCarGenerator(Generator):
         data = self._instance_data(params)
         car = data["car"]
         n_gears = data["n_gears"]
-        # The car starts stopped at the origin in first gear, with every
-        # counter at 0.
         res: dict[FNode, FNode] = {
             self._current_gear(self._gear(1)): TRUE(),
             self._d(): 0,
@@ -384,36 +267,11 @@ class GearCarGenerator(Generator):
                 res[fluent(gear)] = value
             if i < n_gears:
                 res[self._gear_next(gear, self._gear(i + 1))] = TRUE()
-        # `current_gear` of the other gears defaults to false, and the shipped
-        # instances do not list those either.
         return res
 
     def check_instance_parameters(self, params: Configuration):
         if self.variant == "ipc":
             return params["index"] in IPC_INSTANCES
-        # Every generic configuration is accepted.
-        #
-        # TEMPORARILY DISABLED: the fuel has to be able to cover the distance.
-        # This is a necessary condition, not a full solvability check: whether
-        # the car can also stop exactly inside the goal window is left to the
-        # planner, in the same spirit as the expedition port. The drive actions
-        # require both v <= max_speed and v + a <= max_speed, so a step adds at
-        # most 2 * max_speed, and the cheapest step is the top gear driven
-        # inside its own band:
-        #
-        #     n_gears = params["n_gears"]
-        #     cheapest_step = gear_fuel_aligned(n_gears, n_gears)
-        #     longest_step = 2 * SPEED_PER_GEAR * n_gears
-        #     if (params["fuel"] // cheapest_step) * longest_step < params[
-        #         "target_distance"
-        #     ]:
-        #         return False
-        #
-        # It is off because it can leave a whole parameter space with nothing
-        # acceptable in it, and `Generator.sample()` redraws until something is
-        # accepted - so a space of, say, 2 units of fuel against 3 of distance
-        # makes it spin with no way out. Whether upbm should allow spaces that
-        # can do that is a question for the team; until it is settled, **an
-        # instance may simply not have the fuel to finish, and nothing here will
-        # say so.**
+        # Every generic configuration is accepted, so an instance may not have
+        # the fuel to finish.
         return True
