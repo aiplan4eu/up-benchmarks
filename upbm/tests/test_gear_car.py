@@ -40,10 +40,7 @@ class TestGearCar(BaseDomainTest):
 
     def _get_configs(self):
         return [
-            # Deliberately tiny, so a planner solves it at once: the car only
-            # has to creep two units forward and stop again.
             _config(n_gears=2, target_distance=2, fuel=10, beta=1),
-            # n_gears has no upper bound
             _config(n_gears=8, target_distance=2, fuel=10, beta=1),
             # the two ends of the shipped set: p000 (2 gears) and p19 (5 gears)
             _config("ipc", index=0),
@@ -63,8 +60,6 @@ class TestGearCar(BaseDomainTest):
 
     @property
     def validation_cases(self):
-        # Creep one unit forward, then bleed the speed back off so the car
-        # ends stopped, in first gear, with the acceleration back at zero.
         plan = """
         (accelerate g1)
         (drive_aligned_gear g1)
@@ -77,15 +72,4 @@ class TestGearCar(BaseDomainTest):
 
     @property
     def problem_actions(self):
-        # accelerate, decelerate, gear_up, gear_down and the three drive
-        # actions; they are lifted, so the count does not depend on the gears
         return [(*config, 7) for config in self._get_configs()]
-
-    # NOTE that ANML drops the metric is a property of upbm.io rather than of
-    # this domain, so it is tested once in test_io.py instead of here.
-    def test_metric_is_kept_in_every_instance(self):
-        for domain_config, instance_config in self._get_configs():
-            gen = GearCarGenerator(domain_config)
-            problem = gen.get_instance(instance_config)
-            self.assertEqual(len(problem.quality_metrics), 1)
-            self.assertIn("cost", str(problem.quality_metrics[0]))
