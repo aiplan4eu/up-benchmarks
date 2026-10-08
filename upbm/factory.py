@@ -68,6 +68,10 @@ class DomainFactory:
 
         self._registry["ztalloc-sum"] = ZtallocSumGenerator
 
+        from upbm.domains.sailing_wind import SailingWindGenerator
+
+        self._registry["sailing-wind"] = SailingWindGenerator
+
     def register(self, name: str, generator_class: Type[Generator]) -> None:
         """Manually register a generator class under *name*."""
         self._registry[name] = generator_class

@@ -1,0 +1,139 @@
+# The 20 sailing-wind instances of the IPC 2026 optimal track
+# (ipc2026-dataset/sailing-wind-opt).
+#
+# The boat always starts stopped at the origin and keeps half its speed when it
+# turns. That is the `inertia` parameter, given as a whole percentage, so the
+# r = 0.5 of this track is written here as 50; every instance of the track uses
+# the same value. The single person to rescue sits on a diagonal ramp, whose
+# position k is (5 + 0.4 k, 15.5 + 0.4 k); `skip` is how many positions are
+# passed over before that person, and is the only thing that changes. `gap`
+# only matters with two or more people.
+#
+# The variant is named after that ramp rather than after the IPC track: the
+# inertia is no longer what tells the two layouts apart, so `line` and `circle`
+# say what the generator actually does.
+domain: sailing-wind
+params:
+  version: 1
+  variant: line
+instances:
+  - name: problem_0
+    params:
+      n_people: 1
+      skip: 0
+      gap: 0
+      inertia: 50
+  - name: problem_1
+    params:
+      n_people: 1
+      skip: 1
+      gap: 0
+      inertia: 50
+  - name: problem_2
+    params:
+      n_people: 1
+      skip: 2
+      gap: 0
+      inertia: 50
+  - name: problem_3
+    params:
+      n_people: 1
+      skip: 3
+      gap: 0
+      inertia: 50
+  - name: problem_4
+    params:
+      n_people: 1
+      skip: 4
+      gap: 0
+      inertia: 50
+  - name: problem_5
+    params:
+      n_people: 1
+      skip: 5
+      gap: 0
+      inertia: 50
+  - name: problem_6
+    params:
+      n_people: 1
+      skip: 6
+      gap: 0
+      inertia: 50
+  - name: problem_7
+    params:
+      n_people: 1
+      skip: 7
+      gap: 0
+      inertia: 50
+  - name: problem_8
+    params:
+      n_people: 1
+      skip: 8
+      gap: 0
+      inertia: 50
+  - name: problem_9
+    params:
+      n_people: 1
+      skip: 9
+      gap: 0
+      inertia: 50
+  - name: problem_10
+    params:
+      n_people: 1
+      skip: 10
+      gap: 0
+      inertia: 50
+  - name: problem_11
+    params:
+      n_people: 1
+      skip: 11
+      gap: 0
+      inertia: 50
+  - name: problem_12
+    params:
+      n_people: 1
+      skip: 12
+      gap: 0
+      inertia: 50
+  - name: problem_13
+    params:
+      n_people: 1
+      skip: 13
+      gap: 0
+      inertia: 50
+  - name: problem_14
+    params:
+      n_people: 1
+      skip: 14
+      gap: 0
+      inertia: 50
+  - name: problem_15
+    params:
+      n_people: 1
+      skip: 15
+      gap: 0
+      inertia: 50
+  - name: problem_16
+    params:
+      n_people: 1
+      skip: 16
+      gap: 0
+      inertia: 50
+  - name: problem_17
+    params:
+      n_people: 1
+      skip: 17
+      gap: 0
+      inertia: 50
+  - name: problem_18
+    params:
+      n_people: 1
+      skip: 18
+      gap: 0
+      inertia: 50
+  - name: problem_19
+    params:
+      n_people: 1
+      skip: 19
+      gap: 0
+      inertia: 50
