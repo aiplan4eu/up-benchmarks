@@ -36,8 +36,6 @@ SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
 # The boat polar table: how fast the boat can go at each angle to the wind.
-# All variants use exactly these values.
-# vmax_0 is 0 because a sail boat cannot sail straight into the wind.
 POLAR_TABLE = {
     0: Fraction("0"),
     15: Fraction("0.17"),
@@ -54,40 +52,22 @@ POLAR_TABLE = {
     180: Fraction("0.8"),
 }
 
-MAX_INERTIA = 100
-VARIANT_DEFAULT_INERTIA = {
-    "line": 50,
-    "circle": 90,
-    "random": 50,
-}
-
 # save_person wants the boat within 15 of the person in x and in y, so a person
 # this close to the origin is already in reach of the boat where it starts.
 RESCUE_HALF_SIZE = 15
 
 
 # --- "line" placement ------------------------------------------------------
-# The 20 instances of the optimal track put a single person on a straight
-# diagonal ramp: position k of the ramp is (5 + 0.4 k, 15.5 + 0.4 k), and
-# problem_N has its person at position N, for N = 0..19. Both coordinates grow
-# by the same amount, so the ramp leads away from the boat along a 45 degree
-# line.
+# diagonal ramp: position k of the ramp is (5 + 0.4 k, 15.5 + 0.4 k)
 LINE_FIRST_X = Fraction("5")
 LINE_FIRST_Y = Fraction("15.5")
 LINE_STEP = Fraction("0.4")
 
 # --- "circle" placement ----------------------------------------------------
-# The satisficing track puts every person on a circle of radius 100 around the
-# boat, at a multiple of 45 degrees, with the coordinates rounded to whole
-# numbers (100 * cos(45 degrees) is 70.71, which the dataset writes as 71).
-# These eight points are the only person positions that track ever uses.
+# Every person is on a circle of radius 100 around the boat,
+# at a multiple of 45 degrees, with the coordinates rounded to whole numbers.
 #
-# The points are listed clockwise starting from north, because that is the
-# order the shipped set walks them in: its single person instances go north,
-# 45, 0, 315, 270 degrees, and in every two person instance the second person
-# is further clockwise from north than the first. People are placed by walking
-# this list (see `_circle_positions`), so the order here is what makes p0 and
-# p1 come out as they do in the dataset.
+# The points are listed in order clockwise starting from north.
 CIRCLE_POSITIONS = [
     (0, 100),  # 90 degrees, north
     (71, 71),  # 45
@@ -105,16 +85,6 @@ class SailingWindGenerator(Generator):
     def get_domain_parameter_space():
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
-        # The variant says where the people to rescue are put. All three share
-        # one domain skeleton, because the IPC dataset ships sailing-wind twice
-        # and the two domain files are byte-identical.
-        #
-        # "line" and "circle" are the two layouts of the shipped set, named
-        # after their shape rather than after the track they came from: the
-        # optimal track is a line and the satisficing one a circle. What used
-        # to separate those tracks, the inertia, is now an ordinary instance
-        # parameter, so either layout can be sailed by either boat.
-        # "random" draws the people instead, and is the default.
         mapping["variant"] = Categorical(
             "variant",
             ["random", "line", "circle"],
@@ -149,13 +119,9 @@ class SailingWindGenerator(Generator):
     @property
     def instance_parameter_space(self) -> ConfigurationSpace:
         mapping: dict[str, Any] = {}
-        if self.variant not in VARIANT_DEFAULT_INERTIA:
-            raise ValueError(f"invalid variant {self.variant}")
-        mapping["inertia"] = Integer(
-            "inertia",
-            (0, MAX_INERTIA),
-            default=VARIANT_DEFAULT_INERTIA[self.variant],
-        )
+        # inertia as percentage
+        # a boat with 100% inertia cannot change its speed
+        mapping["inertia"] = Integer("inertia", (0, 100), default=50)
 
         if self.variant == "line":
             # People are placed by walking the ramp outwards: skip `skip`
@@ -170,12 +136,14 @@ class SailingWindGenerator(Generator):
             mapping["n_people"] = Integer("n_people", (1, MAX_INT), default=1)
             mapping["skip"] = Integer("skip", (0, len(CIRCLE_POSITIONS) - 1), default=0)
             mapping["gap"] = Integer("gap", (0, len(CIRCLE_POSITIONS) - 2), default=0)
-        else:
+        elif self.variant == "random":
             mapping["n_people"] = Integer("n_people", (1, MAX_INT), default=2)
             mapping["max_distance"] = Integer(
                 "max_distance", (RESCUE_HALF_SIZE + 1, MAX_INT), default=100
             )
             mapping["seed"] = Integer("seed", (0, MAX_INT), default=42)
+        else:
+            raise ValueError(f"invalid variant {self.variant}")
         return ConfigurationSpace(name=mapping)
 
     @property
@@ -207,20 +175,9 @@ class SailingWindGenerator(Generator):
             raise ValueError(f"Invalid instance parameters: {params}")
 
     @staticmethod
-    def _number(value: Fraction):
-        """Write whole numbers as integers, like the shipped instances do.
-
-        The fluents are all real, but the dataset writes `(= (x b0) 0)` rather
-        than `0.0`, and UP keeps the distinction when it writes the PDDL back
-        out. Values are equal either way, this only keeps the generated files
-        looking like the originals.
-        """
-        return int(value) if value.denominator == 1 else Real(value)
-
-    @staticmethod
     def _inertia(params) -> Fraction:
         """The `r` fluent, from the whole percentage the parameter holds."""
-        return Fraction(params["inertia"], MAX_INERTIA)
+        return Fraction(params["inertia"], 100)
 
     def _person_positions(self, params) -> List[Tuple[Fraction, Fraction]]:
         """Return the (x, y) position of every person of this instance."""
@@ -255,10 +212,11 @@ class SailingWindGenerator(Generator):
         fill every point.
 
         The walk keeps going round the circle, so people end up sharing a point
-        once there are more of them than the walk visits: eight with `gap` 0,
-        four with `gap` 1 or 5, two with `gap` 3. Such an instance is still
-        solvable, the boat simply saves everyone at that point from where it
-        stops, just as when two drawn people land on the same spot in `random`.
+        once there are more of them than the points the walk visits: all 8
+        points with an even `gap`, 4 with `gap` 1 or 5, 2 with `gap` 3. Such an
+        instance is still solvable, the boat simply saves everyone at that
+        point from where it stops, just as when two drawn people land on the
+        same spot in `random`.
         """
         res: List[Tuple[Fraction, Fraction]] = []
         for k in SailingWindGenerator._walk(params):
@@ -310,8 +268,6 @@ class SailingWindGenerator(Generator):
     ):
         if instance_parameters_space is None:
             instance_parameters_space = self.instance_parameter_space
-        if self.variant not in VARIANT_DEFAULT_INERTIA:
-            raise ValueError(f"invalid variant {self.variant}")
         _, n_persons = hyperparam_range(instance_parameters_space["n_people"])
         return [self._get_object("b0", self._Boat)] + [
             self._get_object(f"p{i}", self._Person) for i in range(n_persons)
@@ -329,35 +285,23 @@ class SailingWindGenerator(Generator):
         boat = self._get_object("b0", self._Boat)
         res: dict[FNode, FNode] = {}
         for angle, vmax in POLAR_TABLE.items():
-            res[self._domain.fluent(f"vmax_{angle}")(boat)] = self._number(vmax)
-        res[self._x(boat)] = self._number(Fraction(0))
-        res[self._y(boat)] = self._number(Fraction(0))
-        res[self._r(boat)] = self._number(self._inertia(params))
-        res[self._v(boat)] = self._number(Fraction(0))
+            res[self._domain.fluent(f"vmax_{angle}")(boat)] = Real(vmax)
+        res[self._x(boat)] = Real(Fraction(0))
+        res[self._y(boat)] = Real(Fraction(0))
+        res[self._r(boat)] = Real(self._inertia(params))
+        res[self._v(boat)] = Real(Fraction(0))
         res[self._sailing_angle(boat)] = 0
         for i, (x, y) in enumerate(self._person_positions(params)):
             person = self._get_object(f"p{i}", self._Person)
-            res[self._x(person)] = self._number(x)
-            res[self._y(person)] = self._number(y)
+            res[self._x(person)] = Real(x)
+            res[self._y(person)] = Real(y)
         return res
 
     def check_instance_parameters(self, params: Configuration):
-        # As long as the boat can move at all it can reach anyone: it turns by
-        # 15 degrees per move and can always shed speed by heading into the
-        # wind (vmax_0 is 0), so it reaches any point on the plane and stops
-        # there, and the rescue box around a person is a generous 30 by 30.
-        #
-        # The one exception is a boat that keeps *all* of its speed. A move
-        # sets v to `vmax_angle * (1 - r) + r * v`, which at r = 1 is just v,
-        # and the boat starts stopped, so it never moves and never displaces.
-        # Such an instance is solvable only if everybody is already in reach.
-        #
-        # None of the three layouts can in fact put anyone there - the ramp
-        # starts at y = 15.5, the circle has radius 100, and the draw rejects
-        # the box - so today this rejects every instance at MAX_INERTIA. The
-        # position is still what is checked, because that is the real reason,
-        # and a layout added later may well place someone in the box.
-        if params["inertia"] == MAX_INERTIA:
+        if params["inertia"] == 100:
+            # if inertia is 100 (boat keeps all of its speed,
+            # if it starts not moving it cannot move)
+            # only solvable if everyone is in reach from the start
             return all(
                 abs(x) <= RESCUE_HALF_SIZE and abs(y) <= RESCUE_HALF_SIZE
                 for x, y in self._person_positions(params)
