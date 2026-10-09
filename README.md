@@ -219,6 +219,7 @@ The bundled generator classes are:
 | coins | `from upbm.domains.coins import CoinsGenerator` |
 | ztalloc-sum | `from upbm.domains.ztalloc_sum import ZtallocSumGenerator` |
 | expedition | `from upbm.domains.expedition import ExpeditionGenerator` |
+| gear-car | `from upbm.domains.gear_car import GearCarGenerator` |
 
 ### Registering domains via `.upbm` plugins
 
@@ -251,6 +252,7 @@ The following domains are implemented and registered today:
 | **Coins** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Hardness: finding a feasible plan is easy, finding an optimal one is hard |
 | **Ztalloc-Sum** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Reversed Collatz: registers start at 1 and must add up to a target |
 | **Expedition** (IPC 2026) | UP/PDDL | Numbers | Sleds burn one supply per move and must ferry supplies forward to cross a chain of waypoints |
+| **Gear Car** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Hardness: first gear can reach any speed, so shifting only pays for the fuel it saves; a tight fuel budget makes the car work the gears |
 
 ### Planned
 
