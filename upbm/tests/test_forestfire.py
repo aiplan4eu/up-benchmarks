@@ -18,6 +18,7 @@ from ConfigSpace import Configuration
 
 from upbm.domains.forestfire import ForestFireGenerator
 from upbm.tests.base_domain_test import BaseDomainTest
+from unified_planning.engines.results import ValidationResultStatus
 
 PROB01 = dict(index=1)
 PROB12 = dict(index=12)
@@ -123,3 +124,43 @@ class TestForestFire(BaseDomainTest):
     def problem_actions(self) -> List[Tuple[Configuration, Configuration, int]]:
         domain_config, instance_config = self._get_configs("ipc", **PROB01)
         return [(domain_config, instance_config, 7)]
+
+    @property
+    def validation_cases(self):
+        dom, ins = self._get_configs("random", **TINY)
+
+        valid = """
+        (fill-water bot1 grass1_1)
+        (move-grass bot1 grass1_1 bushes1_2)
+        (move-bushes bot1 bushes1_2 grass1_3)
+        (move-grass bot1 grass1_3 grass2_3)
+        (move-grass bot1 grass2_3 grass3_3)
+        (put-out-fire bot1 grass3_3)
+        """
+        invalid = """
+        (fill-water bot1 grass1_1)
+        (move-grass bot1 grass1_1 bushes1_2)
+        (move-bushes bot1 bushes1_2 grass1_3)
+        (move-grass bot1 grass1_3 grass2_3)
+        (move-grass bot1 grass2_3 grass3_3)
+        (move-grass bot1 grass3_3 grass2_3)
+        (put-out-fire bot1 grass3_3)
+        """
+
+        empty_plan = ""
+
+        return [
+            (dom, ins, valid, ValidationResultStatus.VALID),
+            (
+                dom,
+                ins,
+                empty_plan,
+                ValidationResultStatus.INVALID,
+            ),
+            (
+                dom,
+                ins,
+                invalid,  # not valid in the problem with fewer supplies
+                ValidationResultStatus.INVALID,
+            ),
+        ]
