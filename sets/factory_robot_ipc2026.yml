@@ -1,0 +1,95 @@
+# The 20 factory-robot instances of the IPC 2026 dataset
+# (ipc2026-dataset/factory-robot).
+#
+# The `ipc` variant rebuilds the shipped instances, so the only thing an
+# instance chooses is which one: `index` is the number in the file name. The
+# robots, stations and goals live in
+# upbm/domains/factory_robot/resources/ipc_factory_robot_data.py.
+#
+# pfile1 and pfile2 are byte-identical in the dataset, so they are listed
+# twice here on purpose.
+domain: factory-robot
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: pfile1
+    # 2 robots, 5 stations
+    params:
+      index: 1
+  - name: pfile2
+    # 2 robots, 5 stations
+    params:
+      index: 2
+  - name: pfile3
+    # 3 robots, 6 stations
+    params:
+      index: 3
+  - name: pfile4
+    # 3 robots, 6 stations
+    params:
+      index: 4
+  - name: pfile5
+    # 4 robots, 7 stations
+    params:
+      index: 5
+  - name: pfile6
+    # 4 robots, 7 stations
+    params:
+      index: 6
+  - name: pfile7
+    # 5 robots, 8 stations
+    params:
+      index: 7
+  - name: pfile8
+    # 5 robots, 8 stations
+    params:
+      index: 8
+  - name: pfile9
+    # 6 robots, 9 stations
+    params:
+      index: 9
+  - name: pfile10
+    # 6 robots, 9 stations
+    params:
+      index: 10
+  - name: pfile11
+    # 7 robots, 10 stations
+    params:
+      index: 11
+  - name: pfile12
+    # 7 robots, 10 stations
+    params:
+      index: 12
+  - name: pfile13
+    # 8 robots, 11 stations
+    params:
+      index: 13
+  - name: pfile14
+    # 8 robots, 11 stations
+    params:
+      index: 14
+  - name: pfile15
+    # 9 robots, 12 stations
+    params:
+      index: 15
+  - name: pfile16
+    # 9 robots, 12 stations
+    params:
+      index: 16
+  - name: pfile17
+    # 10 robots, 13 stations
+    params:
+      index: 17
+  - name: pfile18
+    # 10 robots, 13 stations
+    params:
+      index: 18
+  - name: pfile19
+    # 12 robots, 14 stations
+    params:
+      index: 19
+  - name: pfile20
+    # 12 robots, 14 stations
+    params:
+      index: 20

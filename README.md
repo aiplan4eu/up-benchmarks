@@ -219,6 +219,7 @@ The bundled generator classes are:
 | coins | `from upbm.domains.coins import CoinsGenerator` |
 | ztalloc-sum | `from upbm.domains.ztalloc_sum import ZtallocSumGenerator` |
 | expedition | `from upbm.domains.expedition import ExpeditionGenerator` |
+| factory-robot | `from upbm.domains.factory_robot import FactoryRobotGenerator` |
 
 ### Registering domains via `.upbm` plugins
 
@@ -251,6 +252,7 @@ The following domains are implemented and registered today:
 | **Coins** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Hardness: finding a feasible plan is easy, finding an optimal one is hard |
 | **Ztalloc-Sum** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Reversed Collatz: registers start at 1 and must add up to a target |
 | **Expedition** (IPC 2026) | UP/PDDL | Numbers | Sleds burn one supply per move and must ferry supplies forward to cross a chain of waypoints |
+| **Factory Robot** (IPC 2026) | UP/PDDL | General Numeric Planning, Negative Conditions | Robots juggle energy, heat and station contention; two actions in the domain are designed to be always pruned |
 
 ### Planned
 
