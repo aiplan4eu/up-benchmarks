@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import random
 from pathlib import Path
-from typing import Any, Dict, List, NamedTuple, Optional
+from typing import Any, Dict, List, Optional
 
 from ConfigSpace import (
     ConfigurationSpace,
@@ -28,7 +27,9 @@ from unified_planning.model import Problem, Object, FNode
 from unified_planning.shortcuts import TRUE, GE, LE
 
 from upbm.generator import Generator
-from upbm.utils import MAX_INT, is_subspace, hyperparam_range
+from upbm.utils import is_subspace, hyperparam_range
+
+from .resources.ipc_factory_robot_data import IPC_INSTANCES, ROBOT_FLUENTS
 
 
 SCRIPT_PATH = Path(__file__).absolute().parent
@@ -37,89 +38,10 @@ RESOURCES_PATH = SCRIPT_PATH / "resources"
 CHARGING = "charging"
 COOLING = "cooling"
 
-START_WORKLOAD = 0
-START_TEMPERATURE = 0
-START_PRODUCTION = 0
-
-CAPACITY_CHOICES = [80, 100, 120, 150]
-WORK_COST_CHOICES = [8, 10, 12, 15]
-EFFICIENCY_CHOICES = [2, 3, 4]
-MAX_TEMP_SPREAD = 5  # max-temp is the argument plus 0..5
-COOLING_POWER_RANGE = (4, 6)
-ENERGY_DEFICIT = 20  # energy is capacity minus 0..20
-WORKLOAD_SPREAD = 2  # the goal is the argument plus -2..2
-
-
-class RobotData(NamedTuple):
-    """The per-instance values the original generator drew at random."""
-
-    capacity: List[int]
-    work_cost: List[int]
-    max_temp: List[int]
-    efficiency: List[int]
-    cooling_power: int
-    at: List[str]
-    energy: List[int]
-    workload_goal: List[int]
-
 
 def stations(n_stations: int) -> List[str]:
     """The station names, in the order the shipped instances declare them."""
     return [CHARGING, COOLING] + [f"assembly{i}" for i in range(n_stations - 2)]
-
-
-def draw(
-    n_robots: int, n_stations: int, workload: int, max_temp: int, seed: int
-) -> RobotData:
-    """Reproduce the random data of one instance.
-
-    This is the original `generate.py` reconstructed from the dataset: every
-    shipped instance records the exact call that made it
-    (`python generate.py --robots N --stations N --workload N --max-temp N
-    --seed 42`), but not the script, so the call sequence below was recovered
-    by matching candidate draws against all 20 instances at once. It
-    reproduces every one of them exactly, field for field.
-
-    Three properties of the set made that possible: the seed is 42 in all 20,
-    so there is a single stream; the instances come in pairs that share
-    `--robots`/`--stations` and differ only in the other two arguments, and
-    every drawn value is identical within a pair, which shows the draws depend
-    on nothing but the robot count and the seed; and `capacity` is a stable
-    prefix as the robot count grows while every other field shifts, which is
-    what a generator drawing field-by-field (rather than robot-by-robot) looks
-    like, and pins `capacity` as the first pass.
-
-    The order of the passes matters, and so do two details that look
-    interchangeable but are not: the positions come from shuffling the station
-    list and taking a prefix, not from `sample()`, and the energy is the
-    capacity minus a draw rather than a draw from a shifted range. Either
-    substitution still produces plausible numbers, but consumes the stream
-    differently and stops reproducing the dataset.
-    """
-    rng = random.Random(seed)
-    capacity = [rng.choice(CAPACITY_CHOICES) for _ in range(n_robots)]
-    work_cost = [rng.choice(WORK_COST_CHOICES) for _ in range(n_robots)]
-    max_temps = [max_temp + rng.randint(0, MAX_TEMP_SPREAD) for _ in range(n_robots)]
-    efficiency = [rng.choice(EFFICIENCY_CHOICES) for _ in range(n_robots)]
-    cooling_power = rng.randint(*COOLING_POWER_RANGE)
-    places = stations(n_stations)
-    rng.shuffle(places)
-    at = places[:n_robots]
-    energy = [c - rng.randint(0, ENERGY_DEFICIT) for c in capacity]
-    workload_goal = [
-        workload + rng.randint(-WORKLOAD_SPREAD, WORKLOAD_SPREAD)
-        for _ in range(n_robots)
-    ]
-    return RobotData(
-        capacity=capacity,
-        work_cost=work_cost,
-        max_temp=max_temps,
-        efficiency=efficiency,
-        cooling_power=cooling_power,
-        at=at,
-        energy=energy,
-        workload_goal=workload_goal,
-    )
 
 
 class FactoryRobotGenerator(Generator):
@@ -154,15 +76,11 @@ class FactoryRobotGenerator(Generator):
         self._has_calibrator = self._domain.fluent("has-calibrator")
         self._free = self._domain.fluent("free")
         self._calibrated = self._domain.fluent("calibrated")
-        self._energy = self._domain.fluent("energy")
         self._workload = self._domain.fluent("workload")
         self._temperature = self._domain.fluent("temperature")
         self._production = self._domain.fluent("production")
-        self._capacity = self._domain.fluent("capacity")
-        self._work_cost = self._domain.fluent("work-cost")
-        self._max_temp = self._domain.fluent("max-temp")
-        self._efficiency = self._domain.fluent("efficiency")
         self._cooling_power = self._domain.fluent("cooling-power")
+        self._robot_fluents = [self._domain.fluent(name) for name in ROBOT_FLUENTS]
 
         self._object_cache: dict[tuple[str, Any], Object] = {}
         super().__init__(domain_params)
@@ -172,11 +90,10 @@ class FactoryRobotGenerator(Generator):
         mapping: dict[str, Any] = {}
         if self.variant != "ipc":
             raise ValueError(f"invalid variant {self.variant}")
-        mapping["n_robots"] = Integer("n_robots", (1, MAX_INT), default=2)
-        mapping["n_stations"] = Integer("n_stations", (2, MAX_INT), default=5)
-        mapping["workload"] = Integer("workload", (0, MAX_INT), default=40)
-        mapping["max_temp"] = Integer("max_temp", (0, MAX_INT), default=20)
-        mapping["seed"] = Integer("seed", (0, MAX_INT), default=42)
+        indices = sorted(IPC_INSTANCES)
+        mapping["index"] = Integer(
+            "index", (indices[0], indices[-1]), default=indices[0]
+        )
         return ConfigurationSpace(name=mapping)
 
     @property
@@ -213,72 +130,68 @@ class FactoryRobotGenerator(Generator):
     def _station(self, name: str) -> Object:
         return self._get_object(name, self._Station)
 
-    def _draw(self, params: Configuration) -> RobotData:
-        return draw(
-            params["n_robots"],
-            params["n_stations"],
-            params["workload"],
-            params["max_temp"],
-            params["seed"],
-        )
+    def _row(self, params: Configuration) -> Dict[str, Any]:
+        return IPC_INSTANCES[params["index"]]
 
     def get_objects(self, params) -> List[Object]:
         self._check_params(params)
         if not self.check_instance_parameters(params):
             raise ValueError(f"Requested instance is unsolvable")
-        robots = [self._robot(i) for i in range(params["n_robots"])]
-        return robots + [self._station(s) for s in stations(params["n_stations"])]
+        row = self._row(params)
+        robots = [self._robot(i) for i in range(len(row["robots"]))]
+        return robots + [self._station(s) for s in stations(row["n_stations"])]
 
     def object_universe(
         self, instance_parameters_space: Optional[ConfigurationSpace] = None
     ):
         if instance_parameters_space is None:
             instance_parameters_space = self.instance_parameter_space
-        _, robots_upper = hyperparam_range(instance_parameters_space["n_robots"])
-        _, stations_upper = hyperparam_range(instance_parameters_space["n_stations"])
+        first, last = hyperparam_range(instance_parameters_space["index"])
+        rows = [IPC_INSTANCES[i] for i in IPC_INSTANCES if first <= i <= last]
+        robots_upper = max(len(row["robots"]) for row in rows)
+        stations_upper = max(row["n_stations"] for row in rows)
         return [self._robot(i) for i in range(robots_upper)] + [
             self._station(s) for s in stations(stations_upper)
         ]
 
     def get_goal(self, params) -> List[FNode]:
         self._check_params(params)
-        data = self._draw(params)
+        row = self._row(params)
+        # A workload target per robot, and a temperature bound on r0 alone.
         goals: List[FNode] = [
             GE(self._workload(self._robot(i)), target)
-            for i, target in enumerate(data.workload_goal)
+            for i, (_, target, *_) in enumerate(row["robots"])
         ]
-        goals.append(LE(self._temperature(self._robot(0)), params["max_temp"]))
+        goals.append(LE(self._temperature(self._robot(0)), row["goal_temperature"]))
         return goals
 
     def get_initial_state(self, params) -> dict[FNode, FNode]:
         self._check_params(params)
-        n_robots = params["n_robots"]
-        places = stations(params["n_stations"])
-        data = self._draw(params)
+        row = self._row(params)
+        places = stations(row["n_stations"])
         res: dict[FNode, FNode] = {}
 
-        for i in range(n_robots):
+        occupied = set()
+        for i, (place, _, *values) in enumerate(row["robots"]):
             robot = self._robot(i)
-            res[self._at(robot, self._station(data.at[i]))] = TRUE()
+            occupied.add(place)
+            res[self._at(robot, self._station(place))] = TRUE()
+            # every robot starts calibrated, idle and cold
             res[self._calibrated(robot)] = TRUE()
-            res[self._energy(robot)] = data.energy[i]
-            res[self._workload(robot)] = START_WORKLOAD
-            res[self._temperature(robot)] = START_TEMPERATURE
-            res[self._production(robot)] = START_PRODUCTION
-            res[self._capacity(robot)] = data.capacity[i]
-            res[self._work_cost(robot)] = data.work_cost[i]
-            res[self._max_temp(robot)] = data.max_temp[i]
-            res[self._efficiency(robot)] = data.efficiency[i]
+            res[self._workload(robot)] = 0
+            res[self._temperature(robot)] = 0
+            res[self._production(robot)] = 0
+            for fluent, value in zip(self._robot_fluents, values):
+                res[fluent(robot)] = value
 
         res[self._has_charger(self._station(CHARGING))] = TRUE()
         res[self._has_calibrator(self._station(COOLING))] = TRUE()
-        occupied = set(data.at)
         for place in places:
             station = self._station(place)
             if place not in occupied:
                 res[self._free(station)] = TRUE()
             res[self._cooling_power(station)] = (
-                data.cooling_power if place == COOLING else 0
+                row["cooling_power"] if place == COOLING else 0
             )
         for a in places:
             for b in places:
@@ -287,18 +200,4 @@ class FactoryRobotGenerator(Generator):
         return res
 
     def check_instance_parameters(self, params: Configuration):
-        # NOTE this is a necessary condition, not a full solvability check.
-        #
-        # Every robot stands on its own station, and there has to be one to
-        # spare. That is not a nicety: `move` requires the target station to
-        # be free, so with exactly as many stations as robots nobody can ever
-        # move, and a robot that did not start on the charging station can
-        # never recharge. With one spare, the clique means any robot can
-        # always reach the charger and the cooler, so it can alternate
-        # working, recharging and cooling indefinitely - and since workload
-        # only ever increases, any target is then reachable given enough
-        # steps.
-        #
-        # The charging and cooling stations are guaranteed by the parameter
-        # space, whose lower bound for n_stations is 2.
-        return params["n_stations"] > params["n_robots"]
+        return params["index"] in IPC_INSTANCES
