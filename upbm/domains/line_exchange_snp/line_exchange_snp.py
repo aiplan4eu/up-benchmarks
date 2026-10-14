@@ -104,7 +104,6 @@ class LineExchangeSnpGenerator(Generator):
                 )
         else:
             mapping["mean_load"] = Integer("mean_load", (0, MAX_INT), default=10)
-            mapping["imbalance"] = Integer("imbalance", (0, MAX_INT), default=50)
             mapping["seed"] = Integer("seed", (0, MAX_INT), default=42)
         return ConfigurationSpace(name=mapping)
 
@@ -170,30 +169,24 @@ class LineExchangeSnpGenerator(Generator):
             return list(self._row(params)["loads"])
         if self.variant == "bounded_5":
             return [params[f"q_{slot}"] for slot in range(params["n_robots"])]
-        return self._scrambled_loads(params)
+        return self._drawn_loads(params)
 
     @staticmethod
-    def _scrambled_loads(params) -> List[int]:
-        """Loads drawn by undoing a few exchanges from the balanced state.
+    def _drawn_loads(params) -> List[int]:
+        """Loads drawn by cutting the total load into random pieces.
 
-        Everyone starts on the mean, which is exactly the goal, and then the
-        loads are scrambled by moving units between neighbours - the same
-        thing the `exch` actions do, just in reverse. So the scramble is a
-        witness plan and the instance is solvable by construction: the total
-        is conserved, so it still divides evenly, and no robot can hand over
-        more than it holds, so no load goes negative.
+        The total is n_robots * mean_load. It is cut at n_robots - 1 random
+        points, and each robot gets the piece between two neighbouring cuts,
+        so no load is negative and the loads add up to the total.
+
+        That is all the goal needs: since the total divides evenly, every
+        robot can end up holding mean_load.
         """
         n_robots = params["n_robots"]
-        loads = [params["mean_load"]] * n_robots
-        step = params["mean_load"] * params["imbalance"] // 100
+        total = n_robots * params["mean_load"]
         rng = random.Random(params["seed"])
-        for _ in range(n_robots):
-            left = rng.randrange(n_robots - 1)
-            donor, receiver = (left, left + 1) if rng.randrange(2) else (left + 1, left)
-            amount = rng.randint(0, min(loads[donor], step))
-            loads[donor] -= amount
-            loads[receiver] += amount
-        return loads
+        cuts = sorted(rng.randint(0, total) for _ in range(n_robots - 1))
+        return [end - start for start, end in zip([0] + cuts, cuts + [total])]
 
     def _home(self, params, i: int) -> Fraction:
         """Where robot i starts, and has to be again at the end.
@@ -254,11 +247,7 @@ class LineExchangeSnpGenerator(Generator):
         # An exchange moves one unit from a robot to its neighbour, so the
         # total load never changes. The goal asks for every robot to hold the
         # same amount, which is only reachable when that total splits evenly.
-        # The "unbounded_random" variant scrambles a balanced start, so it
-        # always does, and every "ipc" row is a shipped instance that divides
-        # evenly by construction. Only "bounded_5", where the caller states the
-        # loads, can get this wrong - which is why the check stays with it
-        # rather than moving to a shared place.
+        # the only variant where this could be wrong is "bounded_5".
         if self.variant != "bounded_5":
             return True
         return sum(self._loads(params)) % params["n_robots"] == 0
