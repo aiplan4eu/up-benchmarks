@@ -18,12 +18,14 @@ The "ipc" variant rebuilds these instead of taking the loads as parameters, so
 its only instance parameter is the index below. The order is the one the dataset
 lists the files in, so index 0 is ``3_10_50_10``.
 
-Why a table at all: the shipped file names encode
-``<n_robots>_<mean_q>_<imbalance%>_<D>``, but only ``n_robots`` and ``D`` are
-recoverable parameters. The loads were drawn at random with no seed recorded,
-and ``imbalance`` does not determine them - ``3_10_90_50`` holds ``[10, 9, 11]``
-and ``3_15_90_10`` holds ``[35, 6, 4]``, both at imbalance 90. So the loads are
-row data, not a rule, and this table is what "reproducing the set" means here.
+Why a table at all: each shipped file name is four numbers, and the dataset
+does not say what they mean. Checked against the files, the first is
+``n_robots``, the second the mean load and the last ``D``; the third (25, 50 or
+90) matches nothing in the files. Only ``n_robots`` and ``D`` are recoverable
+parameters. The loads were drawn at random with no seed recorded, and the third
+number does not determine them - ``3_10_90_50`` holds ``[10, 9, 11]`` and
+``3_15_90_10`` holds ``[35, 6, 4]``. So the loads are row data, not a rule, and
+this table is what "reproducing the set" means here.
 
 Each entry holds everything needed to rebuild that instance:
 
@@ -36,12 +38,10 @@ Each entry holds everything needed to rebuild that instance:
                       divides evenly by ``n_robots``, which is what makes the
                       levelled-out goal reachable;
 - ``mean_q``          the file name's mean load, kept only as provenance:
-                      ``sum(loads) == n_robots * mean_q`` in all twenty;
-- ``imbalance``       the file name's imbalance percentage, likewise provenance.
-                      The "unbounded_random" variant takes it as a real dial.
+                      ``sum(loads) == n_robots * mean_q`` in all twenty.
 
-``mean_q`` and ``imbalance`` are never read when building an instance. They are
-here so the table explains where its own numbers came from.
+``mean_q`` is never read when building an instance. It is here so the table
+explains where its own numbers came from.
 """
 
 from typing import Any, Dict, List
@@ -53,7 +53,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 10,
         "loads": [12, 12, 6],
         "mean_q": 10,
-        "imbalance": 50,
     },
     1: {
         "name": "3_10_90_50",
@@ -61,7 +60,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 50,
         "loads": [10, 9, 11],
         "mean_q": 10,
-        "imbalance": 90,
     },
     2: {
         "name": "3_15_25_100",
@@ -69,7 +67,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 100,
         "loads": [14, 19, 12],
         "mean_q": 15,
-        "imbalance": 25,
     },
     3: {
         "name": "3_15_90_10",
@@ -77,7 +74,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 10,
         "loads": [35, 6, 4],
         "mean_q": 15,
-        "imbalance": 90,
     },
     4: {
         "name": "3_5_50_50",
@@ -85,7 +81,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 50,
         "loads": [3, 6, 6],
         "mean_q": 5,
-        "imbalance": 50,
     },
     5: {
         "name": "3_5_90_100",
@@ -93,7 +88,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 100,
         "loads": [3, 3, 9],
         "mean_q": 5,
-        "imbalance": 90,
     },
     6: {
         "name": "4_10_25_10",
@@ -101,7 +95,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 10,
         "loads": [11, 12, 8, 9],
         "mean_q": 10,
-        "imbalance": 25,
     },
     7: {
         "name": "4_10_50_50",
@@ -109,7 +102,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 50,
         "loads": [13, 9, 5, 13],
         "mean_q": 10,
-        "imbalance": 50,
     },
     8: {
         "name": "4_10_90_100",
@@ -117,7 +109,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 100,
         "loads": [2, 18, 3, 17],
         "mean_q": 10,
-        "imbalance": 90,
     },
     9: {
         "name": "4_15_50_10",
@@ -125,7 +116,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 10,
         "loads": [13, 12, 17, 18],
         "mean_q": 15,
-        "imbalance": 50,
     },
     10: {
         "name": "4_15_90_50",
@@ -133,7 +123,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 50,
         "loads": [24, 12, 18, 6],
         "mean_q": 15,
-        "imbalance": 90,
     },
     11: {
         "name": "4_5_25_50",
@@ -141,7 +130,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 50,
         "loads": [6, 4, 4, 6],
         "mean_q": 5,
-        "imbalance": 25,
     },
     12: {
         "name": "4_5_50_100",
@@ -149,7 +137,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 100,
         "loads": [4, 4, 8, 4],
         "mean_q": 5,
-        "imbalance": 50,
     },
     13: {
         "name": "5_10_25_50",
@@ -157,7 +144,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 50,
         "loads": [7, 10, 11, 12, 10],
         "mean_q": 10,
-        "imbalance": 25,
     },
     14: {
         "name": "5_10_50_100",
@@ -165,7 +151,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 100,
         "loads": [9, 9, 13, 9, 10],
         "mean_q": 10,
-        "imbalance": 50,
     },
     15: {
         "name": "5_15_25_10",
@@ -173,7 +158,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 10,
         "loads": [14, 15, 12, 18, 16],
         "mean_q": 15,
-        "imbalance": 25,
     },
     16: {
         "name": "5_15_50_50",
@@ -181,7 +165,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 50,
         "loads": [20, 12, 14, 15, 14],
         "mean_q": 15,
-        "imbalance": 50,
     },
     17: {
         "name": "5_15_90_100",
@@ -189,7 +172,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 100,
         "loads": [6, 3, 37, 16, 13],
         "mean_q": 15,
-        "imbalance": 90,
     },
     18: {
         "name": "5_5_25_100",
@@ -197,7 +179,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 100,
         "loads": [4, 6, 4, 7, 4],
         "mean_q": 5,
-        "imbalance": 25,
     },
     19: {
         "name": "5_5_90_10",
@@ -205,7 +186,6 @@ IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
         "segment_length": 10,
         "loads": [1, 7, 1, 7, 9],
         "mean_q": 5,
-        "imbalance": 90,
     },
 }
 
