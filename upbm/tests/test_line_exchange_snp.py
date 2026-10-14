@@ -51,14 +51,13 @@ class TestLineExchangeSnp(BaseDomainTest):
                 q_3=0,
                 q_4=0,
             ),
-            # with these parameters the scramble draws [3, 1] as well
+            # with these parameters the draw gives [3, 1] as well
             _configs(
                 "unbounded_random",
                 n_robots=2,
                 segment_length=2,
                 mean_load=2,
-                imbalance=50,
-                seed=2,
+                seed=0,
             ),
             # shipped instance 0, named 3_10_50_10: three robots, D=10
             _configs("ipc", index=0),
