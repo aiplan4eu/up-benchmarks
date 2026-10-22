@@ -59,6 +59,9 @@ class DomainFactory:
         from upbm.domains.expedition import ExpeditionGenerator
 
         self._registry["expedition"] = ExpeditionGenerator
+        from upbm.domains.rainbowttles import RainbowttlesGenerator
+
+        self._registry["rainbowttles"] = RainbowttlesGenerator
 
         from upbm.domains.coins import CoinsGenerator
 
