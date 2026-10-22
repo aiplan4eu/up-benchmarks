@@ -1,0 +1,163 @@
+# The 20 sailing-wind instances of the IPC 2026 satisficing track
+# (ipc2026-dataset/sailing-wind-sat).
+#
+# The boat keeps 90% of its speed when it turns, which makes stopping next to a
+# person much harder than in the optimal track. That is the `inertia` parameter,
+# given as a whole percentage, so the r = 0.9 of this track is written here as
+# 90; every instance of the track uses the same value.
+#
+# Every person waits on a circle of radius 100 around the boat, on one of eight
+# points 45 degrees apart. People are placed by walking those points clockwise
+# from north: `skip` points are passed over first, a person goes on the next
+# one, and each further person comes after `gap` empty points. So skip 0 is due
+# north, skip 2 due east, and two people with skip 1 and gap 1 wait at 45 and
+# 315 degrees. `gap` only matters with two or more people.
+#
+# The variant is named after that circle rather than after the IPC track: the
+# inertia is no longer what tells the two layouts apart, so `line` and `circle`
+# say what the generator actually does.
+domain: sailing-wind
+params:
+  version: 1
+  variant: circle
+instances:
+  # 90 degrees
+  - name: problem_0
+    params:
+      n_people: 1
+      skip: 0
+      gap: 0
+      inertia: 90
+  # 45 degrees
+  - name: problem_1
+    params:
+      n_people: 1
+      skip: 1
+      gap: 0
+      inertia: 90
+  # 0 degrees
+  - name: problem_2
+    params:
+      n_people: 1
+      skip: 2
+      gap: 0
+      inertia: 90
+  # 315 degrees
+  - name: problem_3
+    params:
+      n_people: 1
+      skip: 3
+      gap: 0
+      inertia: 90
+  # 270 degrees
+  - name: problem_4
+    params:
+      n_people: 1
+      skip: 4
+      gap: 0
+      inertia: 90
+  # 45 degrees and 315 degrees
+  - name: problem_5
+    params:
+      n_people: 2
+      skip: 1
+      gap: 1
+      inertia: 90
+  # 45 degrees and 270 degrees
+  - name: problem_6
+    params:
+      n_people: 2
+      skip: 1
+      gap: 2
+      inertia: 90
+  # 45 degrees and 225 degrees
+  - name: problem_7
+    params:
+      n_people: 2
+      skip: 1
+      gap: 3
+      inertia: 90
+  # 45 degrees and 180 degrees
+  - name: problem_8
+    params:
+      n_people: 2
+      skip: 1
+      gap: 4
+      inertia: 90
+  # 45 degrees and 135 degrees
+  - name: problem_9
+    params:
+      n_people: 2
+      skip: 1
+      gap: 5
+      inertia: 90
+  # 0 degrees and 315 degrees
+  - name: problem_10
+    params:
+      n_people: 2
+      skip: 2
+      gap: 0
+      inertia: 90
+  # 0 degrees and 270 degrees
+  - name: problem_11
+    params:
+      n_people: 2
+      skip: 2
+      gap: 1
+      inertia: 90
+  # 0 degrees and 225 degrees
+  - name: problem_12
+    params:
+      n_people: 2
+      skip: 2
+      gap: 2
+      inertia: 90
+  # 0 degrees and 180 degrees
+  - name: problem_13
+    params:
+      n_people: 2
+      skip: 2
+      gap: 3
+      inertia: 90
+  # 315 degrees and 270 degrees
+  - name: problem_14
+    params:
+      n_people: 2
+      skip: 3
+      gap: 0
+      inertia: 90
+  # 315 degrees and 225 degrees
+  - name: problem_15
+    params:
+      n_people: 2
+      skip: 3
+      gap: 1
+      inertia: 90
+  # 90 degrees and 45 degrees
+  - name: problem_16
+    params:
+      n_people: 2
+      skip: 0
+      gap: 0
+      inertia: 90
+  # 90 degrees and 0 degrees
+  - name: problem_17
+    params:
+      n_people: 2
+      skip: 0
+      gap: 1
+      inertia: 90
+  # 90 degrees and 315 degrees
+  - name: problem_18
+    params:
+      n_people: 2
+      skip: 0
+      gap: 2
+      inertia: 90
+  # 90 degrees and 270 degrees
+  - name: problem_19
+    params:
+      n_people: 2
+      skip: 0
+      gap: 3
+      inertia: 90
