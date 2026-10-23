@@ -221,6 +221,7 @@ The bundled generator classes are:
 | expedition | `from upbm.domains.expedition import ExpeditionGenerator` |
 | rainbowttles | `from upbm.domains.rainbowttles import RainbowttlesGenerator` |
 | sailing-wind | `from upbm.domains.sailing_wind import SailingWindGenerator` |
+| line-exchange-snp | `from upbm.domains.line_exchange_snp import LineExchangeSnpGenerator` |
 
 ### Registering domains via `.upbm` plugins
 
@@ -255,6 +256,7 @@ The following domains are implemented and registered today:
 | **Expedition** (IPC 2026) | UP/PDDL | Numbers | Sleds burn one supply per move and must ferry supplies forward to cross a chain of waypoints |
 | **Rainbowttles** (IPC 2026) | UP/PDDL | Numbers | Colour-sorting bottle puzzle. The `random` variant draws instances by scrambling a solved puzzle backwards, so each one comes with a plan that solves it; the `ipc` variant rebuilds the 40 shipped instances, picked by `index` |
 | **Sailing-Wind** (IPC 2026) | UP/PDDL | Numbers, Real Fluents, Disjunctive Conditions | A boat tacks against the wind to reach people at sea and stop next to them. The variant says where the people are: `line` and `circle` are the two shipped layouts, `random` draws them. How much speed the boat keeps through a turn is an instance parameter |
+| **Line-Exchange-SNP** (IPC 2026) | UP/PDDL | Numbers | Robots confined to neighbouring segments meet at the boundary to even out their loads. The `ipc` variant rebuilds the 20 shipped instances by index, `bounded_5` takes each starting load as a parameter (up to 5 robots), `unbounded_random` draws them at random around a mean load |
 
 ### Planned
 
