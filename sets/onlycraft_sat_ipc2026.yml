@@ -1,0 +1,95 @@
+# The 20 onlycraft instances of the satisficing track of the IPC 2026 dataset
+# (ipc2026-dataset/onlycraft-sat).
+#
+# The `ipc` variant rebuilds the shipped instances exactly, so the only thing
+# an instance chooses is which one: `index` is the position of the file in
+# name order, opt track first, so P01_sat is 21 and P20_sat is 40 (the opt
+# track is 1-20). Which cells are trees, where the crafting table stands and
+# where the start is live in
+# upbm/domains/onlycraft/resources/ipc_onlycraft_data.py, because the shipped
+# files scatter them with no rule to rebuild them from.
+domain: onlycraft
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: P01_sat
+    # 9 cells, 1 pogo stick
+    params:
+      index: 21
+  - name: P02_sat
+    # 9 cells, 2 pogo sticks
+    params:
+      index: 22
+  - name: P03_sat
+    # 16 cells, 3 pogo sticks
+    params:
+      index: 23
+  - name: P04_sat
+    # 16 cells, 4 pogo sticks
+    params:
+      index: 24
+  - name: P05_sat
+    # 25 cells, 5 pogo sticks
+    params:
+      index: 25
+  - name: P06_sat
+    # 25 cells, 6 pogo sticks
+    params:
+      index: 26
+  - name: P07_sat
+    # 36 cells, 7 pogo sticks
+    params:
+      index: 27
+  - name: P08_sat
+    # 36 cells, 8 pogo sticks
+    params:
+      index: 28
+  - name: P09_sat
+    # 36 cells, 9 pogo sticks
+    params:
+      index: 29
+  - name: P10_sat
+    # 49 cells, 12 pogo sticks
+    params:
+      index: 30
+  - name: P11_sat
+    # 64 cells, 16 pogo sticks
+    params:
+      index: 31
+  - name: P12_sat
+    # 81 cells, 21 pogo sticks
+    params:
+      index: 32
+  - name: P13_sat
+    # 100 cells, 28 pogo sticks
+    params:
+      index: 33
+  - name: P14_sat
+    # 144 cells, 38 pogo sticks
+    params:
+      index: 34
+  - name: P15_sat
+    # 196 cells, 50 pogo sticks
+    params:
+      index: 35
+  - name: P16_sat
+    # 256 cells, 66 pogo sticks
+    params:
+      index: 36
+  - name: P17_sat
+    # 324 cells, 87 pogo sticks
+    params:
+      index: 37
+  - name: P18_sat
+    # 441 cells, 115 pogo sticks
+    params:
+      index: 38
+  - name: P19_sat
+    # 576 cells, 151 pogo sticks
+    params:
+      index: 39
+  - name: P20_sat
+    # 729 cells, 200 pogo sticks
+    params:
+      index: 40
