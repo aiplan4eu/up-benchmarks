@@ -1,0 +1,290 @@
+# Copyright 2026 Unified Planning library and its maintainers
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""The 20 shipped IPC-2026 gear-car instances, as data.
+
+Every number here is simply what the shipped files say; none of it is
+derived. Keys of IPC_INSTANCES are the number in the file name: p000 -> 0,
+p01 -> 1 ... p19 -> 19.
+
+What every instance shares is not stored: the gears are g1 ... gN, chained
+in that order by gear_next, the car starts stopped at the origin in first
+gear with every counter at 0, and the goal asks for a distance in
+[distance_min, distance_max] with the car stopped, back in first gear.
+
+IPC_CARS holds the car of each gear count the set uses, because every
+instance with the same number of gears ships the same one:
+
+- the car-wide max_acceleration, min_acceleration, acc_step and max_speed;
+- ``gears``: one row per gear, g1 first, holding the values of
+  GEAR_FIELDS in that order.
+
+Each entry of IPC_INSTANCES holds:
+
+- ``file``          the shipped file the entry was read from.
+- ``n_gears``       how many gears the car has, and so which IPC_CARS entry.
+- ``distance_min``  the X of the goal (>= (d) X).
+- ``distance_max``  the Y of the goal (<= (d) Y).
+- ``fuel``, ``alpha``, ``beta``  the initial values of those functions.
+
+In every instance but p000, alpha = beta * (fuel + 1). p000 is a warm-up
+copied from p01 (its problem is even named car_linear_gears_p01) that kept
+p01's alpha and beta while its fuel and distance were lowered.
+"""
+
+from typing import Any, Dict
+
+# The per-gear functions, in the order each row of a car's gears stores them.
+GEAR_FIELDS = (
+    "gear_v_min",
+    "gear_v_max",
+    "gear_min_acceleration",
+    "gear_max_acceleration",
+    "gear_fuel_aligned",
+    "gear_fuel_under",
+    "gear_fuel_over",
+)
+
+# Annotated, or mypy infers the heterogeneous rows as dict[str, object].
+IPC_CARS: Dict[int, Dict[str, Any]] = {
+    2: {
+        "max_acceleration": 2,
+        "min_acceleration": -1,
+        "acc_step": 1,
+        "max_speed": 4,
+        "gears": [
+            (0, 2, -1, 2, 11, 18, 17),
+            (2, 4, -1, 0, 9, 17, 14),
+        ],
+    },
+    3: {
+        "max_acceleration": 2,
+        "min_acceleration": -1,
+        "acc_step": 1,
+        "max_speed": 6,
+        "gears": [
+            (0, 2, -1, 2, 11, 18, 18),
+            (2, 4, -1, 1, 9, 17, 15),
+            (4, 6, -1, 0, 8, 17, 13),
+        ],
+    },
+    4: {
+        "max_acceleration": 2,
+        "min_acceleration": -1,
+        "acc_step": 1,
+        "max_speed": 8,
+        "gears": [
+            (0, 2, -1, 2, 11, 18, 19),
+            (2, 4, -1, 1, 9, 17, 16),
+            (4, 6, -1, 1, 8, 17, 14),
+            (6, 8, -1, 0, 7, 17, 12),
+        ],
+    },
+    5: {
+        "max_acceleration": 2,
+        "min_acceleration": -1,
+        "acc_step": 1,
+        "max_speed": 10,
+        "gears": [
+            (0, 2, -1, 2, 11, 18, 20),
+            (2, 4, -1, 1, 9, 17, 17),
+            (4, 6, -1, 1, 8, 17, 15),
+            (6, 8, -1, 1, 7, 17, 13),
+            (8, 10, -1, 0, 6, 17, 11),
+        ],
+    },
+}
+
+IPC_INSTANCES: Dict[int, Dict[str, Any]] = {
+    0: {
+        "file": "p000",
+        "n_gears": 2,
+        "distance_min": 50,
+        "distance_max": 52,
+        "fuel": 200,
+        "alpha": 19536,
+        "beta": 48,
+    },
+    1: {
+        "file": "p01",
+        "n_gears": 2,
+        "distance_min": 260,
+        "distance_max": 262,
+        "fuel": 406,
+        "alpha": 19536,
+        "beta": 48,
+    },
+    2: {
+        "file": "p02",
+        "n_gears": 2,
+        "distance_min": 290,
+        "distance_max": 292,
+        "fuel": 450,
+        "alpha": 23903,
+        "beta": 53,
+    },
+    3: {
+        "file": "p03",
+        "n_gears": 2,
+        "distance_min": 320,
+        "distance_max": 322,
+        "fuel": 482,
+        "alpha": 27048,
+        "beta": 56,
+    },
+    4: {
+        "file": "p04",
+        "n_gears": 2,
+        "distance_min": 360,
+        "distance_max": 362,
+        "fuel": 536,
+        "alpha": 33294,
+        "beta": 62,
+    },
+    5: {
+        "file": "p05",
+        "n_gears": 2,
+        "distance_min": 410,
+        "distance_max": 412,
+        "fuel": 612,
+        "alpha": 43523,
+        "beta": 71,
+    },
+    6: {
+        "file": "p06",
+        "n_gears": 3,
+        "distance_min": 470,
+        "distance_max": 472,
+        "fuel": 456,
+        "alpha": 28334,
+        "beta": 62,
+    },
+    7: {
+        "file": "p07",
+        "n_gears": 3,
+        "distance_min": 540,
+        "distance_max": 542,
+        "fuel": 513,
+        "alpha": 35466,
+        "beta": 69,
+    },
+    8: {
+        "file": "p08",
+        "n_gears": 3,
+        "distance_min": 620,
+        "distance_max": 622,
+        "fuel": 579,
+        "alpha": 44660,
+        "beta": 77,
+    },
+    9: {
+        "file": "p09",
+        "n_gears": 3,
+        "distance_min": 710,
+        "distance_max": 712,
+        "fuel": 648,
+        "alpha": 55814,
+        "beta": 86,
+    },
+    10: {
+        "file": "p10",
+        "n_gears": 3,
+        "distance_min": 810,
+        "distance_max": 812,
+        "fuel": 727,
+        "alpha": 69160,
+        "beta": 95,
+    },
+    11: {
+        "file": "p11",
+        "n_gears": 4,
+        "distance_min": 920,
+        "distance_max": 922,
+        "fuel": 582,
+        "alpha": 52470,
+        "beta": 90,
+    },
+    12: {
+        "file": "p12",
+        "n_gears": 4,
+        "distance_min": 1040,
+        "distance_max": 1042,
+        "fuel": 649,
+        "alpha": 64350,
+        "beta": 99,
+    },
+    13: {
+        "file": "p13",
+        "n_gears": 4,
+        "distance_min": 1170,
+        "distance_max": 1172,
+        "fuel": 716,
+        "alpha": 78153,
+        "beta": 109,
+    },
+    14: {
+        "file": "p14",
+        "n_gears": 4,
+        "distance_min": 1310,
+        "distance_max": 1312,
+        "fuel": 792,
+        "alpha": 95160,
+        "beta": 120,
+    },
+    15: {
+        "file": "p15",
+        "n_gears": 4,
+        "distance_min": 1460,
+        "distance_max": 1462,
+        "fuel": 867,
+        "alpha": 112840,
+        "beta": 130,
+    },
+    16: {
+        "file": "p16",
+        "n_gears": 5,
+        "distance_min": 1620,
+        "distance_max": 1622,
+        "fuel": 708,
+        "alpha": 90043,
+        "beta": 127,
+    },
+    17: {
+        "file": "p17",
+        "n_gears": 5,
+        "distance_min": 1790,
+        "distance_max": 1792,
+        "fuel": 765,
+        "alpha": 104176,
+        "beta": 136,
+    },
+    18: {
+        "file": "p18",
+        "n_gears": 5,
+        "distance_min": 1970,
+        "distance_max": 1972,
+        "fuel": 830,
+        "alpha": 122157,
+        "beta": 147,
+    },
+    19: {
+        "file": "p19",
+        "n_gears": 5,
+        "distance_min": 2160,
+        "distance_max": 2162,
+        "fuel": 902,
+        "alpha": 143577,
+        "beta": 159,
+    },
+}

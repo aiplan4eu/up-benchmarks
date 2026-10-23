@@ -1,0 +1,91 @@
+# The 20 gear-car instances of the IPC 2026 dataset (ipc2026-dataset/gear-car).
+#
+# The `ipc` variant rebuilds the shipped instances instead of building its own
+# car, so the only thing an instance chooses is which one: `index` is the number
+# in the file name. The cars, distances, fuel and metric prices live in
+# upbm/domains/gear_car/resources/ipc_gear_car_data.py.
+domain: gear-car
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: p000
+    # 2 gears, distance 50
+    params:
+      index: 0
+  - name: p01
+    # 2 gears, distance 260
+    params:
+      index: 1
+  - name: p02
+    # 2 gears, distance 290
+    params:
+      index: 2
+  - name: p03
+    # 2 gears, distance 320
+    params:
+      index: 3
+  - name: p04
+    # 2 gears, distance 360
+    params:
+      index: 4
+  - name: p05
+    # 2 gears, distance 410
+    params:
+      index: 5
+  - name: p06
+    # 3 gears, distance 470
+    params:
+      index: 6
+  - name: p07
+    # 3 gears, distance 540
+    params:
+      index: 7
+  - name: p08
+    # 3 gears, distance 620
+    params:
+      index: 8
+  - name: p09
+    # 3 gears, distance 710
+    params:
+      index: 9
+  - name: p10
+    # 3 gears, distance 810
+    params:
+      index: 10
+  - name: p11
+    # 4 gears, distance 920
+    params:
+      index: 11
+  - name: p12
+    # 4 gears, distance 1040
+    params:
+      index: 12
+  - name: p13
+    # 4 gears, distance 1170
+    params:
+      index: 13
+  - name: p14
+    # 4 gears, distance 1310
+    params:
+      index: 14
+  - name: p15
+    # 4 gears, distance 1460
+    params:
+      index: 15
+  - name: p16
+    # 5 gears, distance 1620
+    params:
+      index: 16
+  - name: p17
+    # 5 gears, distance 1790
+    params:
+      index: 17
+  - name: p18
+    # 5 gears, distance 1970
+    params:
+      index: 18
+  - name: p19
+    # 5 gears, distance 2160
+    params:
+      index: 19
