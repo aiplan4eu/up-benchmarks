@@ -221,6 +221,7 @@ The bundled generator classes are:
 | expedition | `from upbm.domains.expedition import ExpeditionGenerator` |
 | rainbowttles | `from upbm.domains.rainbowttles import RainbowttlesGenerator` |
 | sailing-wind | `from upbm.domains.sailing_wind import SailingWindGenerator` |
+| petri-net | `from upbm.domains.petri_net import PetriNetGenerator` |
 
 ### Registering domains via `.upbm` plugins
 
@@ -255,6 +256,7 @@ The following domains are implemented and registered today:
 | **Expedition** (IPC 2026) | UP/PDDL | Numbers | Sleds burn one supply per move and must ferry supplies forward to cross a chain of waypoints |
 | **Rainbowttles** (IPC 2026) | UP/PDDL | Numbers | Colour-sorting bottle puzzle. The `random` variant draws instances by scrambling a solved puzzle backwards, so each one comes with a plan that solves it; the `ipc` variant rebuilds the 40 shipped instances, picked by `index` |
 | **Sailing-Wind** (IPC 2026) | UP/PDDL | Numbers, Real Fluents, Disjunctive Conditions | A boat tacks against the wind to reach people at sea and stop next to them. The variant says where the people are: `line` and `circle` are the two shipped layouts, `random` draws them. How much speed the boat keeps through a turn is an instance parameter |
+| **Petri Net** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Tokens moved along hyper-edges of size up to 4; every action costs 1, so the metric is the plan length |
 
 ### Planned
 
