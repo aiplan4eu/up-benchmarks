@@ -63,6 +63,10 @@ class DomainFactory:
 
         self._registry["rainbowttles"] = RainbowttlesGenerator
 
+        from upbm.domains.factory_robot import FactoryRobotGenerator
+
+        self._registry["factory-robot"] = FactoryRobotGenerator
+
         from upbm.domains.coins import CoinsGenerator
 
         self._registry["coins"] = CoinsGenerator
