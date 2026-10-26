@@ -1,0 +1,102 @@
+# The 20 2048 instances of the IPC 2026 dataset.
+#
+# One parameter per instance: the index, which is the number in the shipped file
+# name. A 2048 instance is a board rather than a handful of numbers, and the
+# script that produced the shipped boards was never published, so the boards are
+# transcribed into upbm/domains/twenty_forty_eight/resources/ipc_2048_data.py
+# and rebuilt from there.
+#
+# The scaffolding an instance needs - the pos-at / next / start-status /
+# next-idx facts that drive the phase machine - is identical in all 20 shipped
+# instances, so the generator rebuilds it from its sweep rules rather than
+# storing it.
+#
+# The file numbers are also the length of each instance's recorded solution, so
+# pfile8 is solvable in 8 moves. They run 8..26 and then jump to 29: there is no
+# pfile27 or pfile28 in the dataset.
+
+domain: "2048"
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: "pfile8"
+    # 9 tiles, collected into 128 at p11
+    params:
+      index: 8
+  - name: "pfile9"
+    # 15 tiles, collected into 1024 at p11
+    params:
+      index: 9
+  - name: "pfile10"
+    # 14 tiles, collected into 4096 at p11
+    params:
+      index: 10
+  - name: "pfile11"
+    # 10 tiles, collected into 4096 at p11
+    params:
+      index: 11
+  - name: "pfile12"
+    # 16 tiles, collected into 512 at p11
+    params:
+      index: 12
+  - name: "pfile13"
+    # 15 tiles, collected into 8192 at p11
+    params:
+      index: 13
+  - name: "pfile14"
+    # 13 tiles, collected into 1024 at p11
+    params:
+      index: 14
+  - name: "pfile15"
+    # 12 tiles, collected into 256 at p11
+    params:
+      index: 15
+  - name: "pfile16"
+    # 10 tiles, collected into 128 at p11
+    params:
+      index: 16
+  - name: "pfile17"
+    # 14 tiles, collected into 1024 at p11
+    params:
+      index: 17
+  - name: "pfile18"
+    # 16 tiles, collected into 1024 at p11
+    params:
+      index: 18
+  - name: "pfile19"
+    # 16 tiles, collected into 4096 at p11
+    params:
+      index: 19
+  - name: "pfile20"
+    # 16 tiles, collected into 8192 at p11
+    params:
+      index: 20
+  - name: "pfile21"
+    # 10 tiles, collected into 4096 at p11
+    params:
+      index: 21
+  - name: "pfile22"
+    # 16 tiles, collected into 512 at p11
+    params:
+      index: 22
+  - name: "pfile23"
+    # 16 tiles, collected into 1024 at p11
+    params:
+      index: 23
+  - name: "pfile24"
+    # 12 tiles, collected into 8192 at p11
+    params:
+      index: 24
+  - name: "pfile25"
+    # 15 tiles, collected into 4096 at p11
+    params:
+      index: 25
+  - name: "pfile26"
+    # 14 tiles, collected into 8192 at p11
+    params:
+      index: 26
+  - name: "pfile29"
+    # 11 tiles, collected into 2048 at p11
+    params:
+      index: 29
