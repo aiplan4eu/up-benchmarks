@@ -19,12 +19,15 @@ from upbm.domains.gear_car import GearCarGenerator
 from upbm.tests.base_domain_test import BaseDomainTest
 
 
-def _config(variant="generic", **params):
-    """The domain configuration of `variant` and an instance configuration of it."""
+def _config(variant="ipc", **params):
+    """The domain configuration of `variant` and an instance configuration of
+    it, with the parameters left out at their defaults."""
     domain_space = GearCarGenerator.get_domain_parameter_space()
     domain_config = Configuration(domain_space, {"version": 1, "variant": variant})
     space = GearCarGenerator(domain_config).instance_parameter_space
-    return domain_config, Configuration(space, params)
+    values = dict(space.get_default_configuration())
+    values.update(params)
+    return domain_config, Configuration(space, values)
 
 
 class TestGearCar(BaseDomainTest):
@@ -40,11 +43,12 @@ class TestGearCar(BaseDomainTest):
 
     def _get_configs(self):
         return [
-            _config(n_gears=2, target_distance=2, fuel=10, beta=1),
-            _config(n_gears=8, target_distance=2, fuel=10, beta=1),
-            # the two ends of the shipped set: p000 (2 gears) and p19 (5 gears)
-            _config("ipc", index=0),
-            _config("ipc", index=19),
+            _config(n_gears=2, target_distance=2, fuel=30, beta=1),
+            _config(n_gears=8, target_distance=2, fuel=30, beta=1),
+            # the two ends of the shipped set: p000 (2 gears, explicit alpha)
+            # and p19 (5 gears)
+            _config(n_gears=2, target_distance=50, fuel=200, beta=48, alpha=19536),
+            _config(n_gears=5, target_distance=2160, fuel=902, beta=159),
         ]
 
     @property

@@ -30,20 +30,33 @@ from unified_planning.shortcuts import TRUE, Equals, GE, GT, LE
 from upbm.generator import Generator
 from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 
-from .resources.ipc_gear_car_data import GEAR_FIELDS, IPC_CARS, IPC_INSTANCES
-
 
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
+# The per-gear functions, in the order each row of a car's gears stores them.
+GEAR_FIELDS = (
+    "gear_v_min",
+    "gear_v_max",
+    "gear_min_acceleration",
+    "gear_max_acceleration",
+    "gear_fuel_aligned",
+    "gear_fuel_under",
+    "gear_fuel_over",
+)
 
-def generic_car(n_gears: int) -> dict[str, Any]:
-    """The car of the generic variant, in the same shape as an IPC_CARS entry.
+# The car's fuel inside the band is 11 - gear from second gear on, so past 10
+# gears a step in the top gear would burn no fuel at all.
+MAX_GEARS = 10
 
-    Every value is the smallest whole number that keeps the gearbox's shape:
-    first gear pulls hardest, the top gear only cruises, and the higher the
-    gear the less fuel a step inside its speed band burns. A step outside the
-    band burns more than any step inside one. First gear alone can drive any
+
+def car(n_gears: int) -> dict[str, Any]:
+    """The car with n_gears gears, as the IPC set builds it.
+
+    The 2-, 3-, 4- and 5-gear cars of the shipped instances all follow this
+    rule: first gear pulls hardest, the top gear only cruises, and the higher
+    the gear the less fuel a step inside its speed band burns. Over the band a
+    step burns more the more gears the car has. First gear alone can drive any
     plan, so saving fuel is the only reason to shift.
     """
     gears = []
@@ -62,9 +75,9 @@ def generic_car(n_gears: int) -> dict[str, Any]:
                 2 * gear,
                 -1,  # every gear can brake
                 max_acceleration,
-                n_gears + 1 - gear,  # fuel inside the band: 1 in the top gear
-                n_gears + 1,  # below the band
-                n_gears + 1,  # above the band
+                11 if gear == 1 else 11 - gear,  # fuel inside the band
+                18 if gear == 1 else 17,  # below the band
+                15 + n_gears if gear == 1 else 16 + n_gears - 2 * gear,  # above
             )
         )
     return {
@@ -83,8 +96,8 @@ class GearCarGenerator(Generator):
         mapping["version"] = Constant("version", 1)
         mapping["variant"] = Categorical(
             "variant",
-            ["generic", "ipc"],
-            default="generic",
+            ["ipc"],
+            default="ipc",
         )
         return ConfigurationSpace(name=mapping)
 
@@ -122,15 +135,9 @@ class GearCarGenerator(Generator):
     @property
     def instance_parameter_space(self) -> ConfigurationSpace:
         mapping: dict[str, Any] = {}
-        if self.variant == "ipc":
-            indices = sorted(IPC_INSTANCES)
-            mapping["index"] = Integer(
-                "index", (indices[0], indices[-1]), default=indices[0]
-            )
-            return ConfigurationSpace(name=mapping)
-        if self.variant != "generic":
+        if self.variant != "ipc":
             raise ValueError(f"invalid variant {self.variant}")
-        mapping["n_gears"] = Integer("n_gears", (2, MAX_INT), default=3)
+        mapping["n_gears"] = Integer("n_gears", (2, MAX_GEARS), default=3)
         mapping["target_distance"] = Integer(
             "target_distance", (1, MAX_INT), default=100
         )
@@ -138,8 +145,13 @@ class GearCarGenerator(Generator):
         # The price of one unit of fuel in (:metric minimize (cost)). Every
         # gear shift adds 1 to cost, so beta is how many shifts a unit of fuel
         # is worth. At least 1, or the metric would not count fuel or time at
-        # all (alpha, the price of a step, is derived from it).
+        # all (alpha, the price of a step, is derived from it by default).
         mapping["beta"] = Integer("beta", (1, MAX_INT), default=1)
+        # The price of one drive step. 0 derives it as beta * (fuel + 1), which
+        # is worth more than all the fuel, so one step fewer always beats any
+        # fuel saving: plans rank by time, then fuel. Only p000 of the IPC set
+        # sets it explicitly.
+        mapping["alpha"] = Integer("alpha", (0, MAX_INT), default=0)
         return ConfigurationSpace(name=mapping)
 
     @property
@@ -179,13 +191,9 @@ class GearCarGenerator(Generator):
         return self._get_object(f"g{gear}", self._Gear)
 
     def _instance_data(self, params: Configuration) -> dict[str, Any]:
-        """Everything an instance is built from, in the same shape for both
-        variants: n_gears, the goal window distance_min/distance_max, fuel,
-        alpha, beta, and the car (an IPC_CARS entry, or generic_car's).
+        """Everything an instance is built from: n_gears, the goal window
+        distance_min/distance_max, fuel, alpha, beta, and the car.
         """
-        if self.variant == "ipc":
-            row = IPC_INSTANCES[params["index"]]
-            return {**row, "car": IPC_CARS[row["n_gears"]]}
         n_gears = params["n_gears"]
         target = params["target_distance"]
         fuel = params["fuel"]
@@ -193,16 +201,15 @@ class GearCarGenerator(Generator):
         return {
             "n_gears": n_gears,
             # A plan that starts and ends stopped always covers an even
-            # distance, so a window of 1 keeps an odd target reachable.
+            # distance, so the window, 2 wide as in the IPC set, keeps an odd
+            # target reachable.
             "distance_min": target,
-            "distance_max": target + 1,
+            "distance_max": target + 2,
             "fuel": fuel,
             # A drive step costs alpha plus beta per unit of fuel it burns.
-            # This alpha is worth more than all the fuel, so one step fewer
-            # always beats any fuel saving: plans rank by time, then fuel.
-            "alpha": beta * (fuel + 1),
+            "alpha": params["alpha"] or beta * (fuel + 1),
             "beta": beta,
-            "car": generic_car(n_gears),
+            "car": car(n_gears),
         }
 
     def get_objects(self, params) -> List[Object]:
@@ -217,13 +224,7 @@ class GearCarGenerator(Generator):
     ):
         if instance_parameters_space is None:
             instance_parameters_space = self.instance_parameter_space
-        if self.variant == "ipc":
-            first, last = hyperparam_range(instance_parameters_space["index"])
-            gears_upper = max(
-                IPC_INSTANCES[i]["n_gears"] for i in IPC_INSTANCES if first <= i <= last
-            )
-        else:
-            _, gears_upper = hyperparam_range(instance_parameters_space["n_gears"])
+        _, gears_upper = hyperparam_range(instance_parameters_space["n_gears"])
         return [self._gear(i + 1) for i in range(gears_upper)]
 
     def get_goal(self, params) -> List[FNode]:
@@ -270,8 +271,6 @@ class GearCarGenerator(Generator):
         return res
 
     def check_instance_parameters(self, params: Configuration):
-        if self.variant == "ipc":
-            return params["index"] in IPC_INSTANCES
-        # Every generic configuration is accepted, so an instance may not have
-        # the fuel to finish.
+        # Every configuration is accepted, so an instance may not have the
+        # fuel to finish.
         return True
