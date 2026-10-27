@@ -42,7 +42,7 @@ class TestLineExchangeSnp(BaseDomainTest):
         return [
             # two robots holding [3, 1], so one unit has to cross
             _configs(
-                "bounded_5",
+                "ipc",
                 n_robots=2,
                 segment_length=10,
                 q_0=3,
@@ -59,21 +59,18 @@ class TestLineExchangeSnp(BaseDomainTest):
                 mean_load=2,
                 seed=0,
             ),
-            # shipped instance 0, named 3_10_50_10: three robots, D=10
-            _configs("ipc", index=0),
         ]
 
     @property
     def plannable(self):
-        return self._get_configs()[:2]
+        return self._get_configs()
 
     @property
     def object_data(self):
-        bounded, drawn, ipc = self._get_configs()
+        bounded, drawn = self._get_configs()
         return [
             (*bounded, [("robot", 2)]),
             (*drawn, [("robot", 2)]),
-            (*ipc, [("robot", 3)]),
         ]
 
     @property
@@ -82,7 +79,7 @@ class TestLineExchangeSnp(BaseDomainTest):
 
     @property
     def validation_cases(self):
-        bounded, drawn, _ = self._get_configs()
+        bounded, drawn = self._get_configs()
         exchange = ["(conn r0 r1)", "(exch-lre r0 r1)", "(disc r0 r1)"]
         meet = ["(rgt r0)"] * 5 + ["(lft r1)"] * 5
         home = ["(lft r0)"] * 5 + ["(rgt r1)"] * 5

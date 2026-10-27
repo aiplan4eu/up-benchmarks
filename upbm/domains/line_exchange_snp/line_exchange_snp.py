@@ -31,13 +31,11 @@ from unified_planning.shortcuts import TRUE, Equals, Real
 from upbm.generator import Generator
 from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 
-from .resources.ipc_line_exchange_snp_data import IPC_INSTANCES
-
 
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
 
-# Only used for the bounded_5 variant
+# Only used for the ipc variant
 MAX_ROBOTS = 5
 
 
@@ -49,11 +47,10 @@ class LineExchangeSnpGenerator(Generator):
         mapping["variant"] = Categorical(
             "variant",
             [
-                "ipc",  # index to the problem data stored in a separate file
-                "bounded_5",  # limit to 5 robots, can specify the load value for each
+                "ipc",  # limit to 5 robots, can specify the load value for each
                 "unbounded_random",  # unlimited number of robots, initial load drawn with parameters
             ],
-            default="bounded_5",
+            default="ipc",
         )
         return ConfigurationSpace(name=mapping)
 
@@ -82,22 +79,16 @@ class LineExchangeSnpGenerator(Generator):
     @property
     def instance_parameter_space(self) -> ConfigurationSpace:
         mapping: dict[str, Any] = {}
-        if self.variant == "ipc":
-            indices = sorted(IPC_INSTANCES)
-            mapping["index"] = Integer(
-                "index", (indices[0], indices[-1]), default=indices[0]
-            )
-            return ConfigurationSpace(name=mapping)
-        if self.variant not in ("bounded_5", "unbounded_random"):
+        if self.variant not in ("ipc", "unbounded_random"):
             raise ValueError(f"invalid variant {self.variant}")
         mapping["n_robots"] = Integer(
             "n_robots",
-            (2, MAX_ROBOTS if self.variant == "bounded_5" else MAX_INT),
+            (2, MAX_ROBOTS if self.variant == "ipc" else MAX_INT),
             default=3,
         )
         mapping["segment_length"] = Integer("segment_length", (1, MAX_INT), default=50)
 
-        if self.variant == "bounded_5":
+        if self.variant == "ipc":
             for slot, default in enumerate([3, 6, 6, 0, 0]):
                 mapping[f"q_{slot}"] = Integer(
                     f"q_{slot}", (0, MAX_INT), default=default
@@ -138,36 +129,14 @@ class LineExchangeSnpGenerator(Generator):
     def _robot(self, i: int) -> Object:
         return self._get_object(f"r{i}", self._Robot)
 
-    def _row(self, params) -> dict:
-        """The table row an "ipc" instance is built from."""
-        return IPC_INSTANCES[params["index"]]
-
-    def n_robots(self, params) -> int:
-        """How many robots are on the line.
-
-        A parameter under "bounded_5" and "unbounded_random"; table data under
-        "ipc", where the index is the only parameter there is.
-        """
-        if self.variant == "ipc":
-            return self._row(params)["n_robots"]
-        return params["n_robots"]
-
-    def segment_length(self, params) -> int:
-        """The (D) fluent, likewise a parameter except under "ipc"."""
-        if self.variant == "ipc":
-            return self._row(params)["segment_length"]
-        return params["segment_length"]
-
     def _loads(self, params) -> List[int]:
         """The load of each robot, in order.
 
-        One line per variant: "ipc" reads the shipped loads out of the table,
-        "bounded_5" reads them off the q slots, ignoring the unused ones, and
+        One line per variant:
+        "ipc" reads them off the q slots, ignoring the unused ones, and
         "unbounded_random" draws them.
         """
         if self.variant == "ipc":
-            return list(self._row(params)["loads"])
-        if self.variant == "bounded_5":
             return [params[f"q_{slot}"] for slot in range(params["n_robots"])]
         return self._drawn_loads(params)
 
@@ -194,34 +163,26 @@ class LineExchangeSnpGenerator(Generator):
         Every shipped instance puts robot i in the middle of its own segment,
         at D/2 + i*D.
         """
-        d = Fraction(self.segment_length(params))
+        d = Fraction(params["segment_length"])
         return d / 2 + i * d
 
     def get_objects(self, params) -> List[Object]:
         self._check_params(params)
         if not self.check_instance_parameters(params):
             raise ValueError(f"Requested instance is unsolvable")
-        return [self._robot(i) for i in range(self.n_robots(params))]
+        return [self._robot(i) for i in range(params["n_robots"])]
 
     def object_universe(
         self, instance_parameters_space: Optional[ConfigurationSpace] = None
     ):
         if instance_parameters_space is None:
             instance_parameters_space = self.instance_parameter_space
-        if self.variant == "ipc":
-            first, last = hyperparam_range(instance_parameters_space["index"])
-            robots_upper = max(
-                entry["n_robots"]
-                for index, entry in IPC_INSTANCES.items()
-                if first <= index <= last
-            )
-            return [self._robot(i) for i in range(robots_upper)]
         _, robots_upper = hyperparam_range(instance_parameters_space["n_robots"])
         return [self._robot(i) for i in range(robots_upper)]
 
     def get_goal(self, params) -> List[FNode]:
         self._check_params(params)
-        n_robots = self.n_robots(params)
+        n_robots = params["n_robots"]
         res = [
             Equals(self._x(self._robot(i)), Real(self._home(params, i)))
             for i in range(n_robots)
@@ -232,8 +193,8 @@ class LineExchangeSnpGenerator(Generator):
 
     def get_initial_state(self, params) -> dict[FNode, FNode]:
         self._check_params(params)
-        n_robots = self.n_robots(params)
-        res: dict[FNode, FNode] = {self._d(): self.segment_length(params)}
+        n_robots = params["n_robots"]
+        res: dict[FNode, FNode] = {self._d(): params["segment_length"]}
         for i, load in enumerate(self._loads(params)):
             robot = self._robot(i)
             res[self._i(robot)] = i
@@ -247,7 +208,7 @@ class LineExchangeSnpGenerator(Generator):
         # An exchange moves one unit from a robot to its neighbour, so the
         # total load never changes. The goal asks for every robot to hold the
         # same amount, which is only reachable when that total splits evenly.
-        # the only variant where this could be wrong is "bounded_5".
-        if self.variant != "bounded_5":
+        # the only variant where this could be wrong is "ipc".
+        if self.variant != "ipc":
             return True
         return sum(self._loads(params)) % params["n_robots"] == 0
