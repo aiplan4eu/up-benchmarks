@@ -49,6 +49,11 @@ GEAR_FIELDS = (
 # gears a step in the top gear would burn no fuel at all.
 MAX_GEARS = 10
 
+# The solvability check (min_fuel) takes time in proportion to the distance,
+# a few hundredths of a second per instance at this cap. A plan this long is
+# already at least 250 drive steps, even at full speed with 10 gears.
+MAX_TARGET_DISTANCE = 10_000
+
 
 def car(n_gears: int) -> dict[str, Any]:
     """The car with n_gears gears, as the IPC set builds it.
@@ -87,6 +92,57 @@ def car(n_gears: int) -> dict[str, Any]:
         "max_speed": 2 * n_gears,
         "gears": gears,
     }
+
+
+def min_fuel(
+    car: dict[str, Any], distance_min: int, distance_max: int
+) -> Optional[int]:
+    """The least fuel a plan needs to stop between distance_min and
+    distance_max, or None if no plan can.
+
+    Only distance and speed matter. Accelerating, braking and shifting burn
+    no fuel, and at a given distance and speed they can reach any gear with
+    any acceleration that gear allows (bring the acceleration to 0, shift, set
+    it again). So a drive step from speed v with acceleration a burns what the
+    cheapest gear allowing a burns at speed v. A drive step always moves the
+    car forward, except at v = a = 0, which only burns fuel, so one pass in
+    increasing distance finds the minimum.
+    """
+    max_speed = car["max_speed"]
+    # For each speed, the drive steps worth taking: (acceleration, fuel).
+    steps: list[list[tuple[int, int]]] = []
+    for v in range(max_speed + 1):
+        options = []
+        # acc_step is 1, so every acceleration between the limits is reachable
+        for a in range(car["min_acceleration"], car["max_acceleration"] + 1):
+            if not 0 <= v + a <= max_speed or (v, a) == (0, 0):
+                continue
+            costs = [
+                under if v < v_min else over if v > v_max else aligned
+                for v_min, v_max, min_acc, max_acc, aligned, under, over in car["gears"]
+                if min_acc <= a <= max_acc
+            ]
+            if costs:
+                options.append((a, min(costs)))
+        steps.append(options)
+    # best[d][v]: the least fuel to be at distance d with speed v.
+    best: list[list[Optional[int]]] = [
+        [None] * (max_speed + 1) for _ in range(distance_max + 1)
+    ]
+    best[0][0] = 0
+    for d in range(distance_max + 1):
+        for v, fuel in enumerate(best[d]):
+            if fuel is None:
+                continue
+            for a, step_fuel in steps[v]:
+                reached = d + 2 * v + a
+                if reached > distance_max:
+                    continue
+                known = best[reached][v + a]
+                if known is None or fuel + step_fuel < known:
+                    best[reached][v + a] = fuel + step_fuel
+    stops = [best[d][0] for d in range(distance_min, distance_max + 1)]
+    return min((fuel for fuel in stops if fuel is not None), default=None)
 
 
 class GearCarGenerator(Generator):
@@ -137,16 +193,17 @@ class GearCarGenerator(Generator):
         mapping: dict[str, Any] = {}
         if self.variant != "ipc":
             raise ValueError(f"invalid variant {self.variant}")
-        mapping["n_gears"] = Integer("n_gears", (2, MAX_GEARS), default=3)
+        # The defaults are p01 of the IPC set.
+        mapping["n_gears"] = Integer("n_gears", (2, MAX_GEARS), default=2)
         mapping["target_distance"] = Integer(
-            "target_distance", (1, MAX_INT), default=100
+            "target_distance", (1, MAX_TARGET_DISTANCE), default=260
         )
-        mapping["fuel"] = Integer("fuel", (0, MAX_INT), default=30)
+        mapping["fuel"] = Integer("fuel", (0, MAX_INT), default=406)
         # The price of one unit of fuel in (:metric minimize (cost)). Every
         # gear shift adds 1 to cost, so beta is how many shifts a unit of fuel
         # is worth. At least 1, or the metric would not count fuel or time at
         # all (alpha, the price of a step, is derived from it by default).
-        mapping["beta"] = Integer("beta", (1, MAX_INT), default=1)
+        mapping["beta"] = Integer("beta", (1, MAX_INT), default=48)
         # The price of one drive step. 0 derives it as beta * (fuel + 1), which
         # is worth more than all the fuel, so one step fewer always beats any
         # fuel saving: plans rank by time, then fuel. Only p000 of the IPC set
@@ -271,6 +328,9 @@ class GearCarGenerator(Generator):
         return res
 
     def check_instance_parameters(self, params: Configuration):
-        # Every configuration is accepted, so an instance may not have the
-        # fuel to finish.
-        return True
+        # Exact: an instance is solvable exactly when its fuel covers the
+        # cheapest plan. A sampling space with no solvable instance in it makes
+        # sample() redraw forever.
+        data = self._instance_data(params)
+        need = min_fuel(data["car"], data["distance_min"], data["distance_max"])
+        return need is not None and need <= data["fuel"]
