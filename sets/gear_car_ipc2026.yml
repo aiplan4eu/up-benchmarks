@@ -1,0 +1,132 @@
+# The 20 gear-car instances of the IPC 2026 dataset (ipc2026-dataset/gear-car).
+#
+# Every shipped instance is built from parameters: the car comes from
+# n_gears, the goal window is [target_distance, target_distance + 2], and alpha
+# is beta * (fuel + 1). The one exception is p000, a warm-up copied from p01
+# that kept p01's alpha while its fuel was lowered, so it sets alpha explicitly.
+domain: gear-car
+params:
+  version: 1
+  variant: ipc
+instances:
+  - name: p000
+    params:
+      n_gears: 2
+      target_distance: 50
+      fuel: 200
+      beta: 48
+      alpha: 19536
+  - name: p01
+    params:
+      n_gears: 2
+      target_distance: 260
+      fuel: 406
+      beta: 48
+  - name: p02
+    params:
+      n_gears: 2
+      target_distance: 290
+      fuel: 450
+      beta: 53
+  - name: p03
+    params:
+      n_gears: 2
+      target_distance: 320
+      fuel: 482
+      beta: 56
+  - name: p04
+    params:
+      n_gears: 2
+      target_distance: 360
+      fuel: 536
+      beta: 62
+  - name: p05
+    params:
+      n_gears: 2
+      target_distance: 410
+      fuel: 612
+      beta: 71
+  - name: p06
+    params:
+      n_gears: 3
+      target_distance: 470
+      fuel: 456
+      beta: 62
+  - name: p07
+    params:
+      n_gears: 3
+      target_distance: 540
+      fuel: 513
+      beta: 69
+  - name: p08
+    params:
+      n_gears: 3
+      target_distance: 620
+      fuel: 579
+      beta: 77
+  - name: p09
+    params:
+      n_gears: 3
+      target_distance: 710
+      fuel: 648
+      beta: 86
+  - name: p10
+    params:
+      n_gears: 3
+      target_distance: 810
+      fuel: 727
+      beta: 95
+  - name: p11
+    params:
+      n_gears: 4
+      target_distance: 920
+      fuel: 582
+      beta: 90
+  - name: p12
+    params:
+      n_gears: 4
+      target_distance: 1040
+      fuel: 649
+      beta: 99
+  - name: p13
+    params:
+      n_gears: 4
+      target_distance: 1170
+      fuel: 716
+      beta: 109
+  - name: p14
+    params:
+      n_gears: 4
+      target_distance: 1310
+      fuel: 792
+      beta: 120
+  - name: p15
+    params:
+      n_gears: 4
+      target_distance: 1460
+      fuel: 867
+      beta: 130
+  - name: p16
+    params:
+      n_gears: 5
+      target_distance: 1620
+      fuel: 708
+      beta: 127
+  - name: p17
+    params:
+      n_gears: 5
+      target_distance: 1790
+      fuel: 765
+      beta: 136
+  - name: p18
+    params:
+      n_gears: 5
+      target_distance: 1970
+      fuel: 830
+      beta: 147
+  - name: p19
+    params:
+      n_gears: 5
+      target_distance: 2160
+      fuel: 902
+      beta: 159
