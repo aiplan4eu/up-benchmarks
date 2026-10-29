@@ -83,6 +83,10 @@ class DomainFactory:
 
         self._registry["onlycraft"] = OnlyCraftGenerator
 
+        from upbm.domains.temporal_plant_watering import TemporalPlantWateringGenerator
+
+        self._registry["temporal-plant-watering"] = TemporalPlantWateringGenerator
+
     def register(self, name: str, generator_class: Type[Generator]) -> None:
         """Manually register a generator class under *name*."""
         self._registry[name] = generator_class
