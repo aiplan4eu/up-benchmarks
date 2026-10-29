@@ -223,6 +223,7 @@ The bundled generator classes are:
 | sailing-wind | `from upbm.domains.sailing_wind import SailingWindGenerator` |
 | forestfire | `from upbm.domains.forestfire import ForestFireGenerator` |
 | onlycraft | `from upbm.domains.onlycraft import OnlyCraftGenerator` |
+| temporal-plant-watering | `from upbm.domains.temporal_plant_watering import TemporalPlantWateringGenerator` |
 
 ### Registering domains via `.upbm` plugins
 
