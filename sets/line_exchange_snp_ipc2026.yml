@@ -13,13 +13,13 @@
 # set is to state each load with q_0 .. q_4. Slots at or above n_robots are
 # unused and left out.
 #
-# That is what the "bounded_5" variant is for: it takes one load slot per
+# That is what the "ipc" variant is for: it takes one load slot per
 # robot, which is also why it stops at five robots. The other variant,
 # "unbounded_random", draws the loads instead and so cannot reproduce this set.
 domain: line-exchange-snp
 params:
   version: 1
-  variant: bounded_5
+  variant: ipc
 instances:
   # mean_q=10  (sum=30 = 3 x 10)
   - name: "3_10_50_10"
