@@ -36,3 +36,11 @@ include = ["upbm*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.pddl"]
+
+[tool.mypy]
+check_untyped_defs = true
+exclude = "build/*"
+
+[[tool.mypy.overrides]]
+module = ["unified_planning.*", "sympy.*"]
+ignore_missing_imports = true
