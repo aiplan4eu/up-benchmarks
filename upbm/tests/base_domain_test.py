@@ -132,7 +132,7 @@ class BaseDomainTest(unittest.TestCase):
         for domain_config, problem_config, objects_list in self.object_data:
             gen = self.generator(domain_config)
             problem = gen.get_instance(problem_config)
-            for (obj_name, n_objs) in objects_list:
+            for obj_name, n_objs in objects_list:
                 self.assertEqual(
                     sum(1 for _ in problem.objects(problem.user_type(obj_name))), n_objs
                 )

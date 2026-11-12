@@ -369,9 +369,9 @@ class ReplenishGenerator(Generator):
         target_sequence_fluent = self._domain.fluent("target_sequence_fluent")
         for i, g in enumerate(goal_sequence):
             ct = self._get_object(f"cardboard_type_{g}", self._CardboardType)
-            initial_values[
-                target_sequence_fluent(Int(i))
-            ] = self._domain.environment.expression_manager.ObjectExp(ct)
+            initial_values[target_sequence_fluent(Int(i))] = (
+                self._domain.environment.expression_manager.ObjectExp(ct)
+            )
 
         return initial_values
 

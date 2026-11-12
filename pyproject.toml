@@ -20,7 +20,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest",
-    "black==22.6.0",
+    "ruff==0.17.4",
     "mypy",
     "pre-commit",
     "types-PyYAML",

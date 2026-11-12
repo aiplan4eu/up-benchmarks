@@ -18,7 +18,7 @@ The development setup uses [uv](https://docs.astral.sh/uv/). From the repository
 
 ```bash
 uv sync                    # creates .venv with the package and the dev tools
-uv run pre-commit install  # formats the code with black on each commit
+uv run pre-commit install  # formats the code with ruff on each commit
 uv run pytest upbm         # tests
 uv run mypy .              # type checks
 ```

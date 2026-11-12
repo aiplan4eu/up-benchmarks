@@ -1,5 +1,8 @@
 repos:
-- repo: https://github.com/ambv/black
-  rev: 22.6.0
+- repo: local
   hooks:
-  - id: black
+  - id: ruff-format
+    name: ruff format
+    entry: .venv/bin/ruff format
+    language: system
+    types_or: [python, pyi]

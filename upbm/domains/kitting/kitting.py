@@ -383,15 +383,15 @@ class KittingGenerator(Generator):
 
         # set components_on_kit
         for i, c in enumerate(combination):
-            initial_values[
-                components_on_kit(k1, i)
-            ] = self._domain.environment.expression_manager.ObjectExp(c)
+            initial_values[components_on_kit(k1, i)] = (
+                self._domain.environment.expression_manager.ObjectExp(c)
+            )
 
         # pad remaining kit capacity with EMPTY
         for i in range(kit_size, self._max_kit_size):
-            initial_values[
-                components_on_kit(k1, i)
-            ] = self._domain.environment.expression_manager.ObjectExp(EMPTY)
+            initial_values[components_on_kit(k1, i)] = (
+                self._domain.environment.expression_manager.ObjectExp(EMPTY)
+            )
 
         return initial_values
 

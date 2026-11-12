@@ -32,7 +32,7 @@ def is_subspace(small: ConfigurationSpace, big: ConfigurationSpace):
             if isinstance(big_hyperpar, Constant):
                 if type(big_hyperpar.value) != type(small_hyperpar.value):
                     raise TypeError(
-                        f"Hyperparameter {small_hyperpar} does not have the same value type as {big_hyperpar}: { type(small_hyperpar.value)}, { type(big_hyperpar.value)}"
+                        f"Hyperparameter {small_hyperpar} does not have the same value type as {big_hyperpar}: {type(small_hyperpar.value)}, {type(big_hyperpar.value)}"
                     )
                 if big_hyperpar.value != small_hyperpar.value:
                     return False
@@ -46,7 +46,7 @@ def is_subspace(small: ConfigurationSpace, big: ConfigurationSpace):
                     )
                 if type(big_upper) != type(small_hyperpar.value):
                     raise TypeError(
-                        f"Hyperparameter {small_hyperpar} does not have the same value type as {big_hyperpar}: { type(small_hyperpar.value)}, { type(big_upper)}"
+                        f"Hyperparameter {small_hyperpar} does not have the same value type as {big_hyperpar}: {type(small_hyperpar.value)}, {type(big_upper)}"
                     )
                 if (
                     int(small_hyperpar.value) > big_upper

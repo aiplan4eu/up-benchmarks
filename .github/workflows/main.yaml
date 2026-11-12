@@ -15,8 +15,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --upgrade
 
-      - name: Black check
-        run: uv run black --check .
+      - name: Format check
+        run: uv run ruff format --check .
 
       - name: MyPy check
         run: uv run mypy .
