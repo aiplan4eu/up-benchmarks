@@ -18,6 +18,7 @@ import unified_planning as up
 from unified_planning.shortcuts import (
     Problem,
     UserType,
+    Type,
     Object,
     BoolType,
     Fluent,
@@ -83,7 +84,7 @@ class KittingGenerator(Generator):
         self._max_kit_size = domain_params["max_kit_size"]
         self._max_n_kit = domain_params["max_n_kit"]
 
-        self._object_cache: Dict[Tuple[str, UserType], Object] = {}
+        self._object_cache: Dict[Tuple[str, Type], Object] = {}
         self._domain = self._build_domain()
 
     @property
@@ -116,7 +117,7 @@ class KittingGenerator(Generator):
     def pddl_expressible(self) -> bool:
         return False
 
-    def _get_object(self, name: str, utype: UserType) -> Object:
+    def _get_object(self, name: str, utype: Type) -> Object:
         res = self._object_cache.get((name, utype))
         if res is None:
             res = Object(name, utype)
@@ -367,8 +368,8 @@ class KittingGenerator(Generator):
         # set is_present
         for i in range(1, n_components + 1):
             l = self._get_object(f"l{i}", Location)
-            c = self._get_object(f"c{i}", Component)
-            initial_values[is_present(c, l)] = TRUE
+            component = self._get_object(f"c{i}", Component)
+            initial_values[is_present(component, l)] = TRUE
 
         # set robot_at l0
         for i in range(n_robots):
@@ -382,15 +383,15 @@ class KittingGenerator(Generator):
 
         # set components_on_kit
         for i, c in enumerate(combination):
-            initial_values[
-                components_on_kit(k1, i)
-            ] = self._domain.environment.expression_manager.ObjectExp(c)
+            initial_values[components_on_kit(k1, i)] = (
+                self._domain.environment.expression_manager.ObjectExp(c)
+            )
 
         # pad remaining kit capacity with EMPTY
         for i in range(kit_size, self._max_kit_size):
-            initial_values[
-                components_on_kit(k1, i)
-            ] = self._domain.environment.expression_manager.ObjectExp(EMPTY)
+            initial_values[components_on_kit(k1, i)] = (
+                self._domain.environment.expression_manager.ObjectExp(EMPTY)
+            )
 
         return initial_values
 

@@ -17,8 +17,30 @@ dependencies = [
     "sympy"
 ]
 
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff==0.17.4",
+    "mypy",
+    "pre-commit",
+    "types-PyYAML",
+    "up-tamer",
+    "tamerlite[rust]",
+]
+
+[tool.uv.sources]
+unified-planning = { git = "https://github.com/aiplan4eu/unified-planning", branch = "master" }
+
 [tool.setuptools.packages.find]
 include = ["upbm*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.pddl"]
+
+[tool.mypy]
+check_untyped_defs = true
+exclude = "build/*"
+
+[[tool.mypy.overrides]]
+module = ["unified_planning.*", "sympy.*"]
+ignore_missing_imports = true

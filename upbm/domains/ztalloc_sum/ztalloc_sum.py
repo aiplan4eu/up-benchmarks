@@ -26,7 +26,7 @@ from ConfigSpace import (
 from unified_planning.io import PDDLReader
 from unified_planning.model import Problem, Object, FNode
 from unified_planning.model.metrics import MinimizeExpressionOnFinalState
-from unified_planning.shortcuts import TRUE, Equals, Plus
+from unified_planning.shortcuts import TRUE, Equals, Plus, Int
 
 from upbm.generator import Generator
 from upbm.utils import MAX_INT, is_subspace, hyperparam_range
@@ -148,12 +148,12 @@ class ZtallocSumGenerator(Generator):
             raise ValueError(f"Invalid instance parameters: {params}")
         res: dict[FNode, FNode] = {
             self._free(): TRUE(),
-            self._total_cost(): 0,
+            self._total_cost(): Int(0),
         }
         for r in self.get_objects(params):
             res[self._normal(r)] = TRUE()
-            res[self._value(r)] = INITIAL_REGISTER_VALUE
-            res[self._work_value(r)] = 0
+            res[self._value(r)] = Int(INITIAL_REGISTER_VALUE)
+            res[self._work_value(r)] = Int(0)
         return res
 
     def check_instance_parameters(self, params: Configuration):

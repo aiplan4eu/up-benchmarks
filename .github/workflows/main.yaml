@@ -9,16 +9,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: install requirements
-        run: |
-          pip install -r requirements.txt
-          pip install -r dev-requirements.txt
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
 
-      - name: Black check
-        run: python3 -m black --check .
+      - name: Install dependencies
+        run: uv sync --upgrade
+
+      - name: Format check
+        run: uv run ruff format --check .
 
       - name: MyPy check
-        run: python3 -m mypy .
+        run: uv run mypy .
 
   test_linux:
     runs-on: ubuntu-latest
@@ -29,10 +30,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: install requirements
-        run: |
-          pip install -r requirements.txt
-          pip install -r dev-requirements.txt
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies
+        run: uv sync --upgrade
 
       - name: run tests
-        run: python3 -m pytest upbm
+        run: uv run pytest upbm

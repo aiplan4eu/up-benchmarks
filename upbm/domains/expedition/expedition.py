@@ -24,7 +24,7 @@ from ConfigSpace import (
 )
 from unified_planning.io import PDDLReader
 from unified_planning.model import Problem, Object, FNode
-from unified_planning.shortcuts import TRUE
+from unified_planning.shortcuts import TRUE, Int
 
 from upbm.generator import Generator
 from upbm.utils import MAX_INT, is_subspace, hyperparam_range
@@ -185,7 +185,7 @@ class ExpeditionGenerator(Generator):
         for chain in range(n_chains):
             for i in range(n_waypoints):
                 waypoint = self._waypoint(chain, i)
-                res[self._waypoint_supplies(waypoint)] = (
+                res[self._waypoint_supplies(waypoint)] = Int(
                     params["depot_supplies"] if i == 0 else 0
                 )
                 if i + 1 < n_waypoints:
@@ -193,8 +193,8 @@ class ExpeditionGenerator(Generator):
         for i in range(params["n_sleds"]):
             sled = self._sled(i)
             res[self._at(sled, self._waypoint(self._chain_of(i, n_chains), 0))] = TRUE()
-            res[self._sled_capacity(sled)] = params["sled_capacity"]
-            res[self._sled_supplies(sled)] = 1
+            res[self._sled_capacity(sled)] = Int(params["sled_capacity"])
+            res[self._sled_supplies(sled)] = Int(1)
         return res
 
     def check_instance_parameters(self, params: Configuration):

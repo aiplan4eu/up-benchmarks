@@ -26,7 +26,7 @@ from ConfigSpace import (
 from unified_planning.io import PDDLReader
 from unified_planning.model import Problem, Object, FNode
 from unified_planning.model.metrics import MinimizeExpressionOnFinalState
-from unified_planning.shortcuts import TRUE, Equals, UserType
+from unified_planning.shortcuts import TRUE, Equals, Int, Type
 
 from upbm.generator import Generator
 from upbm.utils import MAX_INT, is_subspace, hyperparam_range
@@ -191,7 +191,7 @@ class ForestFireGenerator(Generator):
             return domain
         raise ValueError(f"Unknown domain version {self.version}")
 
-    def _get_object(self, name: str, type: UserType) -> Object:
+    def _get_object(self, name: str, type: Type) -> Object:
         res = self._object_cache.get((name, type), None)
         if res is None:
             res = Object(name, type)
@@ -345,11 +345,11 @@ class ForestFireGenerator(Generator):
                     nx, ny = x + dx, y + dy
                     if 1 <= nx <= width and 1 <= ny <= height:
                         res[self._connected(cell, self._cell(nx, ny, width))] = TRUE()
-                res[self._tree(cell)] = trees.get((x, y), 0)
-                res[self._fire(cell)] = fires.get((x, y), 0)
+                res[self._tree(cell)] = Int(trees.get((x, y), 0))
+                res[self._fire(cell)] = Int(fires.get((x, y), 0))
                 if is_bushes(x, y, width):
                     # a bot can only leave the bushes carrying 1 unit of water
-                    res[self._max_water(cell)] = 1
+                    res[self._max_water(cell)] = Int(1)
 
         # A pond in each of the two top corners
         res[self._pond(self._cell(1, 1, width))] = TRUE()
@@ -359,16 +359,16 @@ class ForestFireGenerator(Generator):
         for i in range(1, self._n_bots(params) + 1):
             bot = self._bot(i)
             res[self._at(bot, self._cell(i, 1, width))] = TRUE()
-            res[self._water_capacity(bot)] = self._capacity(params)
-            res[self._has_water(bot)] = 0
+            res[self._water_capacity(bot)] = Int(self._capacity(params))
+            res[self._has_water(bot)] = Int(0)
         for i, (durability, placed) in enumerate(self._axes(params), start=1):
             axe = self._axe(i)
             if placed:
                 res[self._at(axe, self._cell(i, 1, width))] = TRUE()
-            res[self._durability(axe)] = durability
+            res[self._durability(axe)] = Int(durability)
         # The metric's running total, which every action increases by 1.
         # NOTE is this necessary over just minimizing the plan length?
-        res[self._cost()] = 0
+        res[self._cost()] = Int(0)
         return res
 
     def check_instance_parameters(self, params: Configuration):

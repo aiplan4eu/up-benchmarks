@@ -265,16 +265,16 @@ def main():
             )
 
             for i, instance in enumerate(problems):
-                print(f"Generated sample instance {i+1}/{args.n}")
+                print(f"Generated sample instance {i + 1}/{args.n}")
                 if args.output_folder:
-                    prob_file = args.output_folder / f"problem_{i+1}.pddl"
+                    prob_file = args.output_folder / f"problem_{i + 1}.pddl"
                     dom_file = (
-                        args.output_folder / f"domain_{i+1}.pddl"
+                        args.output_folder / f"domain_{i + 1}.pddl"
                         if fmt == Format.PDDL
                         else None
                     )
                     if fmt == Format.ANML:
-                        prob_file = args.output_folder / f"{i+1}.anml"
+                        prob_file = args.output_folder / f"{i + 1}.anml"
                     dump_instance(instance, fmt, prob_file, dom_file)
                 else:
                     print_instance(instance, fmt)

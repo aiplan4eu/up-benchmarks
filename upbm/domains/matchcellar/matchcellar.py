@@ -25,7 +25,7 @@ from ConfigSpace import (
 )
 from unified_planning.io import PDDLReader
 from unified_planning.model import Problem, Object, FNode
-from unified_planning.shortcuts import TRUE, UserType, Real, FALSE, Int
+from unified_planning.shortcuts import TRUE, Type, Real, FALSE, Int
 from typing import Any
 import math
 
@@ -116,7 +116,7 @@ class MatchCellarGenerator(Generator):
             f"Unknown domain version {self.version} or variant {self.variant}"
         )
 
-    def _get_object(self, name: str, type: UserType):
+    def _get_object(self, name: str, type: Type):
         res = self._object_cache.get((name, type), None)
         if res is None:
             res = Object(name, type)
@@ -138,8 +138,8 @@ class MatchCellarGenerator(Generator):
                 objs.append(self._get_object(f"fuse{i}", self._Fuse))
         elif self.variant == "legacy":
             for i in range(params["n_matches_fuses"]):
-                objs.append(self._get_object(f"m{i+1}", self._Match))
-                objs.append(self._get_object(f"f{i+1}", self._Fuse))
+                objs.append(self._get_object(f"m{i + 1}", self._Match))
+                objs.append(self._get_object(f"f{i + 1}", self._Fuse))
         else:
             raise ValueError(f"invalid variant {self.variant}")
         return objs
@@ -164,10 +164,10 @@ class MatchCellarGenerator(Generator):
             _, total_upper = hyperparam_range(instance_parameters_space["total"])
             actual_upper_limit = max(matches_upper, total_upper)
             return [
-                self._get_object(f"m{i+1}", self._Match)
+                self._get_object(f"m{i + 1}", self._Match)
                 for i in range(actual_upper_limit)
             ] + [
-                self._get_object(f"f{i+1}", self._Fuse)
+                self._get_object(f"f{i + 1}", self._Fuse)
                 for i in range(actual_upper_limit)
             ]
         else:
@@ -183,7 +183,7 @@ class MatchCellarGenerator(Generator):
                 res.append(self._mended(self._get_object(f"fuse{i}", self._Fuse)))
         elif self.variant == "legacy":
             for i in range(params["n_matches_fuses"]):
-                res.append(self._mended(self._get_object(f"f{i+1}", self._Fuse)))
+                res.append(self._mended(self._get_object(f"f{i + 1}", self._Fuse)))
         else:
             raise ValueError(f"invalid variant {self.variant}")
         return res
@@ -203,19 +203,19 @@ class MatchCellarGenerator(Generator):
                         self._domain.fluent("match-duration")(
                             self._get_object(f"match{i}", self._Match)
                         )
-                    ] = 5
+                    ] = Int(5)
                 for i in range(params["n_fuses"]):
                     res[
                         self._domain.fluent("fuse-duration")(
                             self._get_object(f"fuse{i}", self._Fuse)
                         )
-                    ] = 2
+                    ] = Int(2)
         elif self.variant == "legacy":
             res[self._domain.fluent("mend_fuse_duration")()] = Real(Fraction(6, 1))
             for i in range(params["n_matches_fuses"]):
-                res[
-                    self._match_used(self._get_object(f"m{i+1}", self._Match))
-                ] = FALSE()
+                res[self._match_used(self._get_object(f"m{i + 1}", self._Match))] = (
+                    FALSE()
+                )
         else:
             raise ValueError(f"invalid variant {self.variant}")
         return res

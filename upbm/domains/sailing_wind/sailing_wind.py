@@ -26,7 +26,7 @@ from ConfigSpace import (
 )
 from unified_planning.io import PDDLReader
 from unified_planning.model import Problem, Object, FNode
-from unified_planning.shortcuts import Real
+from unified_planning.shortcuts import Int, Real
 
 from upbm.generator import Generator
 from upbm.utils import MAX_INT, is_subspace, hyperparam_range
@@ -290,7 +290,7 @@ class SailingWindGenerator(Generator):
         res[self._y(boat)] = Real(Fraction(0))
         res[self._r(boat)] = Real(self._inertia(params))
         res[self._v(boat)] = Real(Fraction(0))
-        res[self._sailing_angle(boat)] = 0
+        res[self._sailing_angle(boat)] = Int(0)
         for i, (x, y) in enumerate(self._person_positions(params)):
             person = self._get_object(f"p{i}", self._Person)
             res[self._x(person)] = Real(x)

@@ -66,13 +66,13 @@ def dump_instance(
             raise ValueError(
                 "Both output domain and problem files must be specified for PDDL format"
             )
-        writer = PDDLWriter(instance)
-        writer.write_domain(str(output_dom))
-        writer.write_problem(str(output_prob))
+        pddl_writer = PDDLWriter(instance)
+        pddl_writer.write_domain(str(output_dom))
+        pddl_writer.write_problem(str(output_prob))
     elif format == Format.ANML:
         warn_if_metric_lost(instance)
-        writer = ANMLWriter(instance)
-        writer.write_problem(str(output_prob))
+        anml_writer = ANMLWriter(instance)
+        anml_writer.write_problem(str(output_prob))
     else:
         raise ValueError(f"Unknown format: {format}")
 
@@ -80,13 +80,13 @@ def dump_instance(
 def print_instance(instance: Problem, format: Format) -> None:
     """Print a Problem to stdout in the given format."""
     if format == Format.PDDL:
-        writer = PDDLWriter(instance)
-        writer.print_domain()
-        writer.print_problem()
+        pddl_writer = PDDLWriter(instance)
+        pddl_writer.print_domain()
+        pddl_writer.print_problem()
     elif format == Format.ANML:
         warn_if_metric_lost(instance)
-        writer = ANMLWriter(instance)
-        writer.print_problem()
+        anml_writer = ANMLWriter(instance)
+        anml_writer.print_problem()
     else:
         raise ValueError(f"Unknown format: {format}")
 

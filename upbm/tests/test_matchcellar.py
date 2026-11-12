@@ -30,9 +30,7 @@ class TestMatchcellar(BaseDomainTest):
         return MatchCellarGenerator
 
     def _get_configs(self):
-        default_config = (
-            MatchCellarGenerator.get_domain_parameter_space().get_default_configuration()
-        )
+        default_config = MatchCellarGenerator.get_domain_parameter_space().get_default_configuration()
         gen = MatchCellarGenerator(default_config)
         instance_space = gen.instance_parameter_space
         instance_1 = Configuration(instance_space, {"n_matches": 3, "n_fuses": 4})

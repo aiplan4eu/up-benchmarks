@@ -18,6 +18,7 @@ import unified_planning as up
 from unified_planning.shortcuts import (
     Problem,
     UserType,
+    Type,
     Object,
     Fluent,
     IntType,
@@ -85,7 +86,7 @@ class ReplenishGenerator(Generator):
         self._CardboardType = self._domain.user_type("CardboardType")
         self._Drawer = self._domain.user_type("Drawer")
 
-        self._object_cache: Dict[Tuple[str, UserType], Object] = {}
+        self._object_cache: Dict[Tuple[str, Type], Object] = {}
 
     @property
     def instance_parameter_space(self) -> ConfigurationSpace:
@@ -110,7 +111,7 @@ class ReplenishGenerator(Generator):
     def domain(self) -> Problem:
         return self._domain
 
-    def _get_object(self, name: str, type: UserType) -> Object:
+    def _get_object(self, name: str, type: Type) -> Object:
         res = self._object_cache.get((name, type))
         if res is None:
             res = Object(name, type)
@@ -368,9 +369,9 @@ class ReplenishGenerator(Generator):
         target_sequence_fluent = self._domain.fluent("target_sequence_fluent")
         for i, g in enumerate(goal_sequence):
             ct = self._get_object(f"cardboard_type_{g}", self._CardboardType)
-            initial_values[
-                target_sequence_fluent(Int(i))
-            ] = self._domain.environment.expression_manager.ObjectExp(ct)
+            initial_values[target_sequence_fluent(Int(i))] = (
+                self._domain.environment.expression_manager.ObjectExp(ct)
+            )
 
         return initial_values
 

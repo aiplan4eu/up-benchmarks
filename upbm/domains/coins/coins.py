@@ -27,7 +27,7 @@ from ConfigSpace import (
 from unified_planning.io import PDDLReader
 from unified_planning.model import Problem, Object, FNode
 from unified_planning.model.metrics import MinimizeExpressionOnFinalState
-from unified_planning.shortcuts import TRUE, Equals
+from unified_planning.shortcuts import TRUE, Equals, Int
 
 from upbm.generator import Generator
 from upbm.utils import MAX_INT, is_subspace, hyperparam_range
@@ -151,14 +151,14 @@ class CoinsGenerator(Generator):
         if not is_subspace(params.config_space, self.instance_parameter_space):
             raise ValueError(f"Invalid instance parameters: {params}")
         res: dict[FNode, FNode] = {
-            self._current_value(): 0,
-            self._coin_count(): 0,
-            self._penalty(): 0,
+            self._current_value(): Int(0),
+            self._coin_count(): Int(0),
+            self._penalty(): Int(0),
         }
         coin_values = denominations(params["n_coins"])
         for coin, value in zip(self.get_objects(params), coin_values):
-            res[self._denomination(coin)] = value
-            res[self._denomination_penalty(coin)] = 1
+            res[self._denomination(coin)] = Int(value)
+            res[self._denomination_penalty(coin)] = Int(1)
             res[self._no_coin_update(coin)] = TRUE()
         return res
 
