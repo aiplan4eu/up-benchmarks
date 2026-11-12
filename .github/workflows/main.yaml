@@ -2,12 +2,6 @@ name: test
 
 on: push
 
-# Both jobs install with `uv sync --upgrade`: instead of the versions recorded in
-# uv.lock they take the latest of every dependency, including the latest
-# unified-planning master, so CI notices when a new release or a change in
-# unified-planning breaks something. The Python version comes from
-# .python-version.
-
 jobs:
   static_analysis:
     runs-on: ubuntu-latest

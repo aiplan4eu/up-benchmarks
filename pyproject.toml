@@ -17,8 +17,6 @@ dependencies = [
     "sympy"
 ]
 
-# Only for working on this repo: tests, type checks, formatting and the
-# planners that the tests use. `uv sync` installs them.
 [dependency-groups]
 dev = [
     "pytest",
@@ -30,12 +28,6 @@ dev = [
     "tamerlite[rust]",
 ]
 
-# Where uv takes packages from, for the development environment only (`pip
-# install .` still takes unified-planning from PyPI).
-# unified-planning comes from its GitHub master, which is what people using
-# this repo usually run, so CI notices when a change there breaks something.
-# uv.lock records one master commit; CI moves to the latest on every run
-# (`uv sync --upgrade`), locally `uv lock --upgrade` does the same.
 [tool.uv.sources]
 unified-planning = { git = "https://github.com/aiplan4eu/unified-planning", branch = "master" }
 
