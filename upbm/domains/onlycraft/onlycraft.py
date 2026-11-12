@@ -25,7 +25,7 @@ from ConfigSpace import (
 )
 from unified_planning.io import PDDLReader
 from unified_planning.model import Problem, Object, FNode
-from unified_planning.shortcuts import TRUE, GE
+from unified_planning.shortcuts import TRUE, GE, Int
 
 from upbm.generator import Generator
 from upbm.utils import MAX_INT, is_subspace, hyperparam_range
@@ -253,9 +253,12 @@ class OnlyCraftGenerator(Generator):
         cells = self.get_objects(params)
         low, air, start, crafting_table = self._layout(params)
 
-        res: dict[FNode, FNode] = {self._toxicity(): 0, self._count_pogo_stick(): 0}
+        res: dict[FNode, FNode] = {
+            self._toxicity(): Int(0),
+            self._count_pogo_stick(): Int(0),
+        }
         for fluent in self._inventory:
-            res[fluent()] = 0
+            res[fluent()] = Int(0)
         for i, cell in enumerate(cells):
             if i in air:
                 res[self._air_cell(cell)] = TRUE()

@@ -40,7 +40,7 @@ def get_legacy_domain():
 
     mend_fuse = DurativeAction("mend_fuse", f=Fuse)
     f = mend_fuse.parameter("f")
-    mend_fuse.set_fixed_duration(mend_fuse_duration)
+    mend_fuse.set_fixed_duration(mend_fuse_duration())
     mend_fuse.add_condition(StartTiming(), handfree)
     mend_fuse.add_condition(ClosedTimeInterval(StartTiming(), EndTiming()), light)
     mend_fuse.add_effect(StartTiming(), handfree, False)

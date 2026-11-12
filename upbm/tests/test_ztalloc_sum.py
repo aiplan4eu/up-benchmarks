@@ -92,12 +92,11 @@ class TestZtallocSum(BaseDomainTest):
 
         value = problem.fluent("value")
         work_value = problem.fluent("work-value")
+        init = problem.initial_values
         for register in problem.objects(problem.user_type("register")):
-            self.assertEqual(problem.initial_value(value(register)).constant_value(), 1)
-            self.assertEqual(
-                problem.initial_value(work_value(register)).constant_value(), 0
-            )
-        total_cost = problem.initial_value(problem.fluent("total-cost")())
+            self.assertEqual(init[value(register)].constant_value(), 1)
+            self.assertEqual(init[work_value(register)].constant_value(), 0)
+        total_cost = init[problem.fluent("total-cost")()]
         self.assertEqual(total_cost.constant_value(), 0)
         self.assertEqual(len(problem.goals), 2 + 2 * 3)
 

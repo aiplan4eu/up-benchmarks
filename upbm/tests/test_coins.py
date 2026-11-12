@@ -86,8 +86,9 @@ class TestCoins(BaseDomainTest):
         )
         problem = gen.get_instance(instance_config)
         denomination = problem.fluent("denomination")
+        init = problem.initial_values
         return [
-            int(problem.initial_value(denomination(coin)).constant_value())
+            int(init[denomination(coin)].constant_value())
             for coin in problem.objects(problem.user_type("coin"))
         ]
 

@@ -24,6 +24,7 @@ from unified_planning.shortcuts import (
     Not,
     EndTiming,
     UserType,
+    Type,
     BoolType,
     InstantaneousAction,
     DurativeAction,
@@ -71,7 +72,7 @@ class MaJSPGenerator(Generator):
         self._Position = self._domain.user_type("Position")
         self._treated = self._domain.fluent("treated")
 
-        self._object_cache: Dict[Tuple[str, UserType], Object] = {}
+        self._object_cache: Dict[Tuple[str, Type], Object] = {}
 
     @property
     def instance_parameter_space(self) -> ConfigurationSpace:
@@ -96,7 +97,7 @@ class MaJSPGenerator(Generator):
     def pddl_expressible(self) -> bool:
         return False
 
-    def _get_object(self, name: str, type: UserType) -> Object:
+    def _get_object(self, name: str, type: Type) -> Object:
         res = self._object_cache.get((name, type))
         if res is None:
             res = Object(name, type)

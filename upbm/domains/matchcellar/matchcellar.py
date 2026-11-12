@@ -25,7 +25,7 @@ from ConfigSpace import (
 )
 from unified_planning.io import PDDLReader
 from unified_planning.model import Problem, Object, FNode
-from unified_planning.shortcuts import TRUE, UserType, Real, FALSE, Int
+from unified_planning.shortcuts import TRUE, Type, Real, FALSE, Int
 from typing import Any
 import math
 
@@ -116,7 +116,7 @@ class MatchCellarGenerator(Generator):
             f"Unknown domain version {self.version} or variant {self.variant}"
         )
 
-    def _get_object(self, name: str, type: UserType):
+    def _get_object(self, name: str, type: Type):
         res = self._object_cache.get((name, type), None)
         if res is None:
             res = Object(name, type)
@@ -203,13 +203,13 @@ class MatchCellarGenerator(Generator):
                         self._domain.fluent("match-duration")(
                             self._get_object(f"match{i}", self._Match)
                         )
-                    ] = 5
+                    ] = Int(5)
                 for i in range(params["n_fuses"]):
                     res[
                         self._domain.fluent("fuse-duration")(
                             self._get_object(f"fuse{i}", self._Fuse)
                         )
-                    ] = 2
+                    ] = Int(2)
         elif self.variant == "legacy":
             res[self._domain.fluent("mend_fuse_duration")()] = Real(Fraction(6, 1))
             for i in range(params["n_matches_fuses"]):

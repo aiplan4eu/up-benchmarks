@@ -25,7 +25,7 @@ from ConfigSpace import (
 )
 from unified_planning.io import PDDLReader
 from unified_planning.model import Problem, Object, FNode
-from unified_planning.shortcuts import TRUE, UserType
+from unified_planning.shortcuts import TRUE, Int, Type
 
 from upbm.generator import Generator
 from upbm.utils import MAX_INT, is_subspace, hyperparam_range
@@ -308,7 +308,7 @@ class RainbowttlesGenerator(Generator):
             )
         raise ValueError(f"Unknown domain version {self.version}")
 
-    def _get_object(self, name: str, type: UserType) -> Object:
+    def _get_object(self, name: str, type: Type) -> Object:
         res = self._object_cache.get((name, type), None)
         if res is None:
             res = Object(name, type)
@@ -466,14 +466,14 @@ class RainbowttlesGenerator(Generator):
 
         for index, stack in enumerate(stacks):
             bottle = self._bottle(index)
-            res[self._bottle_capacity(bottle)] = capacity
+            res[self._bottle_capacity(bottle)] = Int(capacity)
             counts = dict(stack)
             for colour in range(n_colours):
-                res[self._colour_segments(bottle, self._colour(colour))] = counts.get(
-                    colour, 0
+                res[self._colour_segments(bottle, self._colour(colour))] = Int(
+                    counts.get(colour, 0)
                 )
-            res[self._colour_segments(bottle, self._colour(None))] = 0
-            res[self._segments_filled(bottle)] = filled(stack)
+            res[self._colour_segments(bottle, self._colour(None))] = Int(0)
+            res[self._segments_filled(bottle)] = Int(filled(stack))
             if stack:
                 res[self._upper_colour(bottle, self._colour(stack[-1][0]))] = TRUE()
                 below: Optional[int] = None
