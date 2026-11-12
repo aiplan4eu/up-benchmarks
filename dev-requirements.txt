@@ -4,3 +4,4 @@ mypy
 pre-commit
 types-PyYAML
 up-tamer
+tamerlite[rust]
