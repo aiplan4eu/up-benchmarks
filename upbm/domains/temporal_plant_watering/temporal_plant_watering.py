@@ -26,7 +26,7 @@ from ConfigSpace import (
 from unified_planning.io import PDDLReader
 from unified_planning.model import Problem, Object, FNode
 from unified_planning.model.metrics import MinimizeMakespan
-from unified_planning.shortcuts import TRUE, Equals
+from unified_planning.shortcuts import TRUE, Equals, Int
 
 from upbm.generator import Generator
 from upbm.utils import MAX_INT, is_subspace, hyperparam_range
@@ -211,27 +211,27 @@ class TemporalPlantWateringGenerator(Generator):
         size = params["size"]
         pump = self._pump()
         res: dict[FNode, FNode] = {
-            self._minx(): 1,
-            self._maxx(): size,
-            self._miny(): 1,
-            self._maxy(): size,
-            self._water_reserve(): params["pour"] * params["n_plants"],
+            self._minx(): Int(1),
+            self._maxx(): Int(size),
+            self._miny(): Int(1),
+            self._maxy(): Int(size),
+            self._water_reserve(): Int(params["pour"] * params["n_plants"]),
             self._pump_closed(pump): TRUE(),
             self._free(pump): TRUE(),
-            self._tap_x(pump): params["tap_x"],
-            self._tap_y(pump): params["tap_y"],
+            self._tap_x(pump): Int(params["tap_x"]),
+            self._tap_y(pump): Int(params["tap_y"]),
         }
         agents = self._agents(params["n_agents"])
         for agent, (x, y) in zip(agents, agent_cells(params["n_agents"])):
             res[self._handfree(agent)] = TRUE()
-            res[self._x(agent)] = x
-            res[self._y(agent)] = y
+            res[self._x(agent)] = Int(x)
+            res[self._y(agent)] = Int(y)
         plants = self._plants(params["n_plants"])
         cells = plant_cells(size, params["n_agents"], params["n_plants"])
         for plant, (x, y) in zip(plants, cells):
-            res[self._poured(plant)] = 0
-            res[self._plant_x(plant)] = x
-            res[self._plant_y(plant)] = y
+            res[self._poured(plant)] = Int(0)
+            res[self._plant_x(plant)] = Int(x)
+            res[self._plant_y(plant)] = Int(y)
         return res
 
     def check_instance_parameters(self, params: Configuration):
