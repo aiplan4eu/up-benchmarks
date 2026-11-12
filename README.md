@@ -12,6 +12,20 @@ Requires Python ≥ 3.10. From the repository root:
 pip install .
 ```
 
+### Development
+
+The development setup uses [uv](https://docs.astral.sh/uv/). From the repository root:
+
+```bash
+uv sync                    # creates .venv with the package and the dev tools
+uv run pre-commit install  # formats the code with black on each commit
+uv run pytest upbm         # tests
+uv run mypy .              # type checks
+```
+
+In this setup `unified-planning` comes from its GitHub master: `uv.lock` records one
+commit of it, and `uv lock --upgrade` moves every dependency to its latest version.
+
 ## Quick Start
 
 ```bash

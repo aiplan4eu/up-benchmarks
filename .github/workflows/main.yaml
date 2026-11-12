@@ -2,6 +2,12 @@ name: test
 
 on: push
 
+# Both jobs install with `uv sync --upgrade`: instead of the versions recorded in
+# uv.lock they take the latest of every dependency, including the latest
+# unified-planning master, so CI notices when a new release or a change in
+# unified-planning breaks something. The Python version comes from
+# .python-version.
+
 jobs:
   static_analysis:
     runs-on: ubuntu-latest
@@ -9,21 +15,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
 
-      - name: install requirements
-        run: |
-          pip install -r requirements.txt
-          pip install -r dev-requirements.txt
+      - name: Install dependencies
+        run: uv sync --upgrade
 
       - name: Black check
-        run: python3 -m black --check .
+        run: uv run black --check .
 
       - name: MyPy check
-        run: python3 -m mypy .
+        run: uv run mypy .
 
   test_linux:
     runs-on: ubuntu-latest
@@ -34,15 +36,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
 
-      - name: install requirements
-        run: |
-          pip install -r requirements.txt
-          pip install -r dev-requirements.txt
+      - name: Install dependencies
+        run: uv sync --upgrade
 
       - name: run tests
-        run: python3 -m pytest upbm
+        run: uv run pytest upbm
