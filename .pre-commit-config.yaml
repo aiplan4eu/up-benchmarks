@@ -5,4 +5,4 @@ repos:
     name: ruff format
     entry: .venv/bin/ruff format
     language: system
-    types_or: [python, pyi]
+    types_or: [python, pyi, markdown]

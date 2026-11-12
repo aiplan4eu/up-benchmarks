@@ -159,7 +159,9 @@ dom_space = factory.get_domain_parameter_space("matchcellar")
 domain_params = factory.parse_configuration({"variant": "ipc"}, dom_space)
 
 inst_space = factory.get_instance_parameter_space("matchcellar", domain_params)
-instance_params = factory.parse_configuration({"n_matches": 5, "n_fuses": 5}, inst_space)
+instance_params = factory.parse_configuration(
+    {"n_matches": 5, "n_fuses": 5}, inst_space
+)
 
 # 3. Generate the Unified Planning Problem object
 problem = factory.generate_instance("matchcellar", domain_params, instance_params)
@@ -179,10 +181,7 @@ from ConfigSpace import (
 
 # Create a smaller parameter space
 reduced_space = ConfigurationSpace(
-    {
-        "n_matches" : Constant("n_matches", 10),
-        "n_fuses" : Integer("n_fuses", (5, 20))
-    }
+    {"n_matches": Constant("n_matches", 10), "n_fuses": Integer("n_fuses", (5, 20))}
 )
 
 # Sample 10 instances
