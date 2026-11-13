@@ -1,0 +1,146 @@
+# Ten Space Rescue instances, each solved by Tamerlite (Rust core, greedy
+# best-first search with the hadd heuristic) within 300 s and 8 GB: five small
+# ones that take under a second, then five that scale up to about a minute
+# and a half. The times below were measured on a laptop, two problems at a
+# time, and are only a guide.
+#
+# All 10 parameters are written out, so that a change to the generator's
+# defaults cannot change the set.
+#   p01 - 7 sites, a stranded rover, two goal sites
+#   p02 - 6 sites, a stranded rover, rovers of capacity 4
+#   p03 - 7 sites, a leech, a scattered stash
+#   p04 - 6 sites, a stranded rover and a random rover
+#   p05 - 6 sites, a leech and a stranded rover
+#   p06 - 10 sites, two leeches, a stranded rover, two goal sites (about 2 s)
+#   p07 - 12 sites, capacity 5, a leech, two stranded rovers, two goal
+#         sites, slack 1 (about 7 s)
+#   p08 - 10 sites, capacity 4, a leech, a stranded rover, two scattered
+#         stashes (about 15 s)
+#   p09 - 14 sites, two leeches, two stranded rovers, three goal sites,
+#         slack 1 (about 55 s)
+#   p10 - 12 sites, capacity 4, two leeches, two stranded rovers, two goal
+#         sites, a scattered stash (about 95 s)
+domain: space-rescue
+params:
+  version: 1
+instances:
+  - name: p01
+    params:
+      n_sites: 7
+      rover_capacity: 3
+      n_leech: 0
+      n_stranded: 1
+      n_randoms: 0
+      slack: 0
+      n_goal_sites: 2
+      stash_density: 25
+      stash_total: 0
+      seed: 1
+  - name: p02
+    params:
+      n_sites: 6
+      rover_capacity: 4
+      n_leech: 0
+      n_stranded: 1
+      n_randoms: 0
+      slack: 0
+      n_goal_sites: 1
+      stash_density: 25
+      stash_total: 0
+      seed: 1
+  - name: p03
+    params:
+      n_sites: 7
+      rover_capacity: 3
+      n_leech: 1
+      n_stranded: 0
+      n_randoms: 0
+      slack: 0
+      n_goal_sites: 1
+      stash_density: 30
+      stash_total: 1
+      seed: 1
+  - name: p04
+    params:
+      n_sites: 6
+      rover_capacity: 3
+      n_leech: 0
+      n_stranded: 1
+      n_randoms: 1
+      slack: 0
+      n_goal_sites: 1
+      stash_density: 25
+      stash_total: 0
+      seed: 1
+  - name: p05
+    params:
+      n_sites: 6
+      rover_capacity: 3
+      n_leech: 1
+      n_stranded: 1
+      n_randoms: 0
+      slack: 0
+      n_goal_sites: 1
+      stash_density: 25
+      stash_total: 0
+      seed: 0
+  - name: p06
+    params:
+      n_sites: 10
+      rover_capacity: 3
+      n_leech: 2
+      n_stranded: 1
+      n_randoms: 0
+      slack: 0
+      n_goal_sites: 2
+      stash_density: 25
+      stash_total: 0
+      seed: 0
+  - name: p07
+    params:
+      n_sites: 12
+      rover_capacity: 5
+      n_leech: 1
+      n_stranded: 2
+      n_randoms: 0
+      slack: 1
+      n_goal_sites: 2
+      stash_density: 25
+      stash_total: 0
+      seed: 1
+  - name: p08
+    params:
+      n_sites: 10
+      rover_capacity: 4
+      n_leech: 1
+      n_stranded: 1
+      n_randoms: 0
+      slack: 0
+      n_goal_sites: 1
+      stash_density: 25
+      stash_total: 1
+      seed: 1
+  - name: p09
+    params:
+      n_sites: 14
+      rover_capacity: 3
+      n_leech: 2
+      n_stranded: 2
+      n_randoms: 0
+      slack: 1
+      n_goal_sites: 3
+      stash_density: 25
+      stash_total: 0
+      seed: 1
+  - name: p10
+    params:
+      n_sites: 12
+      rover_capacity: 4
+      n_leech: 2
+      n_stranded: 2
+      n_randoms: 0
+      slack: 0
+      n_goal_sites: 2
+      stash_density: 25
+      stash_total: 2
+      seed: 1
