@@ -35,9 +35,44 @@ the domain is supported, and Tamerlite grounds through unified-planning's
 grounder, which turns `(value ?q)` and `rover_capacity` into plain numbers (the
 grounded problem is simple numeric planning).
 
+## Variants
+
+The domain parameter `variant` changes how the domain is written, not the
+instance: the same instance parameters draw the same map, rovers and packs in
+each.
+
+- **`base`** (the default): the domain above, `space_rescue_v1.pddl`.
+- **`snp`**: simple numeric (`space_rescue_snp_v1.pddl`). Packs move only 1
+  or 3 at a time, with an action for each (`pick_up_1`, `pick_up_3`,
+  `drop_1`, `drop_3`, `recharge_1`, `recharge_3`), and recharging adds packs
+  instead of filling the rover. There are no amount objects: UP calls a
+  domain simple numeric only when every increase and decrease is a literal
+  number, and `(value ?q)` is a static fluent, which makes the `base` domain
+  general numeric before grounding (after grounding both are simple, as UP
+  accepts assigning a constant, `rover_packs := C`). Capacities are at least
+  3, so a rover can always recharge 3 from empty. Moving or charging k packs
+  takes ⌊k/3⌋ + (k mod 3) actions, so plan lengths differ from `base`, where
+  a recharge is always one action and a load one per binary digit of k.
+- **`classical`**: no numbers (`space_rescue_classical_v1.pddl`). Every number
+  of packs is an object of type `count`, `n0` up to M, and static facts do
+  the arithmetic: `(next ?a ?b)` for b = a + 1, `(sum ?a ?q ?b)` for
+  b = a + the value of q, and `(leq ?a ?b)` up to the capacity. Every action
+  keeps its parameters and adds counts after them, so dropping the counts
+  turns a plan into a `base` plan.
+
+Unlike numbers, counts need a top: in the classical variant a site holds at
+most M = max(`site_cap` × C, C + `slack`, `stash_total` × C) packs, the last
+two so that every starting stock fits. `site_cap` exists only in this
+variant, default 2. A `base` plan that piles more than M packs on a site has
+no classical counterpart. Tamerlite with weak heuristics finds plans that
+pile up as much as 19C on one site, but the configurations that found the
+shortest plans never went above 2C (160 plans checked on 2026-11-17). Any
+`site_cap` keeps every instance solvable, see "Why every instance is
+solvable".
+
 ## Rover roles
 
-In the base version every rover has the same capacity, `rover_capacity`,
+As the generator stands, every rover has the same capacity, `rover_capacity`,
 written C below. Per-role capacities are optional additions, listed in the
 quirk table where they help.
 
@@ -74,6 +109,7 @@ along its chain.)
 | `stash_density` | percentage (0–100) of the sites holding a scattered stash, rounded down; fewer when not enough sites qualify (see step 6 of "Construction") |
 | `stash_total` | total scattered packs, in units of C |
 | `seed` | everything else: graph shape, positions, amounts, names, order of the facts |
+| `site_cap` | `classical` variant only: the most packs a site can hold, in units of C, at least 1 (see "Variants") |
 
 
 ## Construction
@@ -126,6 +162,12 @@ C − 2 ≥ 1 at the far end. So every rover can be supplied to its goal, strand
 ones included, whatever the other roles' capacities. Steps 5 and 6 only add
 rovers, which D can supply, and packs, so they cannot break this. The generator
 builds no plan: solvability rests on this argument.
+
+In the classical variant a site holds at most M ≥ C packs, and the argument
+still holds: the packs can travel one load at a time, each site on the way
+topped up only when it runs low, so no site ever needs more than C. Hence
+`site_cap` = 1 already keeps every instance solvable; a cap only removes plans
+that stockpile.
 
 ## Size
 

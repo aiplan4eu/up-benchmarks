@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, List, Optional, Set, Tuple
 
 from ConfigSpace import (
+    Categorical,
     ConfigurationSpace,
     Configuration,
     Integer,
@@ -34,6 +35,16 @@ from upbm.utils import MAX_INT, is_subspace, hyperparam_range
 
 SCRIPT_PATH = Path(__file__).absolute().parent
 RESOURCES_PATH = SCRIPT_PATH / "resources"
+
+# "base" is the domain as first written; "snp" moves packs only 1 or 3 at a
+# time, with no amount objects, which makes it simple numeric; "classical"
+# counts packs with objects.
+VARIANTS = ("base", "snp", "classical")
+DOMAIN_FILES = {
+    "base": "space_rescue_v{version}.pddl",
+    "snp": "space_rescue_snp_v{version}.pddl",
+    "classical": "space_rescue_classical_v{version}.pddl",
+}
 
 # Internal number of the charging station. Sites are numbered 0..n_sites-1
 # while an instance is drawn; the names in the problem are shuffled later.
@@ -72,6 +83,21 @@ def amount_values(capacity: int) -> List[int]:
     return values
 
 
+def max_site_packs(params) -> int:
+    """The most packs a site can hold in the classical variant, M below.
+
+    `site_cap` * C, raised when needed so that every site's starting stock
+    fits: the saviour's start holds at most C + `slack` (step 4 of `_draw`),
+    and a scattered stash at most all `stash_total` * C packs.
+    """
+    capacity = params["rover_capacity"]
+    return max(
+        params["site_cap"] * capacity,
+        capacity + params["slack"],
+        params["stash_total"] * capacity,
+    )
+
+
 class SpaceRescueGenerator(Generator):
     """Space Rescue: rovers out of energy on a graph of sites.
 
@@ -86,12 +112,16 @@ class SpaceRescueGenerator(Generator):
     several rovers that may need each other.
 
     Instances are solvable by construction, see `_draw`.
+
+    The variant changes only how the domain is written, see VARIANTS; the
+    same instance parameters draw the same map in each.
     """
 
     @staticmethod
     def get_domain_parameter_space():
         mapping: dict[str, Any] = {}
         mapping["version"] = Constant("version", 1)
+        mapping["variant"] = Categorical("variant", list(VARIANTS), default="base")
         return ConfigurationSpace(name=mapping)
 
     def __init__(self, domain_params: Configuration):
@@ -103,18 +133,26 @@ class SpaceRescueGenerator(Generator):
             raise ValueError(f"Invalid domain parameters: {domain_params}")
 
         self.version = domain_params["version"]
+        self.variant = domain_params["variant"]
         self._domain = self._mk_domain()
         assert isinstance(self._domain, Problem)
         self._Rover = self._domain.user_type("rover")
         self._Site = self._domain.user_type("site")
-        self._Amount = self._domain.user_type("amount")
+        if self.variant != "snp":
+            self._Amount = self._domain.user_type("amount")
         self._at = self._domain.fluent("at")
         self._connected = self._domain.fluent("connected")
         self._charging_station = self._domain.fluent("charging_station")
         self._rover_packs = self._domain.fluent("rover_packs")
         self._rover_capacity = self._domain.fluent("rover_capacity")
         self._site_packs = self._domain.fluent("site_packs")
-        self._value = self._domain.fluent("value")
+        if self.variant == "base":
+            self._value = self._domain.fluent("value")
+        if self.variant == "classical":
+            self._Count = self._domain.user_type("count")
+            self._next = self._domain.fluent("next")
+            self._sum = self._domain.fluent("sum")
+            self._leq = self._domain.fluent("leq")
 
         self._object_cache: dict[tuple[str, Any], Object] = {}
         super().__init__(domain_params)
@@ -151,22 +189,31 @@ class SpaceRescueGenerator(Generator):
         # Packs in the scattered stashes, all together, in units of C.
         mapping["stash_total"] = Integer("stash_total", (0, MAX_INT), default=2)
         mapping["seed"] = Integer("seed", (0, MAX_INT), default=42)
+        if self.variant == "classical":
+            # The most packs a site can hold, in units of C (see
+            # `max_site_packs`). 1 keeps every instance solvable, see "Why
+            # every instance is solvable" in space_rescue.md.
+            mapping["site_cap"] = Integer("site_cap", (1, MAX_INT), default=2)
         return ConfigurationSpace(name=mapping)
 
     @property
     def name(self) -> str:
-        return f"SpaceRescue V{self.version}"
+        # The base variant keeps the name it had before there were variants.
+        if self.variant == "base":
+            return f"SpaceRescue V{self.version}"
+        return f"SpaceRescue V{self.version} ({self.variant})"
 
     @property
     def domain(self) -> Problem:
         return self._domain
 
     def _mk_domain(self):
+        if self.variant not in VARIANTS:
+            raise ValueError(f"Unknown variant {self.variant}")
         if self.version == 1:
             reader = PDDLReader()
-            return reader.parse_problem(
-                str(RESOURCES_PATH / f"space_rescue_v{self.version}.pddl")
-            )
+            file = DOMAIN_FILES[self.variant].format(version=self.version)
+            return reader.parse_problem(str(RESOURCES_PATH / file))
         raise ValueError(f"Unknown domain version {self.version}")
 
     def _get_object(self, name: str, type: Any):
@@ -193,6 +240,48 @@ class SpaceRescueGenerator(Generator):
 
     def _amount(self, value: int) -> Object:
         return self._get_object(f"q{value}", self._Amount)
+
+    def _count(self, value: int) -> Object:
+        return self._get_object(f"n{value}", self._Count)
+
+    def _packs(self, fluent: Any, obj: Object, value: int) -> Tuple[FNode, Any]:
+        """The fact that `obj` has `value` packs (or capacity), as a number
+        or, in the classical variant, as a count."""
+        if self.variant == "classical":
+            return (fluent(obj, self._count(value)), TRUE())
+        return (fluent(obj), value)
+
+    def _amounts(self, capacity: int) -> List[Object]:
+        """The amount objects; the snp variant has none."""
+        if self.variant == "snp":
+            return []
+        return [self._amount(v) for v in amount_values(capacity)]
+
+    def _arithmetic(self, params) -> List[Tuple[FNode, Any]]:
+        """The static facts that give the amounts their values: `value` in the
+        base variant, `next`, `sum` and `leq` over the counts in the classical
+        one, none in the snp one."""
+        capacity = params["rover_capacity"]
+        amounts = amount_values(capacity)
+        if self.variant == "snp":
+            return []
+        if self.variant == "base":
+            return [(self._value(self._amount(v)), v) for v in amounts]
+        top = max_site_packs(params)
+        n = self._count
+        facts = [(self._next(n(a), n(a + 1)), TRUE()) for a in range(top)]
+        facts += [
+            (self._sum(n(a), self._amount(v), n(a + v)), TRUE())
+            for a in range(top + 1)
+            for v in amounts
+            if a + v <= top
+        ]
+        facts += [
+            (self._leq(n(a), n(b)), TRUE())
+            for b in range(capacity + 1)
+            for a in range(b + 1)
+        ]
+        return facts
 
     # --- drawing an instance -------------------------------------------------
 
@@ -421,7 +510,9 @@ class SpaceRescueGenerator(Generator):
         sites = sorted(layout.site_names, key=lambda name: int(name[1:]))
         objs: List[Object] = [self._rover(name) for name in rovers]
         objs += [self._site(name) for name in sites]
-        objs += [self._amount(v) for v in amount_values(params["rover_capacity"])]
+        objs += self._amounts(params["rover_capacity"])
+        if self.variant == "classical":
+            objs += [self._count(k) for k in range(max_site_packs(params) + 1)]
         return objs
 
     def object_universe(
@@ -438,7 +529,15 @@ class SpaceRescueGenerator(Generator):
         _, capacity = hyperparam_range(space["rover_capacity"])
         objs: List[Object] = [self._rover(f"r{k}") for k in range(1, n_rovers + 1)]
         objs += [self._site(f"s{k}") for k in range(1, n_sites + 1)]
-        objs += [self._amount(v) for v in amount_values(capacity)]
+        objs += self._amounts(capacity)
+        if self.variant == "classical":
+            top = max_site_packs(
+                {
+                    name: hyperparam_range(space[name])[1]
+                    for name in ("rover_capacity", "site_cap", "slack", "stash_total")
+                }
+            )
+            objs += [self._count(k) for k in range(top + 1)]
         return objs
 
     def get_goal(self, params) -> List[FNode]:
@@ -464,13 +563,12 @@ class SpaceRescueGenerator(Generator):
         for a, others in enumerate(layout.neighbours):
             facts += [(self._connected(site[a], site[b]), TRUE()) for b in others]
         for s, packs in enumerate(layout.site_packs):
-            facts.append((self._site_packs(site[s]), packs))
+            facts.append(self._packs(self._site_packs, site[s], packs))
         for r in range(len(rover)):
             facts.append((self._at(rover[r], site[layout.rover_site[r]]), TRUE()))
-            facts.append((self._rover_packs(rover[r]), 0))
-            facts.append((self._rover_capacity(rover[r]), layout.capacity))
-        for v in amount_values(layout.capacity):
-            facts.append((self._value(self._amount(v)), v))
+            facts.append(self._packs(self._rover_packs, rover[r], 0))
+            facts.append(self._packs(self._rover_capacity, rover[r], layout.capacity))
+        facts += self._arithmetic(params)
 
         # Written in a random order, so that nothing in the problem file
         # (where the station's edges are, which rovers come first) gives away
