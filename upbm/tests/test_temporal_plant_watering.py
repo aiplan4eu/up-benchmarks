@@ -61,7 +61,26 @@ class TestTemporalPlantWatering(BaseDomainTest):
                 "tap_y": 2,
             },
         )
-        return [(default_config, instance_1), (default_config, instance_2)]
+        # The smallest grid, 2x2, with as many plants as fit: the agents start
+        # at (1, 1) and (1, 2), so the two plants take the rest of the border,
+        # plant1 at (2, 2) and plant2 at (2, 1). The tap is at (1, 2), where
+        # agent2 starts.
+        instance_3 = Configuration(
+            instance_space,
+            {
+                "size": 2,
+                "n_plants": 2,
+                "pour": 1,
+                "n_agents": 2,
+                "tap_x": 1,
+                "tap_y": 2,
+            },
+        )
+        return [
+            (default_config, instance_1),
+            (default_config, instance_2),
+            (default_config, instance_3),
+        ]
 
     @property
     def plannable(self):
@@ -73,6 +92,7 @@ class TestTemporalPlantWatering(BaseDomainTest):
         return [
             (*instances[0], [("agent", 2), ("plant", 1), ("pump", 1)]),
             (*instances[1], [("agent", 3), ("plant", 3), ("pump", 1)]),
+            (*instances[2], [("agent", 2), ("plant", 2), ("pump", 1)]),
         ]
 
     @property
@@ -117,9 +137,22 @@ class TestTemporalPlantWatering(BaseDomainTest):
         30: (pour agent1 pump1 plant3)
         """
         )
+        # agent2 takes the pump at the tap and carries it to plant1, then down
+        # to plant2, while agent1 steps up to the tap and opens it for each.
+        smallest_grid = """
+        0: (take_pump agent2 pump1)
+        1: (move_right_with_pump agent2 pump1)
+        2: (move_up agent1)
+        3: (open_water_pump agent1 pump1) [10]
+        4: (pour agent2 pump1 plant1)
+        14: (move_down_with_pump agent2 pump1)
+        15: (open_water_pump agent1 pump1) [10]
+        16: (pour agent2 pump1 plant2)
+        """
         return [
             (*instances[0], one_plant, ValidationResultStatus.VALID),
             (*instances[1], three_plants, ValidationResultStatus.VALID),
             # Every step is applicable, but plant3 stays dry.
             (*instances[1], two_plants, ValidationResultStatus.INVALID),
+            (*instances[2], smallest_grid, ValidationResultStatus.VALID),
         ]

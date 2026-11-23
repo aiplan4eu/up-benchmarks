@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import itertools
 from pathlib import Path
 from typing import Any, Optional, List
 
@@ -52,15 +53,19 @@ def plant_cells(size: int, n_agents: int, n_plants: int) -> List[tuple[int, int]
     start on. The border is walked clockwise from the top-left corner: the top
     row left to right, the right column downwards, the bottom row right to left
     and the left column upwards.
+
+    The border is walked lazily and the walk stops at the last plant, so a
+    large grid costs no more than the cells actually visited.
     """
-    border = (
-        [(x, size) for x in range(1, size + 1)]
-        + [(size, y) for y in range(size - 1, 0, -1)]
-        + [(x, 1) for x in range(size - 1, 0, -1)]
-        + [(1, y) for y in range(2, size)]
+    border = itertools.chain(
+        ((x, size) for x in range(1, size + 1)),
+        ((size, y) for y in range(size - 1, 0, -1)),
+        ((x, 1) for x in range(size - 1, 0, -1)),
+        ((1, y) for y in range(2, size)),
     )
     taken = set(agent_cells(n_agents))
-    return [cell for cell in border if cell not in taken][:n_plants]
+    free_cells = (cell for cell in border if cell not in taken)
+    return list(itertools.islice(free_cells, n_plants))
 
 
 class TemporalPlantWateringGenerator(Generator):
@@ -126,8 +131,11 @@ class TemporalPlantWateringGenerator(Generator):
         # carry the pump to a plant and another to open it at the tap.
         mapping["n_agents"] = Integer("n_agents", (2, MAX_INT), default=2)
 
-        mapping["tap_x"] = Integer("tap_x", (1, MAX_INT), default=4)
-        mapping["tap_y"] = Integer("tap_y", (1, MAX_INT), default=4)
+        # The default tap position must fit the smallest grid (size 2): a set
+        # file entry that leaves the tap out gets these defaults, and on a
+        # smaller grid than the tap position it would break the clauses below.
+        mapping["tap_x"] = Integer("tap_x", (1, MAX_INT), default=2)
+        mapping["tap_y"] = Integer("tap_y", (1, MAX_INT), default=2)
         space = ConfigurationSpace(name=mapping)
 
         # The agents and the pump must fit on the grid. As clauses, sampling

@@ -19,6 +19,7 @@ from ConfigSpace import (
     UniformIntegerHyperparameter,
     CategoricalHyperparameter,
 )
+from ConfigSpace.exceptions import ForbiddenValueError
 
 from typing import Iterable, Optional, Iterator
 from unified_planning.model import Problem, Object, FNode  # type: ignore[import-untyped]
@@ -244,7 +245,14 @@ class Generator(object):
 
         for combo in itertools.product(*hp_grid.values()):
             values = dict(zip(hp_grid.keys(), combo))
-            temp_config = Configuration(instance_parameters_space, values=values)
+            # The grid is the product of every parameter's range, so it also
+            # holds combinations that a forbidden clause of the space rules
+            # out. ConfigSpace refuses to build those: skip them, as the ones
+            # check_instance_parameters rejects are skipped.
+            try:
+                temp_config = Configuration(instance_parameters_space, values=values)
+            except ForbiddenValueError:
+                continue
             if self.check_instance_parameters(temp_config):
                 yield temp_config
 
