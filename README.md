@@ -236,6 +236,7 @@ The bundled generator classes are:
 | sailing-wind | `from upbm.domains.sailing_wind import SailingWindGenerator` |
 | forestfire | `from upbm.domains.forestfire import ForestFireGenerator` |
 | onlycraft | `from upbm.domains.onlycraft import OnlyCraftGenerator` |
+| temporal-plant-watering | `from upbm.domains.temporal_plant_watering import TemporalPlantWateringGenerator` |
 
 ### Registering domains via `.upbm` plugins
 
@@ -272,6 +273,7 @@ The following domains are implemented and registered today:
 | **Sailing-Wind** (IPC 2026) | UP/PDDL | Numbers, Real Fluents, Disjunctive Conditions | A boat tacks against the wind to reach people at sea and stop next to them. The variant says where the people are: `line` and `circle` are the two shipped layouts, `random` draws them. How much speed the boat keeps through a turn is an instance parameter |
 | **ForestFire** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Firefighting bot on a grid; a bushes row lets a loaded bot through only one unit of water at a time, unless it spends its axe on the tree blocking the gate |
 | **OnlyCraft** (IPC 2026) | UP/PDDL | Numbers | Minecraft-like crafting, breaking trees into pogo sticks |
+| **Temporal Plant Watering** (ICAPS 2026) | UP/PDDL | Numbers, Required Concurrency, Plan Quality Metric | Agents water plants on a grid with one pump: one agent carries it to a plant while another opens it at the tap, and water flows only while it is open |
 
 ### Planned
 
@@ -281,7 +283,6 @@ These are referenced in our roadmap but **not yet implemented**:
 | --- | --- | --- |
 | Painter (AAAI 2020) | ANML | ICE, Bounded Numbers, Required Concurrency |
 | Temporal Sailing (ICAPS 2026) | PDDL | Numbers, Timed Effects, Required Concurrency with Deadline |
-| Temporal Plant Watering (ICAPS 2026) | PDDL | Numbers, Required Concurrency |
 | SimpleMAIS/HSP (AAAI 2019, extended) | ANML/TPACK | ICE, Numbers, Bounded Numeric Params, Required Concurrency |
 | Driverlog (IPC) | PDDL | — |
 | Satellite (IPC) | PDDL | — |

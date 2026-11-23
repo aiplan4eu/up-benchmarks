@@ -1,0 +1,171 @@
+# The 20 instances distributed with the temporal plant watering domain, named
+# after their original problem files. All of them have two agents and the pump
+# at (4, 4), and they come in three blocks:
+#   pfile1-5:   the grid grows from 10x10 to 14x14, one plant needing 1 unit;
+#   pfile6-10:  15x15 grid, one plant needing 1 to 5 units;
+#   pfile11-20: 15x15 grid, 2 to 11 plants needing 3 units each.
+domain: temporal-plant-watering
+params:
+  version: 1
+  variant: border
+instances:
+  - name: pfile1
+    params:
+      size: 10
+      n_plants: 1
+      pour: 1
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile2
+    params:
+      size: 11
+      n_plants: 1
+      pour: 1
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile3
+    params:
+      size: 12
+      n_plants: 1
+      pour: 1
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile4
+    params:
+      size: 13
+      n_plants: 1
+      pour: 1
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile5
+    params:
+      size: 14
+      n_plants: 1
+      pour: 1
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile6
+    params:
+      size: 15
+      n_plants: 1
+      pour: 1
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile7
+    params:
+      size: 15
+      n_plants: 1
+      pour: 2
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile8
+    params:
+      size: 15
+      n_plants: 1
+      pour: 3
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile9
+    params:
+      size: 15
+      n_plants: 1
+      pour: 4
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile10
+    params:
+      size: 15
+      n_plants: 1
+      pour: 5
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile11
+    params:
+      size: 15
+      n_plants: 2
+      pour: 3
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile12
+    params:
+      size: 15
+      n_plants: 3
+      pour: 3
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile13
+    params:
+      size: 15
+      n_plants: 4
+      pour: 3
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile14
+    params:
+      size: 15
+      n_plants: 5
+      pour: 3
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile15
+    params:
+      size: 15
+      n_plants: 6
+      pour: 3
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile16
+    params:
+      size: 15
+      n_plants: 7
+      pour: 3
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile17
+    params:
+      size: 15
+      n_plants: 8
+      pour: 3
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile18
+    params:
+      size: 15
+      n_plants: 9
+      pour: 3
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile19
+    params:
+      size: 15
+      n_plants: 10
+      pour: 3
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
+  - name: pfile20
+    params:
+      size: 15
+      n_plants: 11
+      pour: 3
+      n_agents: 2
+      tap_x: 4
+      tap_y: 4
