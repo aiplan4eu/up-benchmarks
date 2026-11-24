@@ -87,6 +87,10 @@ class DomainFactory:
 
         self._registry["temporal-plant-watering"] = TemporalPlantWateringGenerator
 
+        from upbm.domains.space_rescue import SpaceRescueGenerator
+
+        self._registry["space-rescue"] = SpaceRescueGenerator
+
     def register(self, name: str, generator_class: Type[Generator]) -> None:
         """Manually register a generator class under *name*."""
         self._registry[name] = generator_class

@@ -237,6 +237,7 @@ The bundled generator classes are:
 | forestfire | `from upbm.domains.forestfire import ForestFireGenerator` |
 | onlycraft | `from upbm.domains.onlycraft import OnlyCraftGenerator` |
 | temporal-plant-watering | `from upbm.domains.temporal_plant_watering import TemporalPlantWateringGenerator` |
+| space-rescue | `from upbm.domains.space_rescue import SpaceRescueGenerator` |
 
 ### Registering domains via `.upbm` plugins
 
@@ -274,6 +275,7 @@ The following domains are implemented and registered today:
 | **ForestFire** (IPC 2026) | UP/PDDL | Numbers, Plan Quality Metric | Firefighting bot on a grid; a bushes row lets a loaded bot through only one unit of water at a time, unless it spends its axe on the tree blocking the gate |
 | **OnlyCraft** (IPC 2026) | UP/PDDL | Numbers | Minecraft-like crafting, breaking trees into pogo sticks |
 | **Temporal Plant Watering** (ICAPS 2026) | UP/PDDL | Numbers, Required Concurrency, Plan Quality Metric | Agents water plants on a grid with one pump: one agent carries it to a plant while another opens it at the tap, and water flows only while it is open |
+| **Space Rescue** (from IPC 2026 Expedition) | UP/PDDL | Numbers | Rovers on a graph spend one battery pack per drive. A saviour rover reaches a charging station that never runs out and brings packs to the others, some of which share its packs or are stranded without any. Instances are drawn solvable by construction. The `snp` variant moves packs only 1 or 3 at a time, which makes it simple numeric, and `classical` counts packs with objects instead of numbers |
 
 ### Planned
 
