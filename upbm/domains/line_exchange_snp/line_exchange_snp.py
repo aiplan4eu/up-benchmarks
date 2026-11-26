@@ -26,7 +26,7 @@ from ConfigSpace import (
 )
 from unified_planning.io import PDDLReader
 from unified_planning.model import Problem, Object, FNode
-from unified_planning.shortcuts import TRUE, Equals, Real
+from unified_planning.shortcuts import TRUE, Equals, Int, Real
 
 from upbm.generator import Generator
 from upbm.utils import MAX_INT, is_subspace, hyperparam_range
@@ -197,9 +197,9 @@ class LineExchangeSnpGenerator(Generator):
         res: dict[FNode, FNode] = {self._d(): params["segment_length"]}
         for i, load in enumerate(self._loads(params)):
             robot = self._robot(i)
-            res[self._i(robot)] = i
+            res[self._i(robot)] = Int(i)
             res[self._x(robot)] = Real(self._home(params, i))
-            res[self._q(robot)] = load
+            res[self._q(robot)] = Int(load)
             if i + 1 < n_robots:
                 res[self._next(robot, self._robot(i + 1))] = TRUE()
         return res
